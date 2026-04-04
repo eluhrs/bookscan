@@ -3,7 +3,7 @@ import io
 import csv
 from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_current_user
@@ -18,19 +18,21 @@ def generate_listing_text(book: Book) -> str:
     edition_str = f" {book.edition}" if book.edition else ""
     title_line = f"{book.title or 'Unknown'} by {book.author or 'Unknown'} ({book.year or 'n.d.'}){edition_str} - {book.publisher or 'Unknown'}"
 
-    lines = [
-        f"Title: {book.title or ''}",
-        f"Author: {book.author or ''}",
-        f"Publisher: {book.publisher or ''}",
-        f"Edition: {book.edition or ''}",
-        f"Year: {book.year or ''}",
-        f"Pages: {book.pages or ''}",
-        f"Dimensions: {book.dimensions or ''}",
-        f"Weight: {book.weight or ''}",
-        f"Subject: {book.subject or ''}",
+    field_map = [
+        ("Title", book.title),
+        ("Author", book.author),
+        ("Publisher", book.publisher),
+        ("Edition", book.edition),
+        ("Year", book.year),
+        ("Pages", book.pages),
+        ("Dimensions", book.dimensions),
+        ("Weight", book.weight),
+        ("Subject", book.subject),
     ]
-    desc = f"\n{book.description}" if book.description else ""
-    body = "\n".join(lines) + desc
+    lines = [f"{label}: {value}" for label, value in field_map if value]
+    if book.description:
+        lines.append(f"\nDescription: {book.description}")
+    body = "\n".join(lines)
 
     return f"TITLE: {title_line}\n\nCONDITION: Used\n\nDESCRIPTION:\n{body}"
 
@@ -67,18 +69,18 @@ async def get_book_listings(
     return list(result.all())
 
 
-@router.get("/listings", response_model=list[ListingResponse])
+@router.get("/listings")
 async def get_all_listings(
     db: Annotated[AsyncSession, Depends(get_db)],
     _user: Annotated[str, Depends(get_current_user)],
-    format: Optional[str] = Query(None),
-):
+    export_format: Optional[str] = Query(None, alias="format"),
+) -> Response:
     result = await db.scalars(
         select(Listing).order_by(Listing.created_at.desc())
     )
     listings = list(result.all())
 
-    if format == "csv":
+    if export_format == "csv":
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow(["id", "book_id", "listing_text", "created_at", "ebay_status"])
@@ -87,8 +89,8 @@ async def get_all_listings(
         output.seek(0)
         return StreamingResponse(
             iter([output.getvalue()]),
-            media_type="text/csv",
+            media_type="text/csv; charset=utf-8",
             headers={"Content-Disposition": "attachment; filename=listings.csv"},
         )
 
-    return [ListingResponse.model_validate(l) for l in listings]
+    return JSONResponse([ListingResponse.model_validate(listing).model_dump(mode='json') for listing in listings])

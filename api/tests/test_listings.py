@@ -83,3 +83,33 @@ async def test_get_book_listings(client, auth_headers):
     resp = await client.get(f"/api/books/{book_id}/listings", headers=auth_headers)
     assert resp.status_code == 200
     assert len(resp.json()) == 2
+
+
+@pytest.mark.asyncio
+async def test_get_all_listings(client, auth_headers):
+    book_resp = await client.post(
+        "/api/books",
+        json={"isbn": "9999999999", "title": "All Listings Test"},
+        headers=auth_headers,
+    )
+    book_id = book_resp.json()["id"]
+    await client.post(f"/api/books/{book_id}/listings", headers=auth_headers)
+    resp = await client.get("/api/listings", headers=auth_headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert any(item["book_id"] == book_id for item in data)
+
+
+@pytest.mark.asyncio
+async def test_get_all_listings_csv(client, auth_headers):
+    book_resp = await client.post(
+        "/api/books",
+        json={"isbn": "8888888888", "title": "CSV Export Test"},
+        headers=auth_headers,
+    )
+    book_id = book_resp.json()["id"]
+    await client.post(f"/api/books/{book_id}/listings", headers=auth_headers)
+    resp = await client.get("/api/listings?format=csv", headers=auth_headers)
+    assert resp.status_code == 200
+    assert "text/csv" in resp.headers["content-type"]
+    assert "listing_text" in resp.text
