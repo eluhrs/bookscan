@@ -67,7 +67,7 @@ async def get_book_listings(
     return list(result.all())
 
 
-@router.get("/listings")
+@router.get("/listings", response_model=list[ListingResponse])
 async def get_all_listings(
     db: Annotated[AsyncSession, Depends(get_db)],
     _user: Annotated[str, Depends(get_current_user)],
@@ -82,8 +82,8 @@ async def get_all_listings(
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow(["id", "book_id", "listing_text", "created_at", "ebay_status"])
-        for l in listings:
-            writer.writerow([l.id, l.book_id, l.listing_text, l.created_at, l.ebay_status])
+        for listing in listings:
+            writer.writerow([listing.id, listing.book_id, listing.listing_text, listing.created_at, listing.ebay_status])
         output.seek(0)
         return StreamingResponse(
             iter([output.getvalue()]),
