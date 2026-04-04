@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import BookTable from '../components/BookTable'
 import BookForm from '../components/BookForm'
 import { listBooks, updateBook, deleteBook, exportListingsCSV } from '../api/books'
@@ -36,26 +37,34 @@ export default function DashboardPage() {
 
   async function handleEdit(updated: BookLookup) {
     if (!editingBook) return
-    await updateBook(editingBook.id, {
-      title: updated.title ?? undefined,
-      author: updated.author ?? undefined,
-      publisher: updated.publisher ?? undefined,
-      edition: updated.edition ?? undefined,
-      year: updated.year ?? undefined,
-      pages: updated.pages ?? undefined,
-      subject: updated.subject ?? undefined,
-      description: updated.description ?? undefined,
-      cover_image_url: updated.cover_image_url ?? undefined,
-      data_complete: updated.data_complete,
-    })
-    setEditingBook(null)
-    load()
+    try {
+      await updateBook(editingBook.id, {
+        title: updated.title,
+        author: updated.author,
+        publisher: updated.publisher,
+        edition: updated.edition,
+        year: updated.year,
+        pages: updated.pages,
+        subject: updated.subject,
+        description: updated.description,
+        cover_image_url: updated.cover_image_url,
+        data_complete: updated.data_complete,
+      })
+      setEditingBook(null)
+      load()
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Save failed')
+    }
   }
 
   async function handleDelete(id: string) {
     if (!confirm('Delete this book?')) return
-    await deleteBook(id)
-    load()
+    try {
+      await deleteBook(id)
+      load()
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Delete failed')
+    }
   }
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
@@ -90,7 +99,7 @@ export default function DashboardPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h1 style={{ margin: 0 }}>BookScan — {total} books</h1>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <a href="/scan" style={{ fontSize: '0.9rem' }}>📱 Scan</a>
+          <Link to="/scan" style={{ fontSize: '0.9rem' }}>📱 Scan</Link>
           <button onClick={logout}>Log out</button>
         </div>
       </div>
