@@ -7,7 +7,7 @@ type SortDir = 'asc' | 'desc'
 interface BookTableProps {
   books: Book[]
   onEdit: (book: Book) => void
-  onDelete: (id: string) => void
+  onDelete: (id: Book['id']) => void
   onGenerateListing: (book: Book) => void
 }
 
@@ -33,12 +33,14 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
 
   function colHeader(label: string, key: SortKey) {
     const arrow = sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''
+    const ariaSort = sortKey === key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'
     return (
       <th
         onClick={() => handleSort(key)}
         style={{ cursor: 'pointer', textAlign: 'left', padding: '0.5rem', userSelect: 'none' }}
+        aria-sort={ariaSort}
       >
-        {label}{arrow}
+        {label}<span aria-hidden="true">{arrow}</span>
       </th>
     )
   }
@@ -77,8 +79,12 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
                 <button onClick={() => onEdit(book)} style={{ marginRight: '0.25rem' }}>
                   Edit
                 </button>
-                <button onClick={() => onDelete(book.id)} style={{ color: 'red' }}>
-                  Del
+                <button
+                  onClick={() => { if (window.confirm(`Delete "${book.title ?? book.isbn}"?`)) onDelete(book.id) }}
+                  style={{ color: 'red' }}
+                  aria-label="Delete book"
+                >
+                  Delete
                 </button>
               </td>
             </tr>
