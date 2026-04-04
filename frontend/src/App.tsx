@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './hooks/useAuth'
 import LoginPage from './pages/LoginPage'
 
@@ -18,17 +19,25 @@ function ProtectedRoutes() {
   )
 }
 
-export default function App() {
+function AppRoutes() {
   const { isAuthenticated } = useAuth()
   return (
+    <Routes>
+      <Route
+        path="/login"
+        element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
+      />
+      <Route path="/*" element={<ProtectedRoutes />} />
+    </Routes>
+  )
+}
+
+export default function App() {
+  return (
     <BrowserRouter>
-      <Routes>
-        <Route
-          path="/login"
-          element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
-        />
-        <Route path="/*" element={<ProtectedRoutes />} />
-      </Routes>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
     </BrowserRouter>
   )
 }
