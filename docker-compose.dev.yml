@@ -1,0 +1,22 @@
+services:
+  api:
+    build:
+      context: ./api
+      target: dev
+    volumes:
+      - ./api:/app
+      - covers:/app/covers
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+    ports:
+      - "8001:8001"
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3001:5173"
+    command: npm run dev -- --host
