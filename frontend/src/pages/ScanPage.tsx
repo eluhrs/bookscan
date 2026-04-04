@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import Scanner from '../components/Scanner'
 import BookForm from '../components/BookForm'
 import { lookupIsbn, saveBook } from '../api/books'
@@ -15,6 +16,7 @@ export default function ScanPage() {
   const handleScan = useCallback(async (isbn: string) => {
     setState('loading')
     setErrorMsg('')
+    setLastSaved(null)
     try {
       const data = await lookupIsbn(isbn)
       setBookData(data)
@@ -26,22 +28,7 @@ export default function ScanPage() {
   }, [])
 
   async function handleSave(book: BookLookup) {
-    await saveBook({
-      isbn: book.isbn,
-      title: book.title,
-      author: book.author,
-      publisher: book.publisher,
-      edition: book.edition,
-      year: book.year,
-      pages: book.pages,
-      dimensions: book.dimensions,
-      weight: book.weight,
-      subject: book.subject,
-      description: book.description,
-      cover_image_url: book.cover_image_url,
-      data_sources: book.data_sources,
-      data_complete: book.data_complete,
-    })
+    await saveBook(book)
     setLastSaved(book.title ?? book.isbn)
     setBookData(null)
     setState('scanning')
@@ -51,9 +38,9 @@ export default function ScanPage() {
     <div style={{ minHeight: '100vh', background: '#000', color: '#fff' }}>
       <div style={{ padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <strong>BookScan</strong>
-        <a href="/dashboard" style={{ color: '#aaa', textDecoration: 'none', fontSize: '0.9rem' }}>
+        <Link to="/dashboard" style={{ color: '#aaa', textDecoration: 'none', fontSize: '0.9rem' }}>
           Dashboard →
-        </a>
+        </Link>
       </div>
 
       {lastSaved && (
