@@ -1,0 +1,78 @@
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_create_book(client, auth_headers):
+    payload = {
+        "isbn": "9780134757599",
+        "title": "Refactoring",
+        "author": "Martin Fowler",
+        "publisher": "Addison-Wesley",
+        "year": 2018,
+        "data_complete": True,
+    }
+    resp = await client.post("/api/books", json=payload, headers=auth_headers)
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["isbn"] == "9780134757599"
+    assert data["data_complete"] is True
+
+
+@pytest.mark.asyncio
+async def test_create_book_duplicate_isbn(client, auth_headers):
+    payload = {"isbn": "9780134757599", "title": "Refactoring"}
+    await client.post("/api/books", json=payload, headers=auth_headers)
+    resp = await client.post("/api/books", json=payload, headers=auth_headers)
+    assert resp.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_list_books(client, auth_headers):
+    await client.post("/api/books", json={"isbn": "111", "title": "A"}, headers=auth_headers)
+    await client.post("/api/books", json={"isbn": "222", "title": "B"}, headers=auth_headers)
+    resp = await client.get("/api/books", headers=auth_headers)
+    assert resp.status_code == 200
+    assert resp.json()["total"] == 2
+
+
+@pytest.mark.asyncio
+async def test_list_books_incomplete_filter(client, auth_headers):
+    await client.post(
+        "/api/books", json={"isbn": "333", "data_complete": False}, headers=auth_headers
+    )
+    await client.post(
+        "/api/books", json={"isbn": "444", "data_complete": True}, headers=auth_headers
+    )
+    resp = await client.get("/api/books?incomplete_only=true", headers=auth_headers)
+    assert resp.json()["total"] == 1
+
+
+@pytest.mark.asyncio
+async def test_update_book(client, auth_headers):
+    create = await client.post(
+        "/api/books", json={"isbn": "555", "title": "Old Title"}, headers=auth_headers
+    )
+    book_id = create.json()["id"]
+    resp = await client.patch(
+        f"/api/books/{book_id}", json={"title": "New Title"}, headers=auth_headers
+    )
+    assert resp.status_code == 200
+    assert resp.json()["title"] == "New Title"
+
+
+@pytest.mark.asyncio
+async def test_delete_book(client, auth_headers):
+    create = await client.post(
+        "/api/books", json={"isbn": "666", "title": "To Delete"}, headers=auth_headers
+    )
+    book_id = create.json()["id"]
+    resp = await client.delete(f"/api/books/{book_id}", headers=auth_headers)
+    assert resp.status_code == 204
+    resp = await client.get(f"/api/books/{book_id}", headers=auth_headers)
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_requires_auth(client):
+    resp = await client.get("/api/books")
+    assert resp.status_code == 401
