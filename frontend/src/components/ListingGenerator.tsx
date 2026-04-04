@@ -35,9 +35,13 @@ export default function ListingGenerator({ book, onClose }: ListingGeneratorProp
 
   async function handleCopy() {
     if (!listing) return
-    await navigator.clipboard.writeText(listing.listing_text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    try {
+      await navigator.clipboard.writeText(listing.listing_text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setError('Could not copy to clipboard')
+    }
   }
 
   return (
@@ -79,8 +83,8 @@ export default function ListingGenerator({ book, onClose }: ListingGeneratorProp
 
       {history.length > 0 && (
         <div style={{ marginTop: '1.5rem' }}>
-          <h3>History ({history.length})</h3>
-          {history.map((h) => (
+          <h3>History ({history.filter((h) => h.id !== listing?.id).length})</h3>
+          {history.filter((h) => h.id !== listing?.id).map((h) => (
             <div
               key={h.id}
               style={{
