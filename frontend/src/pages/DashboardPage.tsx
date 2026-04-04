@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import BookTable from '../components/BookTable'
 import BookForm from '../components/BookForm'
+import ListingGenerator from '../components/ListingGenerator'
 import { listBooks, updateBook, deleteBook, exportListingsCSV } from '../api/books'
 import { Book, BookLookup } from '../types'
 import { useAuth } from '../hooks/useAuth'
@@ -14,6 +15,7 @@ export default function DashboardPage() {
   const [incompleteOnly, setIncompleteOnly] = useState(false)
   const [search, setSearch] = useState('')
   const [editingBook, setEditingBook] = useState<Book | null>(null)
+  const [listingBook, setListingBook] = useState<Book | null>(null)
   const [loading, setLoading] = useState(false)
   const PAGE_SIZE = 20
 
@@ -134,7 +136,7 @@ export default function DashboardPage() {
           books={books}
           onEdit={(b) => setEditingBook(b)}
           onDelete={handleDelete}
-          onGenerateListing={(b) => window.location.href = `/dashboard?listing=${b.id}`}
+          onGenerateListing={(b) => setListingBook(b)}
         />
       )}
 
@@ -143,6 +145,18 @@ export default function DashboardPage() {
           <button disabled={page === 1} onClick={() => setPage((p) => p - 1)}>← Prev</button>
           <span>Page {page} of {totalPages}</span>
           <button disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>Next →</button>
+        </div>
+      )}
+
+      {listingBook && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+          overflowY: 'auto', padding: '2rem'
+        }}>
+          <div style={{ background: '#fff', borderRadius: 8, width: '100%', maxWidth: 640, padding: '1rem' }}>
+            <ListingGenerator book={listingBook} onClose={() => setListingBook(null)} />
+          </div>
         </div>
       )}
     </div>
