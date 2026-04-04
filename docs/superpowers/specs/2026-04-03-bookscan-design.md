@@ -52,17 +52,17 @@ bookscan/
 │   ├── Dockerfile
 │   ├── requirements.txt
 │   ├── alembic/                  # DB migrations
-│   └── app/
-│       ├── main.py
-│       ├── auth.py               # JWT + login route
-│       ├── models.py             # SQLAlchemy models
-│       ├── schemas.py            # Pydantic schemas
-│       ├── routers/
-│       │   ├── books.py
-│       │   └── listings.py
-│       └── services/
-│           ├── lookup.py         # parallel metadata fetch + merge
-│           └── covers.py         # download cover images
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── auth.py               # JWT + login route
+│   │   ├── models.py             # SQLAlchemy models
+│   │   ├── schemas.py            # Pydantic schemas
+│   │   ├── routers/
+│   │   │   ├── books.py
+│   │   │   └── listings.py
+│   │   └── services/
+│   │       ├── lookup.py         # parallel metadata fetch + merge
+│   │       └── covers.py         # download cover images
 │   └── tests/
 │       ├── test_auth.py
 │       ├── test_books.py
@@ -254,6 +254,7 @@ Condition is always "Used" in generated text — edit manually if needed. No con
 ```apache
 <VirtualHost *:443>
     ServerName bookscan.luhrs.net
+    # Requires: a2enmod proxy proxy_http
     ProxyPass / http://localhost:3001/
     ProxyPassReverse / http://localhost:3001/
     # SSL config inherited from existing Let's Encrypt setup
