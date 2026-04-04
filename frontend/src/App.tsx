@@ -5,8 +5,7 @@ import { useBreakpoint } from './hooks/useBreakpoint'
 import LoginPage from './pages/LoginPage'
 import ScanPage from './pages/ScanPage'
 
-// Placeholder — implemented in Task 17
-function DashboardPage() { return <div>Dashboard coming soon</div> }
+import DashboardPage from './pages/DashboardPage'
 
 function ProtectedRoutes() {
   const { isAuthenticated } = useAuth()
