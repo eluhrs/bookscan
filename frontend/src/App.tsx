@@ -1,20 +1,24 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './hooks/useAuth'
+import { useBreakpoint } from './hooks/useBreakpoint'
 import LoginPage from './pages/LoginPage'
+import ScanPage from './pages/ScanPage'
 
-// Placeholder pages — implemented in later tasks
-function ScanPage() { return <div>Scan</div> }
-function DashboardPage() { return <div>Dashboard</div> }
+// Placeholder — implemented in Task 17
+function DashboardPage() { return <div>Dashboard coming soon</div> }
 
 function ProtectedRoutes() {
   const { isAuthenticated } = useAuth()
+  const { isMobile } = useBreakpoint()
+
   if (!isAuthenticated) return <Navigate to="/login" replace />
+
   return (
     <Routes>
       <Route path="/scan" element={<ScanPage />} />
       <Route path="/dashboard" element={<DashboardPage />} />
-      <Route path="*" element={<Navigate to="/scan" replace />} />
+      <Route path="*" element={<Navigate to={isMobile ? '/scan' : '/dashboard'} replace />} />
     </Routes>
   )
 }
