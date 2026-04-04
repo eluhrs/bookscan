@@ -9,4 +9,4 @@ FROM base AS dev
 FROM base AS prod
 COPY . .
 RUN mkdir -p /app/covers
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8001"]

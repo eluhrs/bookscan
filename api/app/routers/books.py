@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from app.auth import get_current_user
-from app.database import get_db
+from app.database import get_db, async_session_maker
 from app.models import Book
 from app.schemas import (
     BookCreate,
@@ -65,20 +65,19 @@ async def create_book(
     if book.cover_image_url:
         import asyncio
         asyncio.create_task(
-            _store_cover(db, book.id, book.isbn, book.cover_image_url)
+            _store_cover(book.id, book.isbn, book.cover_image_url)
         )
     return book
 
 
-async def _store_cover(
-    db: AsyncSession, book_id: uuid.UUID, isbn: str, url: str
-) -> None:
+async def _store_cover(book_id: uuid.UUID, isbn: str, url: str) -> None:
     local_path = await download_cover(isbn, url)
     if local_path:
-        book = await db.get(Book, book_id)
-        if book:
-            book.cover_image_local = local_path
-            await db.commit()
+        async with async_session_maker() as db:
+            book = await db.get(Book, book_id)
+            if book:
+                book.cover_image_local = local_path
+                await db.commit()
 
 
 @router.get("", response_model=BookListResponse)

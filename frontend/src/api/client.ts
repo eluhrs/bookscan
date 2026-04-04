@@ -15,5 +15,6 @@ export async function apiFetch<T>(
     const detail = await resp.json().catch(() => ({ detail: resp.statusText }))
     throw new Error(detail.detail ?? resp.statusText)
   }
+  if (resp.status === 204) return undefined as T
   return resp.json() as Promise<T>
 }
