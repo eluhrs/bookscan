@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Book } from '../types'
+import { theme } from '../styles/theme'
 
 type SortKey = 'title' | 'author' | 'year' | 'publisher' | 'created_at'
 type SortDir = 'asc' | 'desc'
@@ -9,6 +10,13 @@ interface BookTableProps {
   onEdit: (book: Book) => void
   onDelete: (id: Book['id']) => void
   onGenerateListing: (book: Book) => void
+}
+
+const CONDITION_COLOR: Record<string, string> = {
+  'New':       theme.colors.accent,
+  'Very Good': '#16A34A',
+  'Good':      '#D97706',
+  'Acceptable': theme.colors.muted,
 }
 
 export default function BookTable({ books, onEdit, onDelete, onGenerateListing }: BookTableProps) {
@@ -37,7 +45,18 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
     return (
       <th
         onClick={() => handleSort(key)}
-        style={{ cursor: 'pointer', textAlign: 'left', padding: '0.5rem', userSelect: 'none' }}
+        style={{
+          cursor: 'pointer',
+          textAlign: 'left',
+          padding: '0.6rem 0.75rem',
+          userSelect: 'none',
+          fontWeight: 500,
+          fontSize: '0.8rem',
+          color: theme.colors.muted,
+          textTransform: 'uppercase',
+          letterSpacing: '0.04em',
+          whiteSpace: 'nowrap',
+        }}
         aria-sort={ariaSort}
       >
         {label}<span aria-hidden="true">{arrow}</span>
@@ -46,42 +65,144 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
   }
 
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+    <div style={{ overflowX: 'auto', border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.md }}>
+      <table
+        style={{
+          width: '100%',
+          borderCollapse: 'collapse',
+          fontSize: '0.9rem',
+          fontFamily: theme.font.sans,
+        }}
+      >
         <thead>
-          <tr style={{ borderBottom: '2px solid #ddd', background: '#f5f5f5' }}>
-            <th style={{ padding: '0.5rem' }}></th>
+          <tr style={{ borderBottom: `1px solid ${theme.colors.border}`, background: theme.colors.surface }}>
+            <th style={{ padding: '0.6rem 0.75rem', width: 20 }} />
             {colHeader('Title', 'title')}
             {colHeader('Author', 'author')}
             {colHeader('Publisher', 'publisher')}
             {colHeader('Year', 'year')}
-            <th style={{ padding: '0.5rem' }}>Actions</th>
+            <th
+              style={{
+                padding: '0.6rem 0.75rem',
+                fontWeight: 500,
+                fontSize: '0.8rem',
+                color: theme.colors.muted,
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+              }}
+            >
+              Condition
+            </th>
+            <th
+              style={{
+                padding: '0.6rem 0.75rem',
+                fontWeight: 500,
+                fontSize: '0.8rem',
+                color: theme.colors.muted,
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+              }}
+            >
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody>
           {sorted.map((book) => (
-            <tr key={book.id} style={{ borderBottom: '1px solid #eee' }}>
-              <td style={{ padding: '0.5rem', width: 24 }}>
+            <tr
+              key={book.id}
+              style={{ borderBottom: `1px solid ${theme.colors.border}` }}
+            >
+              <td style={{ padding: '0.6rem 0.75rem', width: 20 }}>
                 {!book.data_complete && (
-                  <span title="Incomplete data" style={{ color: 'orange', fontSize: '1rem' }}>
+                  <span
+                    title="Incomplete data"
+                    style={{ color: theme.colors.warning, fontSize: '1rem' }}
+                  >
                     ⚠
                   </span>
                 )}
               </td>
-              <td style={{ padding: '0.5rem' }}>{book.title ?? '—'}</td>
-              <td style={{ padding: '0.5rem' }}>{book.author ?? '—'}</td>
-              <td style={{ padding: '0.5rem' }}>{book.publisher ?? '—'}</td>
-              <td style={{ padding: '0.5rem' }}>{book.year ?? '—'}</td>
-              <td style={{ padding: '0.5rem', whiteSpace: 'nowrap' }}>
-                <button onClick={() => onGenerateListing(book)} style={{ marginRight: '0.25rem' }}>
+              <td style={{ padding: '0.6rem 0.75rem', fontWeight: 500 }}>
+                {book.title ?? '—'}
+              </td>
+              <td style={{ padding: '0.6rem 0.75rem', color: theme.colors.muted }}>
+                {book.author ?? '—'}
+              </td>
+              <td style={{ padding: '0.6rem 0.75rem', color: theme.colors.muted }}>
+                {book.publisher ?? '—'}
+              </td>
+              <td
+                style={{
+                  padding: '0.6rem 0.75rem',
+                  color: theme.colors.muted,
+                  fontFamily: theme.font.mono,
+                  fontSize: '0.85rem',
+                }}
+              >
+                {book.year ?? '—'}
+              </td>
+              <td style={{ padding: '0.6rem 0.75rem' }}>
+                {book.condition ? (
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
+                      color: CONDITION_COLOR[book.condition] ?? theme.colors.muted,
+                      border: `1px solid ${CONDITION_COLOR[book.condition] ?? theme.colors.border}`,
+                      borderRadius: '999px',
+                      padding: '0.15rem 0.55rem',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {book.condition}
+                  </span>
+                ) : (
+                  <span style={{ color: theme.colors.border }}>—</span>
+                )}
+              </td>
+              <td style={{ padding: '0.6rem 0.75rem', whiteSpace: 'nowrap' }}>
+                <button
+                  onClick={() => onGenerateListing(book)}
+                  style={{
+                    marginRight: '0.4rem',
+                    padding: '0.3rem 0.6rem',
+                    fontSize: '0.8rem',
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: theme.radius.sm,
+                    background: theme.colors.bg,
+                    cursor: 'pointer',
+                  }}
+                >
                   List
                 </button>
-                <button onClick={() => onEdit(book)} style={{ marginRight: '0.25rem' }}>
+                <button
+                  onClick={() => onEdit(book)}
+                  style={{
+                    marginRight: '0.4rem',
+                    padding: '0.3rem 0.6rem',
+                    fontSize: '0.8rem',
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: theme.radius.sm,
+                    background: theme.colors.bg,
+                    cursor: 'pointer',
+                  }}
+                >
                   Edit
                 </button>
                 <button
-                  onClick={() => { if (window.confirm(`Delete "${book.title ?? book.isbn}"?`)) onDelete(book.id) }}
-                  style={{ color: 'red' }}
+                  onClick={() => {
+                    if (window.confirm(`Delete "${book.title ?? book.isbn}"?`)) onDelete(book.id)
+                  }}
+                  style={{
+                    padding: '0.3rem 0.6rem',
+                    fontSize: '0.8rem',
+                    border: `1px solid ${theme.colors.danger}`,
+                    borderRadius: theme.radius.sm,
+                    background: theme.colors.bg,
+                    color: theme.colors.danger,
+                    cursor: 'pointer',
+                  }}
                   aria-label="Delete book"
                 >
                   Delete
@@ -91,7 +212,15 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
           ))}
           {sorted.length === 0 && (
             <tr>
-              <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>
+              <td
+                colSpan={7}
+                style={{
+                  textAlign: 'center',
+                  padding: '3rem',
+                  color: theme.colors.muted,
+                  fontSize: '0.9rem',
+                }}
+              >
                 No books yet. Scan some on your phone!
               </td>
             </tr>
