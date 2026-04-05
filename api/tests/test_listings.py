@@ -23,6 +23,7 @@ def make_book(**kwargs) -> Book:
         cover_image_local=None,
         data_sources={},
         data_complete=True,
+        condition=None,
     )
     defaults.update(kwargs)
     return types.SimpleNamespace(**defaults)
@@ -104,7 +105,7 @@ async def test_get_all_listings(client, auth_headers):
 async def test_get_all_listings_csv(client, auth_headers):
     book_resp = await client.post(
         "/api/books",
-        json={"isbn": "8888888888", "title": "CSV Export Test"},
+        json={"isbn": "8888888888", "title": "CSV Export Test", "author": "Auth", "condition": "Good"},
         headers=auth_headers,
     )
     book_id = book_resp.json()["id"]
@@ -112,4 +113,23 @@ async def test_get_all_listings_csv(client, auth_headers):
     resp = await client.get("/api/listings?format=csv", headers=auth_headers)
     assert resp.status_code == 200
     assert "text/csv" in resp.headers["content-type"]
-    assert "listing_text" in resp.text
+    lines = resp.text.strip().splitlines()
+    header = lines[0]
+    assert "title" in header
+    assert "condition" in header
+    assert "isbn" in header
+    assert "listing_text" in header
+    # Data row contains the book's title
+    assert "CSV Export Test" in resp.text
+
+
+def test_listing_uses_condition():
+    book = make_book(condition="Very Good")
+    text = generate_listing_text(book)
+    assert "CONDITION: Very Good" in text
+
+
+def test_listing_condition_defaults_to_used():
+    book = make_book(condition=None)
+    text = generate_listing_text(book)
+    assert "CONDITION: Used" in text

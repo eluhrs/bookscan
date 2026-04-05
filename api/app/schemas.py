@@ -43,6 +43,7 @@ class BookCreate(BaseModel):
     cover_image_url: Optional[str] = None
     data_sources: Optional[dict] = None
     data_complete: bool = False
+    condition: Optional[str] = None
 
 
 class BookUpdate(BaseModel):
@@ -58,6 +59,7 @@ class BookUpdate(BaseModel):
     description: Optional[str] = None
     cover_image_url: Optional[str] = None
     data_complete: Optional[bool] = None
+    condition: Optional[str] = None
 
 
 class BookResponse(BaseModel):
@@ -77,6 +79,7 @@ class BookResponse(BaseModel):
     cover_image_local: Optional[str] = None
     data_sources: Optional[dict] = None
     data_complete: bool
+    condition: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

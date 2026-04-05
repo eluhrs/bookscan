@@ -5,6 +5,7 @@ from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse, JSONResponse, Response
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_current_user
 from app.database import get_db
@@ -17,6 +18,7 @@ router = APIRouter(tags=["listings"])
 def generate_listing_text(book: Book) -> str:
     edition_str = f" {book.edition}" if book.edition else ""
     title_line = f"{book.title or 'Unknown'} by {book.author or 'Unknown'} ({book.year or 'n.d.'}){edition_str} - {book.publisher or 'Unknown'}"
+    condition = book.condition or "Used"
 
     field_map = [
         ("Title", book.title),
@@ -34,7 +36,7 @@ def generate_listing_text(book: Book) -> str:
         lines.append(f"\nDescription: {book.description}")
     body = "\n".join(lines)
 
-    return f"TITLE: {title_line}\n\nCONDITION: Used\n\nDESCRIPTION:\n{body}"
+    return f"TITLE: {title_line}\n\nCONDITION: {condition}\n\nDESCRIPTION:\n{body}"
 
 
 @router.post("/books/{book_id}/listings", response_model=ListingResponse, status_code=201)
@@ -76,16 +78,27 @@ async def get_all_listings(
     export_format: Optional[str] = Query(None, alias="format"),
 ) -> Response:
     result = await db.scalars(
-        select(Listing).order_by(Listing.created_at.desc())
+        select(Listing)
+        .options(selectinload(Listing.book))
+        .order_by(Listing.created_at.desc())
     )
     listings = list(result.all())
 
     if export_format == "csv":
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(["id", "book_id", "listing_text", "created_at", "ebay_status"])
+        writer.writerow([
+            "title", "author", "publisher", "edition", "year", "pages",
+            "dimensions", "weight", "subject", "description", "condition",
+            "isbn", "listing_text", "created_at", "ebay_status",
+        ])
         for listing in listings:
-            writer.writerow([listing.id, listing.book_id, listing.listing_text, listing.created_at, listing.ebay_status])
+            b = listing.book
+            writer.writerow([
+                b.title, b.author, b.publisher, b.edition, b.year, b.pages,
+                b.dimensions, b.weight, b.subject, b.description, b.condition,
+                b.isbn, listing.listing_text, listing.created_at, listing.ebay_status,
+            ])
         output.seek(0)
         return StreamingResponse(
             iter([output.getvalue()]),

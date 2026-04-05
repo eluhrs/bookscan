@@ -76,3 +76,35 @@ async def test_delete_book(client, auth_headers):
 async def test_requires_auth(client):
     resp = await client.get("/api/books")
     assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_create_book_with_condition(client, auth_headers):
+    resp = await client.post(
+        "/api/books",
+        json={"isbn": "9780000000001", "title": "Cond Test", "condition": "Very Good"},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201
+    assert resp.json()["condition"] == "Very Good"
+
+
+@pytest.mark.asyncio
+async def test_update_book_condition(client, auth_headers):
+    create = await client.post(
+        "/api/books", json={"isbn": "9780000000002", "title": "No Cond"}, headers=auth_headers
+    )
+    book_id = create.json()["id"]
+    resp = await client.patch(
+        f"/api/books/{book_id}", json={"condition": "Good"}, headers=auth_headers
+    )
+    assert resp.status_code == 200
+    assert resp.json()["condition"] == "Good"
+
+
+@pytest.mark.asyncio
+async def test_book_condition_defaults_null(client, auth_headers):
+    resp = await client.post(
+        "/api/books", json={"isbn": "9780000000003"}, headers=auth_headers
+    )
+    assert resp.json()["condition"] is None
