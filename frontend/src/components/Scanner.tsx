@@ -57,13 +57,13 @@ export default function Scanner({ onScan, active, isRetry }: ScannerProps) {
       const vh = video.videoHeight
 
       // Match targeting rect: 80% width, 40% height, centered
-      const rw = vw * 0.8
-      const rh = vh * 0.4
-      const rx = (vw - rw) / 2
-      const ry = (vh - rh) / 2
+      const rw = Math.round(vw * 0.8)
+      const rh = Math.round(vh * 0.4)
+      const rx = Math.round((vw - rw) / 2)
+      const ry = Math.round((vh - rh) / 2)
 
-      canvas.width = Math.round(rw)
-      canvas.height = Math.round(rh)
+      canvas.width = rw
+      canvas.height = rh
       const ctx = canvas.getContext('2d')!
       ctx.drawImage(video, rx, ry, rw, rh, 0, 0, rw, rh)
 
@@ -93,6 +93,7 @@ export default function Scanner({ onScan, active, isRetry }: ScannerProps) {
         <video
           ref={videoRef}
           style={{ width: '100%', display: active ? 'block' : 'none', background: '#000' }}
+          autoPlay
           muted
           playsInline
         />
