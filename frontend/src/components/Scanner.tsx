@@ -118,10 +118,10 @@ export default function Scanner({ onScan, active, isRetry }: ScannerProps) {
             }}
           >
             {/* Corner markers */}
-            <div style={{ position: 'absolute', top: -2, left: -2, width: 20, height: 20, borderTop: \`3px solid \${theme.colors.accent}\`, borderLeft: \`3px solid \${theme.colors.accent}\` }} />
-            <div style={{ position: 'absolute', top: -2, right: -2, width: 20, height: 20, borderTop: \`3px solid \${theme.colors.accent}\`, borderRight: \`3px solid \${theme.colors.accent}\` }} />
-            <div style={{ position: 'absolute', bottom: -2, left: -2, width: 20, height: 20, borderBottom: \`3px solid \${theme.colors.accent}\`, borderLeft: \`3px solid \${theme.colors.accent}\` }} />
-            <div style={{ position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, borderBottom: \`3px solid \${theme.colors.accent}\`, borderRight: \`3px solid \${theme.colors.accent}\` }} />
+            <div style={{ position: 'absolute', top: -2, left: -2, width: 20, height: 20, borderTop: `3px solid ${theme.colors.accent}`, borderLeft: `3px solid ${theme.colors.accent}` }} />
+            <div style={{ position: 'absolute', top: -2, right: -2, width: 20, height: 20, borderTop: `3px solid ${theme.colors.accent}`, borderRight: `3px solid ${theme.colors.accent}` }} />
+            <div style={{ position: 'absolute', bottom: -2, left: -2, width: 20, height: 20, borderBottom: `3px solid ${theme.colors.accent}`, borderLeft: `3px solid ${theme.colors.accent}` }} />
+            <div style={{ position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, borderBottom: `3px solid ${theme.colors.accent}`, borderRight: `3px solid ${theme.colors.accent}` }} />
           </div>
         </div>
       </div>
