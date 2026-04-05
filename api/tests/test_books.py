@@ -107,4 +107,5 @@ async def test_book_condition_defaults_null(client, auth_headers):
     resp = await client.post(
         "/api/books", json={"isbn": "9780000000003"}, headers=auth_headers
     )
+    assert resp.status_code == 201
     assert resp.json()["condition"] is None
