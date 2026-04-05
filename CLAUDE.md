@@ -132,10 +132,14 @@ automatically. If you ever edit the hash manually, replace each `$` with `$$`.
 `Acceptable`. Added in migration 002. The field appears in the desktop edit form, the phone review
 form, the eBay listing text, and the CSV export.
 
-**Manual barcode scanning.** `Scanner.tsx` no longer uses continuous `decodeFromVideoDevice`. It
-starts the camera stream via `getUserMedia`, renders a targeting mask overlay (CSS box-shadow inset),
-and on button press captures a single canvas frame cropped to the target rect and calls
-`reader.decodeFromCanvas()`. The scan button shows "Retry" after an incomplete-data lookup.
+**Manual barcode scanning.** `Scanner.tsx` starts the camera via `getUserMedia` requesting
+`{ width: { ideal: 1920 }, height: { ideal: 1080 } }` for better barcode resolution. On button
+press it tries three crop strategies in sequence: (1) 80% × 40% centered, (2) 95% × 25% wide strip,
+(3) 50% × 30% center region stretched 2× for digital zoom. A torch toggle button appears when the
+device reports torch capability. The scan button shows "Retry" after an incomplete-data lookup.
+Library: `@zxing/browser` — adequate for this use case when given sufficient resolution. If future
+testing shows persistent failure on low-end devices, evaluate `@undecaf/zbar-wasm` (ZBar compiled
+to WASM, stronger for 1D/EAN barcodes) as a drop-in replacement.
 
 **Scan audio.** `useScanAudio` hook uses Web Audio API (no files). AudioContext is created lazily on
 first button press (satisfies mobile user-gesture requirement). Success: ascending 880/1108Hz chime.
