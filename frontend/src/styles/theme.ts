@@ -9,6 +9,8 @@ export const theme = {
     danger:    '#E00000',
     scanGreen: '#22C55E',
     warning:   '#F59E0B',
+    warningBg:   '#FFFBEB',
+    warningText: '#92400E',
   },
   font: {
     sans: "'Geist', 'Inter', system-ui, sans-serif",

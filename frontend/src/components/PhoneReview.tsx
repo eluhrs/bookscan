@@ -51,13 +51,13 @@ export default function PhoneReview({ book, onSave, onCancel }: PhoneReviewProps
       {!book.data_complete && (
         <div
           style={{
-            background: '#FFFBEB',
+            background: theme.colors.warningBg,
             border: '1px solid #FCD34D',
             borderRadius: 6,
             padding: '0.6rem 0.75rem',
             marginBottom: '1rem',
             fontSize: '0.85rem',
-            color: '#92400E',
+            color: theme.colors.warningText,
           }}
         >
           Incomplete data — flag retained for desktop review

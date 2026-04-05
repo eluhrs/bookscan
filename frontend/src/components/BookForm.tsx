@@ -77,13 +77,13 @@ export default function BookForm({ initial, onSave, onCancel }: BookFormProps) {
       {!initial.data_complete && (
         <div
           style={{
-            background: '#FFFBEB',
+            background: theme.colors.warningBg,
             border: `1px solid ${theme.colors.warning}`,
             borderRadius: theme.radius.sm,
             padding: '0.5rem 0.75rem',
             marginBottom: '1rem',
             fontSize: '0.85rem',
-            color: '#92400E',
+            color: theme.colors.warningText,
           }}
         >
           Incomplete data — review before saving.
