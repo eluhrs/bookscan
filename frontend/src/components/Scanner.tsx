@@ -143,8 +143,8 @@ export default function Scanner({ onScan, onScanFail, active, isRetry }: Scanner
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
-      {/* Row 1: Camera viewfinder — flex: 3 */}
-      <div style={{ flex: 3, position: 'relative', overflow: 'hidden', background: '#000' }}>
+      {/* Row 1: Camera viewfinder — flex: 4 */}
+      <div style={{ flex: 4, position: 'relative', overflow: 'hidden', background: '#000' }}>
         <video
           ref={videoRef}
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
@@ -159,8 +159,8 @@ export default function Scanner({ onScan, onScanFail, active, isRetry }: Scanner
               position: 'absolute',
               left: '10%',
               right: '10%',
-              top: torchAvailable ? 58 : 8,
-              bottom: 8,
+              top: '25%',
+              bottom: '25%',
               boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)',
               border: '1px solid rgba(255,255,255,0.2)',
             }}
@@ -219,10 +219,10 @@ export default function Scanner({ onScan, onScanFail, active, isRetry }: Scanner
         </button>
       </div>
 
-      {/* Row 3: Hint / message text — flex: 4 */}
+      {/* Row 3: Hint / message text — flex: 3 */}
       <div
         style={{
-          flex: 4,
+          flex: 3,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
