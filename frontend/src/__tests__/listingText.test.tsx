@@ -44,6 +44,6 @@ describe('ListingGenerator', () => {
     render(<ListingGenerator book={mockBook} onClose={vi.fn()} />)
     fireEvent.click(screen.getByText('Generate Listing'))
     await waitFor(() => screen.getByText(/TITLE: Test Book by Test Author/))
-    expect(screen.getByText('Copy to Clipboard')).toBeInTheDocument()
+    expect(screen.getByText('Copy')).toBeInTheDocument()
   })
 })

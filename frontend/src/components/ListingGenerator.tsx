@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type CSSProperties } from 'react'
 import { Book, Listing } from '../types'
 import { generateListing, getBookListings } from '../api/listings'
+import { theme } from '../styles/theme'
 
 interface ListingGeneratorProps {
   book: Book
@@ -44,66 +45,135 @@ export default function ListingGenerator({ book, onClose }: ListingGeneratorProp
     }
   }
 
+  const btnStyle = (variant: 'primary' | 'secondary'): CSSProperties => ({
+    padding: '0.5rem 0.9rem',
+    fontSize: '0.85rem',
+    fontWeight: 500,
+    border: variant === 'primary' ? 'none' : `1px solid ${theme.colors.border}`,
+    borderRadius: theme.radius.sm,
+    background: variant === 'primary' ? theme.colors.text : theme.colors.bg,
+    color: variant === 'primary' ? '#fff' : theme.colors.text,
+    cursor: 'pointer',
+    fontFamily: theme.font.sans,
+  })
+
   return (
-    <div style={{ maxWidth: 600, margin: '0 auto', padding: '1rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0 }}>Listing: {book.title ?? book.isbn}</h2>
-        <button onClick={onClose}>✕ Close</button>
+    <div style={{ fontFamily: theme.font.sans }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: '1rem',
+        }}
+      >
+        <div>
+          <h2 style={{ margin: '0 0 0.2rem', fontSize: '1rem', fontWeight: 600 }}>
+            {book.title ?? book.isbn}
+          </h2>
+          {book.author && (
+            <p style={{ margin: 0, fontSize: '0.85rem', color: theme.colors.muted }}>
+              {book.author}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={onClose}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: theme.colors.muted,
+            fontSize: '1.1rem',
+            padding: '0 0.25rem',
+          }}
+        >
+          ✕
+        </button>
       </div>
 
-      <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
-        <button onClick={handleGenerate} disabled={generating}>
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+        <button onClick={handleGenerate} disabled={generating} style={btnStyle('primary')}>
           {generating ? 'Generating…' : 'Generate Listing'}
         </button>
         {listing && (
-          <button onClick={handleCopy}>
-            {copied ? 'Copied!' : 'Copy to Clipboard'}
+          <button onClick={handleCopy} style={btnStyle('secondary')}>
+            {copied ? 'Copied!' : 'Copy'}
           </button>
         )}
       </div>
 
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && (
+        <p style={{ color: theme.colors.danger, fontSize: '0.85rem', marginBottom: '0.75rem' }}>
+          {error}
+        </p>
+      )}
 
       {listing && (
         <pre
           style={{
-            marginTop: '1rem',
-            padding: '1rem',
-            background: '#f5f5f5',
-            borderRadius: 4,
+            padding: '0.75rem 1rem',
+            background: theme.colors.surface,
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: theme.radius.sm,
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
-            fontSize: '0.85rem',
-            fontFamily: 'monospace',
+            fontSize: '0.82rem',
+            fontFamily: theme.font.mono,
+            lineHeight: 1.6,
+            margin: '0 0 1rem',
           }}
         >
           {listing.listing_text}
         </pre>
       )}
 
-      {history.length > 0 && (
-        <div style={{ marginTop: '1.5rem' }}>
-          <h3>History ({history.filter((h) => h.id !== listing?.id).length})</h3>
-          {history.filter((h) => h.id !== listing?.id).map((h) => (
-            <div
-              key={h.id}
-              style={{
-                borderTop: '1px solid #eee',
-                paddingTop: '0.5rem',
-                marginTop: '0.5rem',
-                fontSize: '0.8rem',
-                color: '#666',
-              }}
-            >
-              <span>{new Date(h.created_at).toLocaleString()}</span>
-              <button
-                onClick={() => setListing(h)}
-                style={{ marginLeft: '0.5rem', fontSize: '0.8rem' }}
+      {history.filter((h) => h.id !== listing?.id).length > 0 && (
+        <div>
+          <p
+            style={{
+              fontSize: '0.78rem',
+              fontWeight: 500,
+              color: theme.colors.muted,
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              marginBottom: '0.5rem',
+            }}
+          >
+            Previous listings
+          </p>
+          {history
+            .filter((h) => h.id !== listing?.id)
+            .map((h) => (
+              <div
+                key={h.id}
+                style={{
+                  borderTop: `1px solid ${theme.colors.border}`,
+                  paddingTop: '0.5rem',
+                  marginTop: '0.5rem',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: '0.82rem',
+                  color: theme.colors.muted,
+                }}
               >
-                View
-              </button>
-            </div>
-          ))}
+                <span>{new Date(h.created_at).toLocaleString()}</span>
+                <button
+                  onClick={() => setListing(h)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: theme.colors.accent,
+                    fontSize: '0.82rem',
+                    padding: 0,
+                  }}
+                >
+                  View
+                </button>
+              </div>
+            ))}
         </div>
       )}
     </div>
