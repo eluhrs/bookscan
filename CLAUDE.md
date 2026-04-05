@@ -132,14 +132,25 @@ automatically. If you ever edit the hash manually, replace each `$` with `$$`.
 `Acceptable`. Added in migration 002. The field appears in the desktop edit form, the phone review
 form, the eBay listing text, and the CSV export.
 
-**Manual barcode scanning.** `Scanner.tsx` starts the camera via `getUserMedia` requesting
-`{ width: { ideal: 1920 }, height: { ideal: 1080 } }` for better barcode resolution. On button
-press it tries three crop strategies in sequence: (1) 80% × 40% centered, (2) 95% × 25% wide strip,
-(3) 50% × 30% center region stretched 2× for digital zoom. A torch toggle button appears when the
-device reports torch capability. The scan button shows "Retry" after an incomplete-data lookup.
+**Manual barcode scanning — how it works.** Several techniques combine to make scanning reliable
+across phone cameras:
+
+1. **High resolution request.** `getUserMedia` requests `{ width: { ideal: 1920 }, height: { ideal: 1080 } }`. Phones typically grant 1080p or better, giving the decoder many pixels of barcode detail even when the phone is held further back.
+
+2. **Multi-crop decode loop.** On each button press, `Scanner.tsx` tries three crop strategies in sequence and returns on the first success. All crops are taken from the center of the video frame:
+   - Strategy 1 — standard: 80% × 40% of the frame, 1:1 scale
+   - Strategy 2 — wide strip: 95% × 25% of the frame (catches barcodes near the horizontal edges)
+   - Strategy 3 — center zoom: 50% × 30% of the frame stretched 2× digitally (helps cameras that need distance to focus and can't resolve fine lines at close range)
+
+3. **Torch toggle.** A flashlight button appears in the top-right corner of the viewfinder when `track.getCapabilities().torch` is true. Activates via `applyConstraints({ advanced: [{ torch: true }] })`. Torch state persists across scans via a module-level `persistedTorchOn` variable — see below.
+
+4. **Targeting mask.** The dark overlay with a transparent centered rect guides the user to align the barcode. The rect is sized to roughly match the button height (flex proportions 4:2:3 — camera:button:messages) and is vertically centered with 25% padding above and below.
+
 Library: `@zxing/browser` — adequate for this use case when given sufficient resolution. If future
 testing shows persistent failure on low-end devices, evaluate `@undecaf/zbar-wasm` (ZBar compiled
 to WASM, stronger for 1D/EAN barcodes) as a drop-in replacement.
+
+**Torch state persistence across scans.** When the user saves a book and returns to the scan screen, the Scanner component remounts — React state resets to false but the torch may still be physically on. Fix: a module-level variable `let persistedTorchOn = false` outside the component. `useState(persistedTorchOn)` initializes from it on each mount. `handleTorchToggle` writes to it before calling `applyConstraints`. On new stream start, if `persistedTorchOn` is true, `applyConstraints({ torch: true })` re-fires. The cleanup effect does NOT reset `torchOn` state or turn the torch off — stopping the track already powers it down physically, and the persisted value handles restoration on remount. Do not add `applyConstraints({ torch: false })` to cleanup; it races with `t.stop()` and has no reliable effect.
 
 **Scan audio.** `useScanAudio` hook uses Web Audio API (no files). AudioContext is created lazily on
 first button press (satisfies mobile user-gesture requirement). Success: ascending 880/1108Hz chime.
@@ -320,6 +331,15 @@ Apache VirtualHost (apply manually):
 - DATA-01: `condition` column + migration 002
 - AUDIO-01: Web Audio API scan feedback tones (`useScanAudio`)
 - DESIGN-01: Geist design token system applied across all components
+
+**CHANGES-03** — all items implemented:
+- BUG-01: CSV export now queries books with `selectinload(Book.listings)` — books without listings were previously omitted
+- BUG-02: Delete for pre-v2 records fixed with `passive_deletes=True` on `Book.listings` relationship — SQLAlchemy was trying to null `book_id` before delete, which fails on a NOT NULL column; cascade is now handled by the DB FK constraint
+- BUG-03: Removed both `confirm()` calls (one in `BookTable.tsx`, one in `DashboardPage.tsx`) — delete now executes immediately
+- BUG-04: Added `onScanFail` prop to `Scanner.tsx`; negative sound now plays on both barcode-not-found and incomplete-metadata paths
+- DATA-01: Investigated dimensions/weight — data unavailability confirmed (see "Dimensions and weight" gotcha above)
+- SCAN-01: Camera reliability overhaul — high resolution request, 3-strategy multi-crop decode loop, torch toggle, module-level torch state persistence; see "Manual barcode scanning" gotcha above
+- Scan UI: 3-section flexbox layout (`100dvh`) — camera (flex:4), button (flex:2), messages (flex:3); targeting mask vertically centered at `top/bottom: 25%`; torch button overlaid top-right of viewfinder
 
 ---
 
