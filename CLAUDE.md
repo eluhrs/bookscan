@@ -158,6 +158,13 @@ isbn, listing_text, created_at, ebay_status) — not the old listing_text blob.
 **ISBN barcodes only.** The scanner picks up any barcode. Only barcodes starting with `978` or `979`
 are book ISBNs — other barcodes will return empty metadata from the lookup APIs.
 
+**Dimensions and weight — data unavailability.** The `dimensions` and `weight` fields exist in the
+schema and `BookData` but are never populated. None of the current free sources carry physical specs:
+Open Library has no dimensions/weight fields, Google Books has no physical specs in `volumeInfo`,
+and the LoC MODS schema does not include them. ISBNdb (paid, ~$10/month) is the most practical
+source for physical specs and would be the right call once eBay listing accuracy matters enough to
+justify the cost. Until then, dimensions and weight will be blank in all listings.
+
 ---
 
 ## Project Structure
