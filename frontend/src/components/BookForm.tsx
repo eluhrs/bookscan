@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { BookLookup } from '../types'
+import { theme } from '../styles/theme'
 
 interface BookFormProps {
   initial: BookLookup
@@ -19,6 +20,26 @@ const TEXT_FIELDS: Array<{ key: keyof BookLookup; label: string; type?: string }
 ]
 
 const CONDITIONS = ['', 'New', 'Very Good', 'Good', 'Acceptable'] as const
+
+const inputStyle: CSSProperties = {
+  width: '100%',
+  padding: '0.5rem 0.75rem',
+  fontSize: '0.95rem',
+  border: `1px solid ${theme.colors.border}`,
+  borderRadius: theme.radius.sm,
+  fontFamily: theme.font.sans,
+  outline: 'none',
+}
+
+const labelStyle: CSSProperties = {
+  display: 'block',
+  fontSize: '0.78rem',
+  fontWeight: 500,
+  color: theme.colors.muted,
+  marginBottom: '0.3rem',
+  textTransform: 'uppercase',
+  letterSpacing: '0.04em',
+}
 
 export default function BookForm({ initial, onSave, onCancel }: BookFormProps) {
   const [book, setBook] = useState<BookLookup>(initial)
@@ -45,36 +66,46 @@ export default function BookForm({ initial, onSave, onCancel }: BookFormProps) {
   }
 
   return (
-    <div style={{ padding: '1rem', maxWidth: 480, margin: '0 auto' }}>
+    <div style={{ padding: '0.25rem', fontFamily: theme.font.sans }}>
       {book.cover_image_url && (
         <img
           src={book.cover_image_url}
           alt="Cover"
-          style={{ width: 80, marginBottom: '1rem', borderRadius: 4 }}
+          style={{ width: 72, marginBottom: '1rem', borderRadius: theme.radius.sm }}
         />
       )}
       {!initial.data_complete && (
-        <p style={{ color: 'orange', fontSize: '0.85rem' }}>
+        <div
+          style={{
+            background: '#FFFBEB',
+            border: `1px solid ${theme.colors.warning}`,
+            borderRadius: theme.radius.sm,
+            padding: '0.5rem 0.75rem',
+            marginBottom: '1rem',
+            fontSize: '0.85rem',
+            color: '#92400E',
+          }}
+        >
           Incomplete data — review before saving.
-        </p>
+        </div>
       )}
       {TEXT_FIELDS.map(({ key, label, type }) => (
-        <div key={key} style={{ marginBottom: '0.5rem' }}>
-          <label style={{ display: 'block', fontSize: '0.8rem', color: '#666' }}>{label}</label>
+        <div key={key} style={{ marginBottom: '0.75rem' }}>
+          <label style={labelStyle}>{label}</label>
           <input
             type={type ?? 'text'}
             value={String(book[key] ?? '')}
             onChange={(e) => handleChange(key, e.target.value)}
-            style={{ width: '100%', padding: '0.4rem', fontSize: '1rem' }}
+            style={inputStyle}
           />
         </div>
       ))}
-      <div style={{ marginBottom: '0.5rem' }}>
-        <label style={{ display: 'block', fontSize: '0.8rem', color: '#666' }}>Condition</label>
+      <div style={{ marginBottom: '0.75rem' }}>
+        <label style={labelStyle}>Condition</label>
         <select
           value={book.condition ?? ''}
           onChange={(e) => setBook((b) => ({ ...b, condition: e.target.value || null }))}
-          style={{ width: '100%', padding: '0.4rem', fontSize: '1rem' }}
+          style={inputStyle}
         >
           {CONDITIONS.map((c) => (
             <option key={c} value={c}>{c || '— not set —'}</option>
@@ -82,27 +113,61 @@ export default function BookForm({ initial, onSave, onCancel }: BookFormProps) {
         </select>
       </div>
       {!initial.data_complete && (
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+        <div style={{ marginBottom: '1rem' }}>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+            }}
+          >
             <input
               type="checkbox"
               checked={retainFlag}
               onChange={(e) => setRetainFlag(e.target.checked)}
             />
-            <span style={{ fontSize: '0.9rem' }}>Retain Flag</span>
+            <span>Retain Flag</span>
           </label>
         </div>
       )}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+      {error && (
+        <p style={{ color: theme.colors.danger, fontSize: '0.85rem', marginBottom: '0.75rem' }}>
+          {error}
+        </p>
+      )}
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
         <button
           onClick={handleSave}
           disabled={saving}
-          style={{ flex: 1, padding: '0.75rem', fontSize: '1rem' }}
+          style={{
+            flex: 1,
+            padding: '0.65rem',
+            fontSize: '0.95rem',
+            fontWeight: 500,
+            background: saving ? theme.colors.muted : theme.colors.text,
+            color: '#fff',
+            border: 'none',
+            borderRadius: theme.radius.sm,
+            cursor: saving ? 'default' : 'pointer',
+            fontFamily: theme.font.sans,
+          }}
         >
           {saving ? 'Saving…' : 'Save Book'}
         </button>
-        <button onClick={onCancel} style={{ padding: '0.75rem' }}>
+        <button
+          onClick={onCancel}
+          style={{
+            padding: '0.65rem 1rem',
+            fontSize: '0.95rem',
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: theme.radius.sm,
+            background: theme.colors.bg,
+            cursor: 'pointer',
+            fontFamily: theme.font.sans,
+          }}
+        >
           Cancel
         </button>
       </div>

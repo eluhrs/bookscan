@@ -5,6 +5,7 @@ import ListingGenerator from '../components/ListingGenerator'
 import { listBooks, updateBook, deleteBook, exportListingsCSV } from '../api/books'
 import { Book, BookLookup } from '../types'
 import { useAuth } from '../hooks/useAuth'
+import { theme } from '../styles/theme'
 
 export default function DashboardPage() {
   const { logout } = useAuth()
@@ -128,44 +129,107 @@ export default function DashboardPage() {
       data_complete: editingBook.data_complete,
     }
     return (
-      <div style={{ maxWidth: 600, margin: '2rem auto', padding: '0 1rem' }}>
-        <h2>Edit Book</h2>
+      <div
+        style={{
+          maxWidth: 560,
+          margin: '2rem auto',
+          padding: '0 1rem',
+          fontFamily: theme.font.sans,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            marginBottom: '1.5rem',
+            paddingBottom: '1rem',
+            borderBottom: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <button
+            onClick={() => setEditingBook(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: theme.colors.muted,
+              fontSize: '1rem',
+              padding: 0,
+            }}
+          >
+            ←
+          </button>
+          <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Edit Book</h2>
+        </div>
         <BookForm initial={asLookup} onSave={handleEdit} onCancel={() => setEditingBook(null)} />
       </div>
     )
   }
 
   return (
-    <div style={{ padding: '1rem' }}>
+    <div style={{ padding: '1.5rem', fontFamily: theme.font.sans, maxWidth: 1200, margin: '0 auto' }}>
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '1rem',
+          marginBottom: '1.5rem',
+          paddingBottom: '1rem',
+          borderBottom: `1px solid ${theme.colors.border}`,
         }}
       >
-        <h1 style={{ margin: 0 }}>BookScan — {total} books</h1>
+        <div>
+          <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, letterSpacing: '-0.02em' }}>
+            BookScan
+          </h1>
+          <p style={{ margin: '0.2rem 0 0', fontSize: '0.85rem', color: theme.colors.muted }}>
+            {total} book{total !== 1 ? 's' : ''}
+          </p>
+        </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <button onClick={logout}>Log out</button>
+          <button
+            onClick={logout}
+            style={{
+              padding: '0.4rem 0.75rem',
+              fontSize: '0.85rem',
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.radius.sm,
+              background: theme.colors.bg,
+              cursor: 'pointer',
+              fontFamily: theme.font.sans,
+            }}
+          >
+            Log out
+          </button>
         </div>
       </div>
 
-      <div
-        style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}
-      >
+      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
         <input
           placeholder="Search title, author, ISBN…"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-          style={{ flex: 1, minWidth: 200, padding: '0.4rem' }}
+          style={{
+            flex: 1,
+            minWidth: 200,
+            padding: '0.5rem 0.75rem',
+            fontSize: '0.9rem',
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: theme.radius.sm,
+            fontFamily: theme.font.sans,
+            outline: 'none',
+          }}
         />
         <label
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '0.3rem',
+            gap: '0.4rem',
             whiteSpace: 'nowrap',
+            fontSize: '0.85rem',
+            color: theme.colors.muted,
+            cursor: 'pointer',
           }}
         >
           <input
@@ -178,11 +242,13 @@ export default function DashboardPage() {
         <button
           onClick={() => exportListingsCSV().catch(() => alert('Export failed'))}
           style={{
-            padding: '0.4rem 0.75rem',
-            background: '#eee',
-            borderRadius: 4,
-            border: 'none',
+            padding: '0.5rem 0.75rem',
+            fontSize: '0.85rem',
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: theme.radius.sm,
+            background: theme.colors.bg,
             cursor: 'pointer',
+            fontFamily: theme.font.sans,
           }}
         >
           Export CSV
@@ -190,7 +256,7 @@ export default function DashboardPage() {
       </div>
 
       {loading ? (
-        <p>Loading…</p>
+        <p style={{ color: theme.colors.muted, fontSize: '0.9rem' }}>Loading…</p>
       ) : (
         <BookTable
           books={books}
@@ -202,11 +268,44 @@ export default function DashboardPage() {
 
       {totalPages > 1 && (
         <div
-          style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}
+          style={{
+            marginTop: '1.25rem',
+            display: 'flex',
+            gap: '0.5rem',
+            justifyContent: 'center',
+            alignItems: 'center',
+            fontSize: '0.85rem',
+          }}
         >
-          <button disabled={page === 1} onClick={() => setPage((p) => p - 1)}>← Prev</button>
-          <span>Page {page} of {totalPages}</span>
-          <button disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>Next →</button>
+          <button
+            disabled={page === 1}
+            onClick={() => setPage((p) => p - 1)}
+            style={{
+              padding: '0.35rem 0.65rem',
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.radius.sm,
+              background: theme.colors.bg,
+              cursor: page === 1 ? 'default' : 'pointer',
+              opacity: page === 1 ? 0.4 : 1,
+            }}
+          >
+            ← Prev
+          </button>
+          <span style={{ color: theme.colors.muted }}>Page {page} of {totalPages}</span>
+          <button
+            disabled={page === totalPages}
+            onClick={() => setPage((p) => p + 1)}
+            style={{
+              padding: '0.35rem 0.65rem',
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.radius.sm,
+              background: theme.colors.bg,
+              cursor: page === totalPages ? 'default' : 'pointer',
+              opacity: page === totalPages ? 0.4 : 1,
+            }}
+          >
+            Next →
+          </button>
         </div>
       )}
 
@@ -215,7 +314,7 @@ export default function DashboardPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.5)',
+            background: 'rgba(0,0,0,0.4)',
             display: 'flex',
             alignItems: 'flex-start',
             justifyContent: 'center',
@@ -225,11 +324,13 @@ export default function DashboardPage() {
         >
           <div
             style={{
-              background: '#fff',
-              borderRadius: 8,
+              background: theme.colors.bg,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.radius.md,
+              boxShadow: theme.shadow.card,
               width: '100%',
               maxWidth: 640,
-              padding: '1rem',
+              padding: '1.5rem',
             }}
           >
             <ListingGenerator book={listingBook} onClose={() => setListingBook(null)} />
