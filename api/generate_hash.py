@@ -9,4 +9,5 @@ if len(sys.argv) != 2:
     print("Usage: python generate_hash.py <password>", file=sys.stderr)
     sys.exit(1)
 
-print(bcrypt.hashpw(sys.argv[1].encode(), bcrypt.gensalt()).decode())
+hash = bcrypt.hashpw(sys.argv[1].encode(), bcrypt.gensalt()).decode()
+print(hash.replace('$', '$$'))

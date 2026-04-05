@@ -1,6 +1,7 @@
 # BookScan — CLAUDE.md
 
-Personal web app for scanning book ISBN barcodes with a phone camera, looking up metadata from public APIs, storing in PostgreSQL, and generating eBay listing text.
+Personal web app for scanning book ISBN barcodes with a phone camera, looking up
+metadata from public APIs, storing in PostgreSQL, and generating eBay listing text.
 
 ---
 
@@ -29,7 +30,7 @@ Open Library · Google Books · Library of Congress
 
 | Layer | Choice |
 |---|---|
-| Backend | Python 3.12, FastAPI, SQLAlchemy 2.0 async, Alembic, python-jose, passlib, httpx, slowapi |
+| Backend | Python 3.12, FastAPI, SQLAlchemy 2.0 async, Alembic, python-jose, bcrypt, httpx, slowapi |
 | Frontend | React 18, Vite, TypeScript strict, React Router v6, @zxing/browser, Vitest |
 | Database | PostgreSQL 15 |
 | Containers | Docker Compose |
@@ -49,9 +50,11 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api alembic 
 docker compose -f docker-compose.yml -f docker-compose.dev.yml down
 ```
 
-App runs at `http://localhost:3001`.
+App runs at `https://localhost:3001` (Vite serves HTTPS using mkcert certs). mkcert certs are in
+`frontend/localhost+1.pem` and `frontend/localhost+1-key.pem` — Vite loads them automatically if present.
 
-For phone camera access (requires HTTPS), access at `https://<mac-ip>:3001`. mkcert certs are in `frontend/localhost+1.pem` and `frontend/localhost+1-key.pem`. Accept the certificate warning in Safari or install the mkcert CA root.
+For phone camera access, use `https://<mac-ip>:3001`. Accept the certificate warning in Safari or
+install the mkcert CA root.
 
 ---
 
@@ -65,16 +68,28 @@ POSTGRES_PASSWORD=...
 POSTGRES_DB=bookscan
 SECRET_KEY=...          # openssl rand -hex 32
 APP_USERNAME=admin
-PASSWORD_HASH=...        # run: cd api && .venv/bin/python generate_hash.py <password>
+PASSWORD_HASH=...        # see below — output of generate_hash.py, paste directly
 ```
 
-**Important:** `PASSWORD_HASH` stores a bcrypt hash. Generate it with `cd api && .venv/bin/python generate_hash.py <password>`. The `$` in bcrypt hashes requires quoting in `.env`; the app reads it correctly via pydantic-settings.
+**Important:** `PASSWORD_HASH` stores a bcrypt hash with `$` signs escaped as `$$` for Docker Compose.
+`generate_hash.py` outputs the `$$`-escaped form automatically — paste its output directly into `.env`.
+
+To update password:
+```bash
+# cd api && .venv/bin/python generate_hash.py '<password>'
+# Paste output here as PASSWORD_HASH=<output>
+# Then: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+```
+
+The `$$` escaping is required because Docker Compose interpolates `$` in `env_file` values. The
+container receives the correct `$2b$12$...` hash.
 
 ---
 
 ## Auth
 
-- Single-user: `APP_USERNAME` + `PASSWORD` from `.env`
+- Single-user: `APP_USERNAME` + `PASSWORD_HASH` from `.env`
+- Password verified with `bcrypt.checkpw()` (direct bcrypt, no passlib)
 - JWT tokens via `python-jose`, 1-week expiry
 - All routes protected except `POST /api/login`
 - Rate limiting via slowapi on all endpoints, stricter on `/api/books/lookup/{isbn}`
@@ -83,35 +98,65 @@ PASSWORD_HASH=...        # run: cd api && .venv/bin/python generate_hash.py <pas
 
 ## Key Decisions & Gotchas
 
-**Docker Compose dev override strips migration step.** `docker-compose.dev.yml` overrides the CMD to run uvicorn with `--reload`, skipping the `alembic upgrade head` that's baked into the prod Dockerfile CMD. Always run migrations manually after first start or schema changes.
+**Docker Compose dev override strips migration step.** `docker-compose.dev.yml` overrides the CMD to
+run uvicorn with `--reload`, skipping the `alembic upgrade head` that's baked into the prod Dockerfile
+CMD. Always run migrations manually after first start or schema changes.
 
-**Port mapping conflict.** The base `docker-compose.yml` has no `ports:` on the frontend service — ports are declared only in the dev/prod overrides. Do not add `ports:` to the base file or Docker Compose will merge both mappings and neither will bind.
+**Port mapping conflict.** The base `docker-compose.yml` has no `ports:` on the frontend service —
+ports are declared only in the dev/prod overrides. Do not add `ports:` to the base file or Docker
+Compose will merge both mappings and neither will bind.
 
-**Vite proxy target inside Docker.** `vite.config.ts` proxies `/api` to `http://api:8001` (Docker service name), not `localhost`. This is correct for dev mode running inside Docker.
+**Vite proxy target inside Docker.** `vite.config.ts` proxies `/api` to `http://api:8001` (Docker
+service name), not `localhost`. This is correct for dev mode running inside Docker.
 
-**zxing cleanup.** `BrowserMultiFormatReader` in `@zxing/browser` 0.1.x has no `reset()` method. Camera cleanup stops tracks directly via `videoRef.current.srcObject`.
+**zxing cleanup.** `BrowserMultiFormatReader` in `@zxing/browser` 0.1.x has no `reset()` method.
+Camera cleanup stops tracks directly via `videoRef.current.srcObject`.
 
-**Cover download uses its own DB session.** The background cover download task opens a fresh `async_session_maker()` session — it does not reuse the request-scoped session, which is closed by the time the background task runs.
+**Cover download uses its own DB session.** The background cover download task opens a fresh
+`async_session_maker()` session — it does not reuse the request-scoped session, which is closed by
+the time the background task runs.
 
-**HTTP 204 on DELETE.** `apiFetch` guards `resp.status === 204` and returns `undefined` rather than calling `resp.json()`, which would throw on an empty body.
+**HTTP 204 on DELETE.** `apiFetch` guards `resp.status === 204` and returns `undefined` rather than
+calling `resp.json()`, which would throw on an empty body.
 
-**Bcrypt password hashing.** The `.env` field is `PASSWORD_HASH` (bcrypt hash), not `PASSWORD`. Generate a hash with `cd api && .venv/bin/python generate_hash.py <password>`. The auth code uses `pwd_context.verify()`. The test env in `pytest.ini` also uses `PASSWORD_HASH`.
+**Bcrypt password hashing.** The `.env` field is `PASSWORD_HASH`. `generate_hash.py` outputs a
+`$$`-escaped bcrypt hash ready to paste directly into `.env`. The auth code uses `bcrypt.checkpw()`
+(passlib was removed — incompatible with bcrypt ≥ 4.0.0). The test env in `pytest.ini` also uses
+`PASSWORD_HASH`.
 
-**Condition field.** Books have a `condition` column (VARCHAR 20): `New`, `Very Good`, `Good`, `Acceptable`. Added in migration 002. The field appears in the desktop edit form, the phone review form, the eBay listing text, and the CSV export.
+**Docker Compose `$` interpolation.** Docker Compose expands `$` in `env_file` values. Bcrypt hashes
+contain `$` signs, so they must be stored as `$$` in `.env`. `generate_hash.py` handles this
+automatically. If you ever edit the hash manually, replace each `$` with `$$`.
 
-**Manual barcode scanning.** `Scanner.tsx` no longer uses continuous `decodeFromVideoDevice`. It starts the camera stream via `getUserMedia`, renders a targeting mask overlay (CSS box-shadow inset), and on button press captures a single canvas frame cropped to the target rect and calls `reader.decodeFromCanvas()`. The scan button shows "Retry" after an incomplete-data lookup.
+**Condition field.** Books have a `condition` column (VARCHAR 20): `New`, `Very Good`, `Good`,
+`Acceptable`. Added in migration 002. The field appears in the desktop edit form, the phone review
+form, the eBay listing text, and the CSV export.
 
-**Scan audio.** `useScanAudio` hook uses Web Audio API (no files). AudioContext is created lazily on first button press (satisfies mobile user-gesture requirement). Success: ascending 880/1108Hz chime. Review: descending 440/330Hz tone.
+**Manual barcode scanning.** `Scanner.tsx` no longer uses continuous `decodeFromVideoDevice`. It
+starts the camera stream via `getUserMedia`, renders a targeting mask overlay (CSS box-shadow inset),
+and on button press captures a single canvas frame cropped to the target rect and calls
+`reader.decodeFromCanvas()`. The scan button shows "Retry" after an incomplete-data lookup.
 
-**Phone vs desktop UI.** `PhoneReview` is the post-scan save form (phone only). `BookForm` is the desktop edit form. `ScanPage` renders `PhoneReview`; `DashboardPage` renders `BookForm` for editing.
+**Scan audio.** `useScanAudio` hook uses Web Audio API (no files). AudioContext is created lazily on
+first button press (satisfies mobile user-gesture requirement). Success: ascending 880/1108Hz chime.
+Review: descending 440/330Hz tone.
 
-**Dashboard polling.** `DashboardPage` polls `GET /api/books` every 3 seconds via `setInterval`, paused when tab is not visible (`visibilitychange` event). No WebSocket or backend changes needed.
+**Phone vs desktop UI.** `PhoneReview` is the post-scan save form (phone only). `BookForm` is the
+desktop edit form. `ScanPage` renders `PhoneReview`; `DashboardPage` renders `BookForm` for editing.
 
-**Design tokens.** All UI colors, fonts, radii, and shadows are in `frontend/src/styles/theme.ts`. Do not add new hardcoded hex values to components — reference `theme.colors.*` etc. instead. Geist and Geist Mono loaded from Google Fonts CDN in `index.html`.
+**Dashboard polling.** `DashboardPage` polls `GET /api/books` every 3 seconds via `setInterval`,
+paused when tab is not visible (`visibilitychange` event). No WebSocket or backend changes needed.
 
-**CSV export columns.** `GET /api/listings?format=csv` now outputs discrete book+listing columns (title, author, publisher, edition, year, pages, dimensions, weight, subject, description, condition, isbn, listing_text, created_at, ebay_status) — not the old listing_text blob.
+**Design tokens.** All UI colors, fonts, radii, and shadows are in `frontend/src/styles/theme.ts`.
+Do not add new hardcoded hex values to components — reference `theme.colors.*` etc. instead. Geist
+and Geist Mono loaded from Google Fonts CDN in `index.html`.
 
-**ISBN barcodes only.** The scanner picks up any barcode. Only barcodes starting with `978` or `979` are book ISBNs — other barcodes will return empty metadata from the lookup APIs.
+**CSV export columns.** `GET /api/listings?format=csv` now outputs discrete book+listing columns
+(title, author, publisher, edition, year, pages, dimensions, weight, subject, description, condition,
+isbn, listing_text, created_at, ebay_status) — not the old listing_text blob.
+
+**ISBN barcodes only.** The scanner picks up any barcode. Only barcodes starting with `978` or `979`
+are book ISBNs — other barcodes will return empty metadata from the lookup APIs.
 
 ---
 
@@ -129,7 +174,9 @@ bookscan/
 │   ├── generate_hash.py        # CLI: generate bcrypt hash for PASSWORD_HASH
 │   ├── pytest.ini              # asyncio_mode=auto, in-memory SQLite for tests
 │   ├── alembic/
-│   │   └── versions/001_initial_schema.py
+│   │   └── versions/
+│   │       ├── 001_initial_schema.py
+│   │       └── 002_add_condition.py   # adds condition VARCHAR(20) to books
 │   ├── app/
 │   │   ├── main.py             # FastAPI app, slowapi, router registration
 │   │   ├── config.py           # pydantic-settings v2
@@ -156,6 +203,7 @@ bookscan/
     └── src/
         ├── api/
         │   ├── client.ts       # apiFetch wrapper (Bearer token, 204 guard)
+        │   ├── auth.ts         # login (form POST), getMe
         │   ├── books.ts        # lookupIsbn, saveBook, listBooks, updateBook, deleteBook, exportListingsCSV
         │   └── listings.ts     # generateListing, getBookListings, getAllListings
         ├── context/
@@ -165,10 +213,10 @@ bookscan/
         │   ├── useBreakpoint.ts # isMobile: window.innerWidth < 768
         │   └── useScanAudio.ts  # Web Audio API scan feedback tones
         ├── components/
-        │   ├── Scanner.tsx     # @zxing/browser camera, debounced, HTTPS guard
-        │   ├── BookForm.tsx    # post-scan metadata form
+        │   ├── Scanner.tsx     # @zxing/browser camera, single-frame capture, targeting mask
+        │   ├── BookForm.tsx    # desktop book edit form (condition, retain flag)
         │   ├── BookTable.tsx   # sortable, filterable, aria-sort, confirm-delete
-        │   ├── PhoneReview.tsx  # Post-scan mobile save form (phone only)
+        │   ├── PhoneReview.tsx  # post-scan mobile save form (phone only)
         │   └── ListingGenerator.tsx # generate + copy-to-clipboard + history
         ├── pages/
         │   ├── LoginPage.tsx
@@ -250,8 +298,23 @@ Apache VirtualHost (apply manually):
 
 ---
 
+## Completed Iterations
+
+**CHANGES-02** — all items implemented except DASH-01 (per-row eBay copy button, removed from scope):
+- BUG-01: Review flag now clears on dashboard edit (with retain option)
+- BUG-02/DASH-02: CSV export outputs discrete columns
+- BUG-03: bcrypt password hashing via `PASSWORD_HASH` in `.env`
+- SCAN-01/02/03: Single-frame capture with targeting mask and manual shutter button
+- PHONE-01/02/03: `PhoneReview` form, scan button removed from desktop, dashboard polls at 3s
+- DATA-01: `condition` column + migration 002
+- AUDIO-01: Web Audio API scan feedback tones (`useScanAudio`)
+- DESIGN-01: Geist design token system applied across all components
+
+---
+
 ## Future Work
 
+- DASH-01: Per-row eBay listing copy button (deferred)
 - eBay API integration (OAuth, `AddFixedPriceItem`, status sync)
 - ISBNdb for dimensions/weight
 - WorldCat fallback for obscure titles
