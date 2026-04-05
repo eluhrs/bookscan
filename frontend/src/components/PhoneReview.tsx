@@ -22,6 +22,7 @@ export default function PhoneReview({ book, onSave, onCancel }: PhoneReviewProps
       await onSave({ ...book, condition })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed')
+    } finally {
       setSaving(false)
     }
   }
