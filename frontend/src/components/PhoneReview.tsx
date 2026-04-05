@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { BookLookup } from '../types'
+import { theme } from '../styles/theme'
 
 const CONDITIONS = ['New', 'Very Good', 'Good', 'Acceptable'] as const
 type Condition = (typeof CONDITIONS)[number]
@@ -28,7 +29,7 @@ export default function PhoneReview({ book, onSave, onCancel }: PhoneReviewProps
   }
 
   return (
-    <div style={{ padding: '1.25rem', maxWidth: 480, margin: '0 auto', color: '#000' }}>
+    <div style={{ padding: '1.25rem', maxWidth: 480, margin: '0 auto', color: theme.colors.text }}>
       {book.cover_image_url && (
         <img
           src={book.cover_image_url}
@@ -40,10 +41,10 @@ export default function PhoneReview({ book, onSave, onCancel }: PhoneReviewProps
       <h2 style={{ margin: '0 0 0.25rem', fontSize: '1.25rem', lineHeight: 1.3 }}>
         {book.title ?? 'Unknown Title'}
       </h2>
-      <p style={{ margin: '0 0 0.15rem', color: '#444', fontSize: '1rem' }}>
+      <p style={{ margin: '0 0 0.15rem', color: '#333', fontSize: '1rem' }}>
         {book.author ?? '—'}
       </p>
-      <p style={{ margin: '0 0 0.75rem', color: '#777', fontSize: '0.9rem' }}>
+      <p style={{ margin: '0 0 0.75rem', color: theme.colors.muted, fontSize: '0.9rem' }}>
         {[book.year, book.publisher].filter(Boolean).join(' · ')}
       </p>
 
@@ -75,9 +76,9 @@ export default function PhoneReview({ book, onSave, onCancel }: PhoneReviewProps
               flex: 1,
               padding: '0.6rem 0.2rem',
               fontSize: '0.78rem',
-              background: condition === c ? '#000' : '#F3F4F6',
+              background: condition === c ? '#000' : theme.colors.surface,
               color: condition === c ? '#fff' : '#374151',
-              border: condition === c ? '1px solid #000' : '1px solid #D1D5DB',
+              border: condition === c ? '1px solid #000' : `1px solid ${theme.colors.border}`,
               borderRadius: 6,
               cursor: 'pointer',
               fontWeight: condition === c ? 600 : 400,
@@ -101,7 +102,7 @@ export default function PhoneReview({ book, onSave, onCancel }: PhoneReviewProps
           padding: '1rem',
           fontSize: '1.1rem',
           fontWeight: 600,
-          background: '#22C55E',
+          background: theme.colors.scanGreen,
           color: '#fff',
           border: 'none',
           borderRadius: 8,
@@ -119,7 +120,7 @@ export default function PhoneReview({ book, onSave, onCancel }: PhoneReviewProps
           style={{
             background: 'none',
             border: 'none',
-            color: '#6B7280',
+            color: theme.colors.muted,
             cursor: 'pointer',
             fontSize: '0.9rem',
             padding: '0.5rem',

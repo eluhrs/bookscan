@@ -5,6 +5,7 @@ import PhoneReview from '../components/PhoneReview'
 import { lookupIsbn, saveBook } from '../api/books'
 import { useScanAudio } from '../hooks/useScanAudio'
 import { BookLookup } from '../types'
+import { theme } from '../styles/theme'
 
 type ScanState = 'scanning' | 'loading' | 'review' | 'error'
 
@@ -64,7 +65,7 @@ export default function ScanPage() {
         }}
       >
         <strong>BookScan</strong>
-        <Link to="/dashboard" style={{ color: '#aaa', textDecoration: 'none', fontSize: '0.9rem' }}>
+        <Link to="/dashboard" style={{ color: '#888', textDecoration: 'none', fontSize: '0.9rem' }}>
           Dashboard →
         </Link>
       </div>
@@ -72,7 +73,7 @@ export default function ScanPage() {
       {lastSaved && (
         <div
           style={{
-            background: '#1a4a1a',
+            background: '#052e16',
             padding: '0.5rem 1rem',
             fontSize: '0.85rem',
             color: '#8f8',
@@ -87,7 +88,7 @@ export default function ScanPage() {
           <Scanner onScan={handleScan} active={true} isRetry={isRetry} />
           <p
             style={{
-              color: '#888',
+              color: theme.colors.muted,
               textAlign: 'center',
               marginTop: '0.75rem',
               fontSize: '0.85rem',
@@ -106,7 +107,7 @@ export default function ScanPage() {
 
       {state === 'error' && (
         <div style={{ padding: '2rem', textAlign: 'center' }}>
-          <p style={{ color: 'red' }}>{errorMsg}</p>
+          <p style={{ color: theme.colors.danger }}>{errorMsg}</p>
           <button
             onClick={() => setState('scanning')}
             style={{ marginTop: '1rem', padding: '0.75rem 1.5rem' }}
