@@ -84,6 +84,7 @@ export default function DashboardPage() {
       weight: editingBook.weight,
       subject: editingBook.subject,
       description: editingBook.description,
+      condition: editingBook.condition,
       cover_image_url: editingBook.cover_image_url,
       data_sources: editingBook.data_sources,
       data_complete: editingBook.data_complete,
