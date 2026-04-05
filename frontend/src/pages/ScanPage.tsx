@@ -55,7 +55,7 @@ export default function ScanPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#000', color: '#fff' }}>
+    <div style={{ height: '100dvh', background: '#000', color: '#fff', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div
         style={{
           padding: '0.75rem 1rem',
@@ -84,29 +84,19 @@ export default function ScanPage() {
       )}
 
       {state === 'scanning' && (
-        <div style={{ padding: '1rem' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <Scanner onScan={handleScan} onScanFail={playReview} active={true} isRetry={isRetry} />
-          <p
-            style={{
-              color: theme.colors.muted,
-              textAlign: 'center',
-              marginTop: '0.75rem',
-              fontSize: '0.85rem',
-            }}
-          >
-            Align barcode within the frame and tap Scan
-          </p>
         </div>
       )}
 
       {state === 'loading' && (
-        <div style={{ textAlign: 'center', paddingTop: '4rem', color: '#888' }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
           Looking up…
         </div>
       )}
 
       {state === 'error' && (
-        <div style={{ padding: '2rem', textAlign: 'center' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
           <p style={{ color: theme.colors.danger }}>{errorMsg}</p>
           <button
             onClick={() => setState('scanning')}

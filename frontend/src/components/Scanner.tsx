@@ -48,12 +48,9 @@ export default function Scanner({ onScan, onScanFail, active, isRetry }: Scanner
         },
       })
       .then((stream) => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream
-        }
+        if (videoRef.current) videoRef.current.srcObject = stream
         const track = stream.getVideoTracks()[0]
         trackRef.current = track
-        // Check torch support (typed as any — torch is not in standard TS types)
         const caps = track.getCapabilities() as MediaTrackCapabilities & { torch?: boolean }
         setTorchAvailable(!!caps.torch)
       })
@@ -121,28 +118,29 @@ export default function Scanner({ onScan, onScanFail, active, isRetry }: Scanner
     }
   }
 
+  const buttonLabel = scanning ? 'Scanning…' : isRetry ? 'Retry' : 'Scan'
+
   if (cameraError) {
     return (
-      <div style={{ padding: '1rem', color: 'red', textAlign: 'center' }}>
-        {cameraError}
+      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+        <p style={{ color: 'red', textAlign: 'center', fontSize: '0.9rem', margin: 0 }}>{cameraError}</p>
       </div>
     )
   }
 
-  const buttonLabel = scanning ? 'Scanning…' : isRetry ? 'Retry' : 'Scan'
-
   return (
-    <div style={{ width: '100%', maxWidth: 480, margin: '0 auto' }}>
-      {/* Viewfinder + overlay */}
-      <div style={{ position: 'relative', display: 'block', lineHeight: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+
+      {/* Row 1: Camera viewfinder — flex: 1 */}
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#000' }}>
         <video
           ref={videoRef}
-          style={{ width: '100%', display: active ? 'block' : 'none', background: '#000' }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           autoPlay
           muted
           playsInline
         />
-        {/* Darkening overlay with transparent targeting rect matching strategy 1 crop */}
+        {/* Darkening overlay with transparent targeting rect */}
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
           <div
             style={{
@@ -161,42 +159,46 @@ export default function Scanner({ onScan, onScanFail, active, isRetry }: Scanner
             <div style={{ position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, borderBottom: `3px solid ${theme.colors.accent}`, borderRight: `3px solid ${theme.colors.accent}` }} />
           </div>
         </div>
-      </div>
-
-      {/* Hidden canvas for frame capture */}
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
-
-      {/* Controls row: torch toggle (when available) + scan button */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+        {/* Torch toggle — overlaid top-right corner of viewfinder */}
         {torchAvailable && (
           <button
             onClick={handleTorchToggle}
             style={{
-              padding: '1rem',
-              fontSize: '1.3rem',
-              background: torchOn ? '#FFD700' : 'rgba(255,255,255,0.15)',
+              position: 'absolute',
+              top: 10,
+              right: 10,
+              padding: '0.4rem 0.5rem',
+              fontSize: '1.2rem',
+              lineHeight: 1,
+              background: torchOn ? '#FFD700' : 'rgba(0,0,0,0.5)',
               border: 'none',
               borderRadius: 8,
               cursor: 'pointer',
-              flexShrink: 0,
             }}
             aria-label={torchOn ? 'Turn off torch' : 'Turn on torch'}
           >
             🔦
           </button>
         )}
+      </div>
+
+      {/* Hidden canvas for frame capture */}
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+      {/* Row 2: Scan button — flex: 1 */}
+      <div style={{ flex: 1, display: 'flex', padding: '0.75rem 1rem' }}>
         <button
           onClick={handleScanPress}
           disabled={scanning || !active}
           style={{
             flex: 1,
-            padding: '1rem',
-            fontSize: '1.1rem',
-            fontWeight: 600,
+            fontSize: '1.5rem',
+            fontWeight: 700,
+            letterSpacing: '0.04em',
             background: theme.colors.scanGreen,
             color: '#fff',
             border: 'none',
-            borderRadius: 8,
+            borderRadius: 12,
             cursor: scanning ? 'default' : 'pointer',
             opacity: scanning ? 0.7 : 1,
           }}
@@ -205,11 +207,25 @@ export default function Scanner({ onScan, onScanFail, active, isRetry }: Scanner
         </button>
       </div>
 
-      {scanError && (
-        <p style={{ color: '#ff6b6b', textAlign: 'center', marginTop: '0.5rem', fontSize: '0.9rem' }}>
-          {scanError}
-        </p>
-      )}
+      {/* Row 3: Hint / message text — flex: 1 */}
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '0 1.5rem',
+          textAlign: 'center',
+        }}
+      >
+        {scanError ? (
+          <p style={{ color: '#ff6b6b', fontSize: '1rem', margin: 0 }}>{scanError}</p>
+        ) : (
+          <p style={{ color: '#666', fontSize: '0.9rem', margin: 0 }}>
+            Align barcode within the frame and tap {isRetry ? 'Retry' : 'Scan'}
+          </p>
+        )}
+      </div>
     </div>
   )
 }
