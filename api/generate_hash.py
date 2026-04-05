@@ -3,11 +3,10 @@
 Usage: python generate_hash.py <password>
 """
 import sys
-from passlib.context import CryptContext
+import bcrypt
 
 if len(sys.argv) != 2:
     print("Usage: python generate_hash.py <password>", file=sys.stderr)
     sys.exit(1)
 
-ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
-print(ctx.hash(sys.argv[1]))
+print(bcrypt.hashpw(sys.argv[1].encode(), bcrypt.gensalt()).decode())
