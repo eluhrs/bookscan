@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { BrowserMultiFormatReader } from '@zxing/browser'
 import { theme } from '../styles/theme'
 
+// Module-level — survives component remounts so torch state persists between scans
+let persistedTorchOn = false
+
 interface ScannerProps {
   onScan: (isbn: string) => void
   onScanFail?: () => void
@@ -27,7 +30,7 @@ export default function Scanner({ onScan, onScanFail, active, isRetry }: Scanner
   const [scanError, setScanError] = useState<string | null>(null)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [torchAvailable, setTorchAvailable] = useState(false)
-  const [torchOn, setTorchOn] = useState(false)
+  const [torchOn, setTorchOn] = useState(persistedTorchOn)
 
   useEffect(() => {
     if (!active) return
@@ -52,36 +55,41 @@ export default function Scanner({ onScan, onScanFail, active, isRetry }: Scanner
         const track = stream.getVideoTracks()[0]
         trackRef.current = track
         const caps = track.getCapabilities() as MediaTrackCapabilities & { torch?: boolean }
-        setTorchAvailable(!!caps.torch)
+        const hasTorch = !!caps.torch
+        setTorchAvailable(hasTorch)
+        if (persistedTorchOn && hasTorch) {
+          track.applyConstraints({ advanced: [{ torch: true } as any] }).catch(() => {})
+          // torchOn already true from useState(persistedTorchOn)
+        } else if (persistedTorchOn && !hasTorch) {
+          persistedTorchOn = false
+          setTorchOn(false)
+        }
       })
       .catch((e) => {
         setCameraError(`Camera error: ${e instanceof Error ? e.message : String(e)}`)
       })
 
     return () => {
-      // Explicitly turn torch off before releasing track so physical state matches UI on remount
-      if (trackRef.current) {
-        trackRef.current.applyConstraints({ advanced: [{ torch: false } as any] }).catch(() => {})
-      }
       if (videoRef.current?.srcObject) {
         const stream = videoRef.current.srcObject as MediaStream
         stream.getTracks().forEach((t) => t.stop())
         videoRef.current.srcObject = null
       }
       trackRef.current = null
-      setTorchOn(false)
       setTorchAvailable(false)
+      // torchOn state intentionally NOT reset — persistedTorchOn handles restoration on remount
     }
   }, [active])
 
   async function handleTorchToggle() {
     if (!trackRef.current) return
     const next = !torchOn
+    persistedTorchOn = next
     try {
       await trackRef.current.applyConstraints({ advanced: [{ torch: next } as any] })
       setTorchOn(next)
     } catch {
-      // Torch not supported on this device despite capability report — ignore
+      persistedTorchOn = torchOn  // revert on failure
     }
   }
 
@@ -135,8 +143,8 @@ export default function Scanner({ onScan, onScanFail, active, isRetry }: Scanner
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
-      {/* Row 1: Camera viewfinder — flex: 4 (gets the space reclaimed from the button) */}
-      <div style={{ flex: 4, position: 'relative', overflow: 'hidden', background: '#000' }}>
+      {/* Row 1: Camera viewfinder — flex: 3 */}
+      <div style={{ flex: 3, position: 'relative', overflow: 'hidden', background: '#000' }}>
         <video
           ref={videoRef}
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
@@ -211,10 +219,10 @@ export default function Scanner({ onScan, onScanFail, active, isRetry }: Scanner
         </button>
       </div>
 
-      {/* Row 3: Hint / message text — flex: 3 */}
+      {/* Row 3: Hint / message text — flex: 4 */}
       <div
         style={{
-          flex: 1,
+          flex: 4,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
