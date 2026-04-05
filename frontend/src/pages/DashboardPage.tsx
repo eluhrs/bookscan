@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Link } from 'react-router-dom'
 import BookTable from '../components/BookTable'
 import BookForm from '../components/BookForm'
 import ListingGenerator from '../components/ListingGenerator'
@@ -35,7 +34,45 @@ export default function DashboardPage() {
     }
   }, [page, incompleteOnly, search])
 
+  const poll = useCallback(async () => {
+    try {
+      const result = await listBooks({
+        page,
+        page_size: PAGE_SIZE,
+        incomplete_only: incompleteOnly,
+        search: search || undefined,
+      })
+      setBooks(result.items)
+      setTotal(result.total)
+    } catch {
+      // Ignore silent poll errors
+    }
+  }, [page, incompleteOnly, search])
+
   useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null
+
+    function start() {
+      if (document.visibilityState === 'visible') {
+        interval = setInterval(poll, 3000)
+      }
+    }
+
+    function handleVisibility() {
+      if (interval) clearInterval(interval)
+      start()
+    }
+
+    start()
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      if (interval) clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [poll])
 
   async function handleEdit(updated: BookLookup, retainFlag?: boolean) {
     if (!editingBook) return
@@ -100,22 +137,37 @@ export default function DashboardPage() {
 
   return (
     <div style={{ padding: '1rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '1rem',
+        }}
+      >
         <h1 style={{ margin: 0 }}>BookScan — {total} books</h1>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <Link to="/scan" style={{ fontSize: '0.9rem' }}>📱 Scan</Link>
           <button onClick={logout}>Log out</button>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+      <div
+        style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}
+      >
         <input
           placeholder="Search title, author, ISBN…"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1) }}
           style={{ flex: 1, minWidth: 200, padding: '0.4rem' }}
         />
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', whiteSpace: 'nowrap' }}>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.3rem',
+            whiteSpace: 'nowrap',
+          }}
+        >
           <input
             type="checkbox"
             checked={incompleteOnly}
@@ -125,7 +177,13 @@ export default function DashboardPage() {
         </label>
         <button
           onClick={() => exportListingsCSV().catch(() => alert('Export failed'))}
-          style={{ padding: '0.4rem 0.75rem', background: '#eee', borderRadius: 4, border: 'none', cursor: 'pointer' }}
+          style={{
+            padding: '0.4rem 0.75rem',
+            background: '#eee',
+            borderRadius: 4,
+            border: 'none',
+            cursor: 'pointer',
+          }}
         >
           Export CSV
         </button>
@@ -143,7 +201,9 @@ export default function DashboardPage() {
       )}
 
       {totalPages > 1 && (
-        <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+        <div
+          style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}
+        >
           <button disabled={page === 1} onClick={() => setPage((p) => p - 1)}>← Prev</button>
           <span>Page {page} of {totalPages}</span>
           <button disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>Next →</button>
@@ -151,12 +211,27 @@ export default function DashboardPage() {
       )}
 
       {listingBook && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-          display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-          overflowY: 'auto', padding: '2rem'
-        }}>
-          <div style={{ background: '#fff', borderRadius: 8, width: '100%', maxWidth: 640, padding: '1rem' }}>
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            overflowY: 'auto',
+            padding: '2rem',
+          }}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 8,
+              width: '100%',
+              maxWidth: 640,
+              padding: '1rem',
+            }}
+          >
             <ListingGenerator book={listingBook} onClose={() => setListingBook(null)} />
           </div>
         </div>
