@@ -50,6 +50,7 @@ export default function DashboardPage() {
         subject: updated.subject,
         description: updated.description,
         cover_image_url: updated.cover_image_url,
+        condition: updated.condition,
         data_complete: updated.data_complete,
       })
       setEditingBook(null)
