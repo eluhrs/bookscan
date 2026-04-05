@@ -99,7 +99,6 @@ export default function DashboardPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Delete this book?')) return
     try {
       await deleteBook(id)
       load()

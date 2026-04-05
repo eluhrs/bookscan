@@ -191,9 +191,7 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
                   Edit
                 </button>
                 <button
-                  onClick={() => {
-                    if (window.confirm(`Delete "${book.title ?? book.isbn}"?`)) onDelete(book.id)
-                  }}
+                  onClick={() => onDelete(book.id)}
                   style={{
                     padding: '0.3rem 0.6rem',
                     fontSize: '0.8rem',

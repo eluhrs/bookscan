@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
+import { vi } from 'vitest'
 import BookTable from '../components/BookTable'
 import { Book } from '../types'
 
@@ -47,5 +48,13 @@ describe('BookTable', () => {
     render(<BookTable books={books} onEdit={vi.fn()} onDelete={vi.fn()} onGenerateListing={vi.fn()} />)
     expect(screen.getByText('Incomplete Book')).toBeInTheDocument()
     expect(screen.getByTitle('Incomplete data')).toBeInTheDocument()
+  })
+
+  it('calls onDelete immediately when delete button is clicked', () => {
+    const onDelete = vi.fn()
+    const book = makeBook({ title: 'Delete Me' })
+    render(<BookTable books={[book]} onEdit={vi.fn()} onDelete={onDelete} onGenerateListing={vi.fn()} />)
+    fireEvent.click(screen.getByLabelText('Delete book'))
+    expect(onDelete).toHaveBeenCalledWith(book.id)
   })
 })
