@@ -11,6 +11,7 @@ export interface Book {
   weight: string | null
   subject: string | null
   description: string | null
+  condition: string | null
   cover_image_url: string | null
   cover_image_local: string | null
   data_sources: Record<string, string> | null
@@ -31,6 +32,7 @@ export interface BookLookup {
   weight: string | null
   subject: string | null
   description: string | null
+  condition: string | null
   cover_image_url: string | null
   data_sources: Record<string, string> | null
   data_complete: boolean

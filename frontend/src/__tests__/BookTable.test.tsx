@@ -15,6 +15,7 @@ const makeBook = (overrides: Partial<Book> = {}): Book => ({
   weight: null,
   subject: null,
   description: null,
+  condition: null,
   cover_image_url: null,
   cover_image_local: null,
   data_sources: null,

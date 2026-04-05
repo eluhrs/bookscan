@@ -3,11 +3,11 @@ import { BookLookup } from '../types'
 
 interface BookFormProps {
   initial: BookLookup
-  onSave: (book: BookLookup) => Promise<void>
+  onSave: (book: BookLookup, retainFlag?: boolean) => Promise<void>
   onCancel: () => void
 }
 
-const FIELDS: Array<{ key: keyof BookLookup; label: string; type?: string }> = [
+const TEXT_FIELDS: Array<{ key: keyof BookLookup; label: string; type?: string }> = [
   { key: 'isbn', label: 'ISBN' },
   { key: 'title', label: 'Title' },
   { key: 'author', label: 'Author' },
@@ -18,8 +18,11 @@ const FIELDS: Array<{ key: keyof BookLookup; label: string; type?: string }> = [
   { key: 'subject', label: 'Subject' },
 ]
 
+const CONDITIONS = ['', 'New', 'Very Good', 'Good', 'Acceptable'] as const
+
 export default function BookForm({ initial, onSave, onCancel }: BookFormProps) {
   const [book, setBook] = useState<BookLookup>(initial)
+  const [retainFlag, setRetainFlag] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -34,7 +37,7 @@ export default function BookForm({ initial, onSave, onCancel }: BookFormProps) {
     setSaving(true)
     setError('')
     try {
-      await onSave(book)
+      await onSave(book, retainFlag)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed')
       setSaving(false)
@@ -50,12 +53,12 @@ export default function BookForm({ initial, onSave, onCancel }: BookFormProps) {
           style={{ width: 80, marginBottom: '1rem', borderRadius: 4 }}
         />
       )}
-      {!book.data_complete && (
+      {!initial.data_complete && (
         <p style={{ color: 'orange', fontSize: '0.85rem' }}>
           Incomplete data — review before saving.
         </p>
       )}
-      {FIELDS.map(({ key, label, type }) => (
+      {TEXT_FIELDS.map(({ key, label, type }) => (
         <div key={key} style={{ marginBottom: '0.5rem' }}>
           <label style={{ display: 'block', fontSize: '0.8rem', color: '#666' }}>{label}</label>
           <input
@@ -66,6 +69,30 @@ export default function BookForm({ initial, onSave, onCancel }: BookFormProps) {
           />
         </div>
       ))}
+      <div style={{ marginBottom: '0.5rem' }}>
+        <label style={{ display: 'block', fontSize: '0.8rem', color: '#666' }}>Condition</label>
+        <select
+          value={book.condition ?? ''}
+          onChange={(e) => setBook((b) => ({ ...b, condition: e.target.value || null }))}
+          style={{ width: '100%', padding: '0.4rem', fontSize: '1rem' }}
+        >
+          {CONDITIONS.map((c) => (
+            <option key={c} value={c}>{c || '— not set —'}</option>
+          ))}
+        </select>
+      </div>
+      {!initial.data_complete && (
+        <div style={{ marginBottom: '0.75rem' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={retainFlag}
+              onChange={(e) => setRetainFlag(e.target.checked)}
+            />
+            <span style={{ fontSize: '0.9rem' }}>Retain Flag</span>
+          </label>
+        </div>
+      )}
       {error && <p style={{ color: 'red' }}>{error}</p>}
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
         <button
