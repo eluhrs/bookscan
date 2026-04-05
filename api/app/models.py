@@ -33,7 +33,7 @@ class Book(Base):
         DateTime, server_default=func.now(), onupdate=func.now()
     )
 
-    listings: Mapped[list["Listing"]] = relationship(back_populates="book")
+    listings: Mapped[list["Listing"]] = relationship(back_populates="book", passive_deletes=True)
 
 
 class Listing(Base):

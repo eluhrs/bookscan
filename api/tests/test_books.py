@@ -109,3 +109,19 @@ async def test_book_condition_defaults_null(client, auth_headers):
     )
     assert resp.status_code == 201
     assert resp.json()["condition"] is None
+
+
+@pytest.mark.asyncio
+async def test_delete_book_with_listing(client, auth_headers):
+    """Deleting a book that has listings must succeed (FK cascade)."""
+    create = await client.post(
+        "/api/books", json={"isbn": "DELETE-CASCADE-TEST", "title": "Has Listing"}, headers=auth_headers
+    )
+    assert create.status_code == 201
+    book_id = create.json()["id"]
+    listing = await client.post(f"/api/books/{book_id}/listings", headers=auth_headers)
+    assert listing.status_code == 201
+    resp = await client.delete(f"/api/books/{book_id}", headers=auth_headers)
+    assert resp.status_code == 204
+    gone = await client.get(f"/api/books/{book_id}", headers=auth_headers)
+    assert gone.status_code == 404
