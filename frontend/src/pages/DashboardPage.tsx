@@ -37,7 +37,7 @@ export default function DashboardPage() {
 
   useEffect(() => { load() }, [load])
 
-  async function handleEdit(updated: BookLookup) {
+  async function handleEdit(updated: BookLookup, retainFlag?: boolean) {
     if (!editingBook) return
     try {
       await updateBook(editingBook.id, {
@@ -51,7 +51,7 @@ export default function DashboardPage() {
         description: updated.description,
         cover_image_url: updated.cover_image_url,
         condition: updated.condition,
-        data_complete: updated.data_complete,
+        ...(retainFlag === true ? { data_complete: false } : {}),
       })
       setEditingBook(null)
       load()
