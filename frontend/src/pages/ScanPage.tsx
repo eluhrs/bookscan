@@ -85,7 +85,7 @@ export default function ScanPage() {
 
       {state === 'scanning' && (
         <div style={{ padding: '1rem' }}>
-          <Scanner onScan={handleScan} active={true} isRetry={isRetry} />
+          <Scanner onScan={handleScan} onScanFail={playReview} active={true} isRetry={isRetry} />
           <p
             style={{
               color: theme.colors.muted,

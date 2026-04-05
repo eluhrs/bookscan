@@ -4,11 +4,12 @@ import { theme } from '../styles/theme'
 
 interface ScannerProps {
   onScan: (isbn: string) => void
+  onScanFail?: () => void
   active: boolean
   isRetry?: boolean
 }
 
-export default function Scanner({ onScan, active, isRetry }: ScannerProps) {
+export default function Scanner({ onScan, onScanFail, active, isRetry }: ScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const readerRef = useRef<BrowserMultiFormatReader | null>(null)
@@ -71,6 +72,7 @@ export default function Scanner({ onScan, active, isRetry }: ScannerProps) {
       const result = readerRef.current.decodeFromCanvas(canvas)
       onScan(result.getText())
     } catch {
+      onScanFail?.()
       setScanError('No barcode found — try again')
     } finally {
       setScanning(false)
