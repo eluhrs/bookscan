@@ -77,14 +77,15 @@ async def get_all_listings(
     _user: Annotated[str, Depends(get_current_user)],
     export_format: Optional[str] = Query(None, alias="format"),
 ) -> Response:
-    result = await db.scalars(
-        select(Listing)
-        .options(selectinload(Listing.book))
-        .order_by(Listing.created_at.desc())
-    )
-    listings = list(result.all())
-
     if export_format == "csv":
+        # Export all books; include most recent listing text per book if it exists
+        books_result = await db.scalars(
+            select(Book)
+            .options(selectinload(Book.listings))
+            .order_by(Book.created_at.desc())
+        )
+        books = list(books_result.all())
+
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow([
@@ -92,12 +93,15 @@ async def get_all_listings(
             "dimensions", "weight", "subject", "description", "condition",
             "isbn", "listing_text", "created_at", "ebay_status",
         ])
-        for listing in listings:
-            b = listing.book
+        for b in books:
+            latest = max(b.listings, key=lambda l: l.created_at, default=None)
             writer.writerow([
                 b.title, b.author, b.publisher, b.edition, b.year, b.pages,
                 b.dimensions, b.weight, b.subject, b.description, b.condition,
-                b.isbn, listing.listing_text, listing.created_at, listing.ebay_status,
+                b.isbn,
+                latest.listing_text if latest else "",
+                latest.created_at if latest else "",
+                latest.ebay_status if latest else "",
             ])
         output.seek(0)
         return StreamingResponse(
@@ -106,4 +110,11 @@ async def get_all_listings(
             headers={"Content-Disposition": "attachment; filename=listings.csv"},
         )
 
-    return JSONResponse([ListingResponse.model_validate(listing).model_dump(mode='json') for listing in listings])
+    # JSON: return listing objects as before
+    result = await db.scalars(
+        select(Listing)
+        .options(selectinload(Listing.book))
+        .order_by(Listing.created_at.desc())
+    )
+    listings = list(result.all())
+    return JSONResponse([ListingResponse.model_validate(l).model_dump(mode='json') for l in listings])

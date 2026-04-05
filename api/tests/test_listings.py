@@ -123,6 +123,20 @@ async def test_get_all_listings_csv(client, auth_headers):
     assert "CSV Export Test" in resp.text
 
 
+@pytest.mark.asyncio
+async def test_csv_includes_books_without_listings(client, auth_headers):
+    """Books with no listing must still appear as a row in the CSV."""
+    resp = await client.post(
+        "/api/books",
+        json={"isbn": "NO-LISTING-CSV", "title": "No Listing Book", "author": "Nobody"},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201
+    csv_resp = await client.get("/api/listings?format=csv", headers=auth_headers)
+    assert csv_resp.status_code == 200
+    assert "No Listing Book" in csv_resp.text
+
+
 def test_listing_uses_condition():
     book = make_book(condition="Very Good")
     text = generate_listing_text(book)
