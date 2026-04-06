@@ -86,7 +86,6 @@ Layout: `100dvh` flex column, `background: #000`, `color: #fff`.
 
 ```ts
 type WorkflowStep = 'photograph' | 'lookup' | 'review'
-type LookupMode = 'camera' | 'keyboard'
 
 const [step, setStep]               = useState<WorkflowStep>('photograph')
 const [photos, setPhotos]           = useState<File[]>([])
@@ -94,8 +93,11 @@ const [targetCount, setTargetCount] = useState<number>(
   () => Number(localStorage.getItem('photoTargetCount') ?? 3)
 )
 const [lookupResult, setLookupResult] = useState<BookLookup | null>(null)
-const [lookupMode, setLookupMode]     = useState<LookupMode>('camera')
+const [savedBookId, setSavedBookId]   = useState<string | null>(null)
+// lookupMode ('camera' | 'keyboard') is internal to LookupStep — not needed at page level
 ```
+
+`savedBookId` is set after a successful `POST /api/books`. If the subsequent photo upload fails, SAVE re-attempts only `POST /api/books/{savedBookId}/photos` — it does not re-create the book.
 
 **Transitions:**
 - Photograph → Lookup: auto when `photos.length >= targetCount`
@@ -214,7 +216,7 @@ class BookPhotoResponse(BaseModel):
     model_config = {"from_attributes": True}
 ```
 
-`BookResponse` gains `has_photos: bool` (computed via EXISTS subquery in router, not a model field) and `photos: list[BookPhotoResponse] = []` (populated only on single-book GET, not the list endpoint).
+`BookResponse` gains `has_photos: bool` (computed via EXISTS subquery in router, not a model field) — included in **both** the list endpoint and single-book GET so the dashboard table can show the missing-photos indicator. `photos: list[BookPhotoResponse] = []` is populated only on single-book GET (not the list endpoint) to avoid N+1 query overhead.
 
 ---
 
@@ -241,7 +243,7 @@ docker compose exec api alembic upgrade head
 
 **Missing-photos indicator in `BookTable`:** Small inline badge or camera icon shown on rows where `book.has_photos === false`. Display-only — no filter added.
 
-**Photo grid in book detail view:** When `editingBook` is set in `DashboardPage`, fetch `GET /api/books/{id}/photos`. Render above the `BookForm` as a 3–4 column responsive grid of ≈100px thumbnails. Each thumbnail has a delete (×) button — calls `DELETE /api/photos/{photo_id}`, updates local state. Thumbnails fetched via `apiFetch` → blob URL (same pattern as CSV export) since the endpoint is authenticated.
+**Photo grid in book detail view:** When `editingBook` is set in `DashboardPage`, fetch `GET /api/books/{id}/photos`. Render above the `BookForm` as a 3–4 column responsive grid of ≈100px thumbnails. Each thumbnail has a delete (×) button — calls `DELETE /api/photos/{photo_id}`, updates local state. Thumbnails fetched via `apiFetch` → blob URL (same pattern as CSV export) since the endpoint is authenticated. Blob URLs must be revoked (`URL.revokeObjectURL`) when the component unmounts to avoid memory leaks.
 
 ---
 
