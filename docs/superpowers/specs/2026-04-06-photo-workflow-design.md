@@ -123,12 +123,18 @@ Photos are held in browser memory as `File` objects until Save is tapped. They a
 ### Camera mode
 **Controls bar:** keyboard icon (left, taps to switch to keyboard mode), torch toggle (right).
 
-**Main content:** Live viewfinder + targeting mask. Identical to the existing `Scanner` component:
+**Main content:** Live viewfinder + targeting mask.
+
+> **CRITICAL — copy capture logic verbatim from `Scanner.tsx`, do not reimplement.**
+> The exact combination of high-resolution request, 3-strategy crop loop, and zxing decode took significant iteration to get right. Any simplification risks breaking reliable barcode detection. Move the code directly into `LookupStep`; do not rewrite or "clean up" the capture logic.
+
+The logic to carry over exactly:
 - `getUserMedia` with `{ facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }`
 - `BrowserMultiFormatReader` from `@zxing/browser`
-- 3-strategy crop decode loop (standard 80×40%, wide strip 95×25%, center zoom 50×30% 2×)
+- 3-strategy crop decode loop (standard 80×40%, wide strip 95×25%, center zoom 50×30% 2×) — all three strategies, same constants
 - Torch toggle via `applyConstraints({ advanced: [{ torch }] })`
 - Module-level `persistedTorchOn` variable for torch state across remounts
+- Cleanup: stop all tracks via `stream.getTracks().forEach(t => t.stop())`, do not reset torch state on cleanup
 
 **Primary button (LOOKUP):** Captures single frame, runs 3-strategy decode.
 - Success: calls `onLookupSuccess(isbn)` in parent → parent calls `/api/books/lookup/{isbn}` → on result, `setLookupResult(data)`, `setStep('review')`, play `playSuccess()` or `playReview()` based on `data.data_complete`
@@ -283,4 +289,5 @@ docker compose exec api alembic upgrade head
 - `has_photos` is computed via EXISTS subquery in the router, not a denormalized column — avoids migration and stays consistent with cascade deletes
 - "Flag for review" maps to `data_complete = false` (explicit override, not recalculated)
 - Old `ScanPage` / `Scanner` / `PhoneReview` deleted — recoverable via git if needed
+- Barcode capture logic copied verbatim from `Scanner.tsx` into `LookupStep` — do not simplify; the high-res request + 3-strategy crop loop combination was hard-won and must be preserved exactly
 - `Poor` added as 5th condition option (spec CHANGES-04 adds it)
