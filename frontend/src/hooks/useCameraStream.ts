@@ -39,6 +39,8 @@ export function useCameraStream({ enabled }: UseCameraStreamOptions): UseCameraS
     // Reset error from any previous attempt
     setCameraError(null)
 
+    let cancelled = false
+
     navigator.mediaDevices
       .getUserMedia({
         video: {
@@ -48,6 +50,10 @@ export function useCameraStream({ enabled }: UseCameraStreamOptions): UseCameraS
         },
       })
       .then((stream) => {
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop())
+          return
+        }
         if (videoRef.current) videoRef.current.srcObject = stream
         const track = stream.getVideoTracks()[0]
         trackRef.current = track
@@ -66,6 +72,7 @@ export function useCameraStream({ enabled }: UseCameraStreamOptions): UseCameraS
       })
 
     return () => {
+      cancelled = true
       if (videoRef.current?.srcObject) {
         const stream = videoRef.current.srcObject as MediaStream
         stream.getTracks().forEach((t) => t.stop())
