@@ -56,17 +56,17 @@ describe('ReviewStep', () => {
 
   it('flag for review is unchecked when data_complete is true', () => {
     render(<ReviewStep {...defaultProps} lookupResult={{ ...baseLookup, data_complete: true }} />, { wrapper })
-    expect(screen.getByRole('checkbox', { name: /Flag for review/ })).not.toBeChecked()
+    expect(screen.getByRole('checkbox', { name: /Mark for Review/ })).not.toBeChecked()
   })
 
   it('flag for review is pre-checked when data_complete is false', () => {
     render(<ReviewStep {...defaultProps} lookupResult={{ ...baseLookup, data_complete: false }} />, { wrapper })
-    expect(screen.getByRole('checkbox', { name: /Flag for review/ })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: /Mark for Review/ })).toBeChecked()
   })
 
   it('user can override the flag for review checkbox', () => {
     render(<ReviewStep {...defaultProps} lookupResult={{ ...baseLookup, data_complete: false }} />, { wrapper })
-    const checkbox = screen.getByRole('checkbox', { name: /Flag for review/ })
+    const checkbox = screen.getByRole('checkbox', { name: /Mark for Review/ })
     expect(checkbox).toBeChecked()
     fireEvent.click(checkbox)
     expect(checkbox).not.toBeChecked()

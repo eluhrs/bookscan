@@ -1,3 +1,5 @@
+// frontend/src/components/workflow/ReviewStep.tsx
+
 import { useState } from 'react'
 import WorkflowWrapper from './WorkflowWrapper'
 import { BookLookup } from '../../types'
@@ -101,51 +103,96 @@ export default function ReviewStep({
           height: '100%',
           overflowY: 'auto',
           padding: '1rem 1.25rem',
-          color: '#fff',
+          color: theme.colors.text,
         }}
       >
         {/* Cover + metadata */}
-        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', alignItems: 'flex-start' }}>
-          {lookupResult.cover_image_url && (
+        <div
+          style={{
+            display: 'flex',
+            gap: '0.875rem',
+            marginBottom: '1.25rem',
+            alignItems: 'flex-start',
+          }}
+        >
+          {lookupResult.cover_image_url ? (
             <img
               src={lookupResult.cover_image_url}
               alt="Cover"
-              style={{ width: 60, borderRadius: 4, flexShrink: 0 }}
+              style={{
+                width: 64,
+                aspectRatio: '2 / 3',
+                objectFit: 'cover',
+                borderRadius: 4,
+                flexShrink: 0,
+                border: `1px solid ${theme.colors.border}`,
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 64,
+                aspectRatio: '2 / 3',
+                background: theme.colors.subtle,
+                borderRadius: 4,
+                flexShrink: 0,
+                border: `1px solid ${theme.colors.border}`,
+              }}
             />
           )}
           <div>
-            <h2 style={{ margin: '0 0 0.2rem', fontSize: '1.1rem', lineHeight: 1.3 }}>
+            <h2
+              style={{
+                margin: '0 0 0.25rem',
+                fontSize: '1.05rem',
+                fontWeight: 700,
+                lineHeight: 1.3,
+                color: theme.colors.text,
+              }}
+            >
               {lookupResult.title ?? 'Unknown Title'}
             </h2>
-            <p style={{ margin: '0 0 0.1rem', fontSize: '0.95rem', color: '#ccc' }}>
+            <p style={{ margin: '0 0 0.1rem', fontSize: '0.9rem', color: theme.colors.muted }}>
               {lookupResult.author ?? '—'}
             </p>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: '#666' }}>
+            <p style={{ margin: 0, fontSize: '0.82rem', color: theme.colors.muted }}>
               {[lookupResult.year, lookupResult.publisher].filter(Boolean).join(' · ')}
             </p>
           </div>
         </div>
 
         {/* Condition selector */}
-        <p style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', color: '#888', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        <p
+          style={{
+            margin: '0 0 0.5rem',
+            fontSize: '0.75rem',
+            color: theme.colors.muted,
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+          }}
+        >
           Condition
         </p>
-        <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.35rem', marginBottom: '1rem' }}>
           {CONDITIONS.map((c) => (
             <button
               key={c}
               onClick={() => setCondition(c)}
               style={{
                 flex: 1,
-                minWidth: 60,
-                padding: '0.5rem 0.25rem',
-                fontSize: '0.78rem',
-                background: condition === c ? '#fff' : '#111',
-                color: condition === c ? '#000' : '#aaa',
-                border: condition === c ? '1px solid #fff' : '1px solid #333',
+                padding: '0.45rem 0.1rem',
+                fontSize: '0.72rem',
+                background: condition === c ? theme.colors.accent : theme.colors.subtle,
+                color: condition === c ? '#fff' : theme.colors.text,
+                border: condition === c
+                  ? `1px solid ${theme.colors.accent}`
+                  : `1px solid ${theme.colors.border}`,
                 borderRadius: 6,
                 cursor: 'pointer',
                 fontWeight: condition === c ? 600 : 400,
+                fontFamily: theme.font.sans,
+                whiteSpace: 'nowrap',
               }}
             >
               {c}
@@ -161,8 +208,8 @@ export default function ReviewStep({
             gap: '0.5rem',
             cursor: 'pointer',
             marginBottom: '0.75rem',
-            fontSize: '0.9rem',
-            color: '#aaa',
+            fontSize: '0.875rem',
+            color: theme.colors.text,
           }}
         >
           <input
@@ -170,11 +217,13 @@ export default function ReviewStep({
             checked={flagForReview}
             onChange={(e) => setFlagForReview(e.target.checked)}
           />
-          Flag for review
+          Mark for Review?
         </label>
 
         {error && (
-          <p style={{ color: theme.colors.danger, fontSize: '0.85rem', margin: '0.5rem 0' }}>{error}</p>
+          <p style={{ color: theme.colors.danger, fontSize: '0.85rem', margin: '0.5rem 0' }}>
+            {error}
+          </p>
         )}
       </div>
     </WorkflowWrapper>
