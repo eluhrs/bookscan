@@ -37,7 +37,8 @@ async function captureAndCompress(video: HTMLVideoElement): Promise<File> {
     canvas.getContext('2d')!.drawImage(video, 0, 0, w, h)
     canvas.toBlob(
       (blob) => {
-        resolve(new File([blob!], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' }))
+        if (!blob) return
+        resolve(new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' }))
       },
       'image/jpeg',
       0.85,
@@ -186,7 +187,7 @@ export default function PhotographStep({
           height: '100%',
           borderRadius: 12,
           overflow: 'hidden',
-          border: `1px solid #E5E5E5`,
+          border: `1px solid ${theme.colors.border}`,
           background: '#000',
         }}
       >
