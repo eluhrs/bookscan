@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import PhotographStep from '../components/workflow/PhotographStep'
 import LookupStep from '../components/workflow/LookupStep'
 import ReviewStep from '../components/workflow/ReviewStep'
@@ -16,12 +16,17 @@ export default function PhotoWorkflowPage() {
   const [lookupResult, setLookupResult] = useState<BookLookup | null>(null)
   const [savedBookId, setSavedBookId] = useState<string | null>(null)
 
+  // Tracks current step immediately (before React re-renders) so handleLookupComplete
+  // can detect stale calls caused by cancel being pressed while a lookup is in-flight.
+  const stepRef = useRef<WorkflowStep>('photograph')
+
   const { playSuccess, playReview } = useScanAudio()
 
   function handlePhotoAdded(file: File) {
     setPhotos((prev) => {
       const next = [...prev, file]
       if (next.length >= targetCount) {
+        stepRef.current = 'lookup'
         setStep('lookup')
       }
       return next
@@ -35,16 +40,23 @@ export default function PhotoWorkflowPage() {
 
   const handleLookupComplete = useCallback(
     (result: BookLookup) => {
+      // Guard: if cancel was pressed while lookup was in-flight, stepRef is already
+      // 'photograph'. Ignore the stale callback instead of overriding the cancel.
+      if (stepRef.current !== 'lookup') return
       setLookupResult(result)
       setSavedBookId(null)
       if (result.data_complete) playSuccess()
       else playReview()
+      stepRef.current = 'review'
       setStep('review')
     },
     [playSuccess, playReview]
   )
 
   function handleCancel() {
+    // Update ref immediately so any in-flight lookup callback is ignored
+    // even if it fires before the React re-render completes.
+    stepRef.current = 'photograph'
     setPhotos([])
     setLookupResult(null)
     setSavedBookId(null)
@@ -52,6 +64,7 @@ export default function PhotoWorkflowPage() {
   }
 
   function handleSaveComplete() {
+    stepRef.current = 'photograph'
     setPhotos([])
     setLookupResult(null)
     setSavedBookId(null)
