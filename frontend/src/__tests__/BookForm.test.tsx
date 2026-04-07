@@ -28,7 +28,7 @@ describe('BookForm', () => {
     render(<BookForm initial={makeBook()} onSave={vi.fn()} onCancel={vi.fn()} />)
     const select = screen.getByRole('combobox')
     const options = Array.from(select.querySelectorAll('option')).map((o) => o.value)
-    expect(options).toEqual(['', 'New', 'Very Good', 'Good', 'Acceptable'])
+    expect(options).toEqual(['', 'New', 'Very Good', 'Good', 'Acceptable', 'Poor'])
   })
 
   it('shows Retain Flag when data_complete is false', () => {
