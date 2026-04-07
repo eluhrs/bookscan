@@ -331,9 +331,11 @@ Tests use in-memory SQLite (backend) and jsdom + vitest (frontend). No external 
 
 ```bash
 # On the server after SSH
-git pull && docker compose up -d --build
+git pull && docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 docker compose exec api alembic upgrade head
 ```
+
+**Important:** Always include `-f docker-compose.prod.yml`. Without it the frontend port is not mapped and Apache gets a 503. `docker-compose.prod.yml` binds the frontend to `127.0.0.1:3001` (localhost only — not publicly exposed).
 
 Apache VirtualHost (apply manually):
 ```apache
