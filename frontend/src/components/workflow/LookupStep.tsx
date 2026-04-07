@@ -1,20 +1,21 @@
-import { useEffect, useRef, useState } from 'react'
+// frontend/src/components/workflow/LookupStep.tsx
+
+import { useRef, useState } from 'react'
 import { BrowserMultiFormatReader } from '@zxing/browser'
 import WorkflowWrapper from './WorkflowWrapper'
 import { lookupIsbn } from '../../api/books'
 import { useScanAudio } from '../../hooks/useScanAudio'
+import { useCameraStream } from '../../hooks/useCameraStream'
 import { BookLookup } from '../../types'
 import { theme } from '../../styles/theme'
 
-// --- Verbatim from Scanner.tsx — do not simplify ---
-let persistedTorchOn = false
-
+// --- Verbatim decode crop strategies from Scanner.tsx — do not simplify ---
 const CROP_STRATEGIES = [
   { srcW: 0.8,  srcH: 0.4,  zoom: 1 },
   { srcW: 0.95, srcH: 0.25, zoom: 1 },
   { srcW: 0.5,  srcH: 0.3,  zoom: 2 },
 ]
-// ---------------------------------------------------
+// --------------------------------------------------------------------------
 
 type LookupMode = 'camera' | 'keyboard'
 
@@ -28,78 +29,14 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
   const [isbn, setIsbn] = useState('')
   const [looking, setLooking] = useState(false)
   const [hintError, setHintError] = useState<string | null>(null)
-  const [cameraError, setCameraError] = useState<string | null>(null)
-  const [torchAvailable, setTorchAvailable] = useState(false)
-  const [torchOn, setTorchOn] = useState(persistedTorchOn)
 
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const { videoRef, canvasRef, torchAvailable, torchOn, cameraError, handleTorchToggle } =
+    useCameraStream({ enabled: mode === 'camera' })
+
   const readerRef = useRef<BrowserMultiFormatReader | null>(null)
-  const trackRef = useRef<MediaStreamTrack | null>(null)
+  if (!readerRef.current) readerRef.current = new BrowserMultiFormatReader()
 
   const { playReview } = useScanAudio()
-
-  // --- Verbatim camera setup from Scanner.tsx ---
-  useEffect(() => {
-    if (mode !== 'camera') return
-
-    if (!navigator.mediaDevices) {
-      setCameraError('Camera requires HTTPS.')
-      return
-    }
-
-    readerRef.current = new BrowserMultiFormatReader()
-
-    navigator.mediaDevices
-      .getUserMedia({
-        video: {
-          facingMode: 'environment',
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
-      })
-      .then((stream) => {
-        if (videoRef.current) videoRef.current.srcObject = stream
-        const track = stream.getVideoTracks()[0]
-        trackRef.current = track
-        const caps = track.getCapabilities() as MediaTrackCapabilities & { torch?: boolean }
-        const hasTorch = !!caps.torch
-        setTorchAvailable(hasTorch)
-        if (persistedTorchOn && hasTorch) {
-          track.applyConstraints({ advanced: [{ torch: true } as any] }).catch(() => {})
-        } else if (persistedTorchOn && !hasTorch) {
-          persistedTorchOn = false
-          setTorchOn(false)
-        }
-      })
-      .catch((e) => {
-        setCameraError(`Camera error: ${e instanceof Error ? e.message : String(e)}`)
-      })
-
-    return () => {
-      if (videoRef.current?.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream
-        stream.getTracks().forEach((t) => t.stop())
-        videoRef.current.srcObject = null
-      }
-      trackRef.current = null
-      setTorchAvailable(false)
-      // torchOn state intentionally NOT reset — persistedTorchOn handles restoration on remount
-    }
-  }, [mode])
-  // -----------------------------------------------
-
-  async function handleTorchToggle() {
-    if (!trackRef.current) return
-    const next = !torchOn
-    persistedTorchOn = next
-    try {
-      await trackRef.current.applyConstraints({ advanced: [{ torch: next } as any] })
-      setTorchOn(next)
-    } catch {
-      persistedTorchOn = torchOn
-    }
-  }
 
   // --- Verbatim decode logic from Scanner.tsx ---
   async function handleCameraLookup() {
@@ -166,7 +103,17 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
       <button
         aria-label="Switch to keyboard input"
         onClick={() => { setMode('keyboard'); setHintError(null) }}
-        style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '1.3rem', padding: '0.25rem' }}
+        style={{
+          background: theme.colors.subtle,
+          border: `1px solid ${theme.colors.border}`,
+          color: theme.colors.text,
+          cursor: 'pointer',
+          fontSize: '1.1rem',
+          padding: '0.3rem 0.5rem',
+          borderRadius: 8,
+          lineHeight: 1,
+        }}
+        title="Switch to keyboard"
       >
         ⌨
       </button>
@@ -174,11 +121,11 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
         <button
           onClick={handleTorchToggle}
           style={{
-            padding: '0.4rem 0.5rem',
-            fontSize: '1.2rem',
+            padding: '0.35rem 0.5rem',
+            fontSize: '1.1rem',
             lineHeight: 1,
-            background: torchOn ? '#FFD700' : 'rgba(255,255,255,0.1)',
-            border: 'none',
+            background: torchOn ? '#FEF08A' : theme.colors.subtle,
+            border: `1px solid ${theme.colors.border}`,
             borderRadius: 8,
             cursor: 'pointer',
           }}
@@ -194,7 +141,17 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
     <button
       aria-label="Switch to camera"
       onClick={() => { setMode('camera'); setHintError(null) }}
-      style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '1.3rem', padding: '0.25rem' }}
+      style={{
+        background: theme.colors.subtle,
+        border: `1px solid ${theme.colors.border}`,
+        color: theme.colors.text,
+        cursor: 'pointer',
+        fontSize: '1.1rem',
+        padding: '0.3rem 0.5rem',
+        borderRadius: 8,
+        lineHeight: 1,
+      }}
+      title="Switch to camera"
     >
       📷
     </button>
@@ -203,17 +160,27 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
   const hintText = hintError
     ? hintError
     : mode === 'camera'
-      ? 'Align barcode and tap Lookup, or use keyboard'
-      : 'Type ISBN-10 or ISBN-13'
+      ? 'Align barcode then tap Lookup, or use keyboard'
+      : 'Type ISBN and tap Lookup'
 
   const mainContent = mode === 'camera' ? (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+    <div style={{ height: '100%', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {cameraError ? (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-          <p style={{ color: 'red', textAlign: 'center', fontSize: '0.9rem', margin: 0 }}>{cameraError}</p>
-        </div>
+        <p style={{ color: theme.colors.danger, textAlign: 'center', fontSize: '0.9rem', margin: 0 }}>
+          {cameraError}
+        </p>
       ) : (
-        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#000' }}>
+        <div
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: '100%',
+            borderRadius: 12,
+            overflow: 'hidden',
+            border: `1px solid ${theme.colors.border}`,
+            background: '#000',
+          }}
+        >
           <video
             ref={videoRef}
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
@@ -221,7 +188,7 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
             muted
             playsInline
           />
-          {/* Targeting mask — verbatim from Scanner.tsx */}
+          {/* Landscape targeting mask */}
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
             <div
               style={{
@@ -230,24 +197,36 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
                 right: '10%',
                 top: '25%',
                 bottom: '25%',
-                boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)',
-                border: '1px solid rgba(255,255,255,0.2)',
+                boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)',
+                borderRadius: 4,
               }}
             >
-              <div style={{ position: 'absolute', top: -2, left: -2, width: 20, height: 20, borderTop: `3px solid ${theme.colors.accent}`, borderLeft: `3px solid ${theme.colors.accent}` }} />
-              <div style={{ position: 'absolute', top: -2, right: -2, width: 20, height: 20, borderTop: `3px solid ${theme.colors.accent}`, borderRight: `3px solid ${theme.colors.accent}` }} />
-              <div style={{ position: 'absolute', bottom: -2, left: -2, width: 20, height: 20, borderBottom: `3px solid ${theme.colors.accent}`, borderLeft: `3px solid ${theme.colors.accent}` }} />
-              <div style={{ position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, borderBottom: `3px solid ${theme.colors.accent}`, borderRight: `3px solid ${theme.colors.accent}` }} />
+              {/* Blue corner brackets */}
+              <div style={{ position: 'absolute', top: -2, left: -2, width: 22, height: 22, borderTop: `3px solid ${theme.colors.accent}`, borderLeft: `3px solid ${theme.colors.accent}`, borderRadius: '2px 0 0 0' }} />
+              <div style={{ position: 'absolute', top: -2, right: -2, width: 22, height: 22, borderTop: `3px solid ${theme.colors.accent}`, borderRight: `3px solid ${theme.colors.accent}`, borderRadius: '0 2px 0 0' }} />
+              <div style={{ position: 'absolute', bottom: -2, left: -2, width: 22, height: 22, borderBottom: `3px solid ${theme.colors.accent}`, borderLeft: `3px solid ${theme.colors.accent}`, borderRadius: '0 0 0 2px' }} />
+              <div style={{ position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderBottom: `3px solid ${theme.colors.accent}`, borderRight: `3px solid ${theme.colors.accent}`, borderRadius: '0 0 2px 0' }} />
+
+              {/* Hint text: bottom-aligned inside mask */}
+              <div style={{ position: 'absolute', bottom: 10, left: 8, right: 8, textAlign: 'center' }}>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    background: 'rgba(0,0,0,0.55)',
+                    color: '#fff',
+                    fontSize: '0.78rem',
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: 20,
+                  }}
+                >
+                  Align barcode within frame
+                </span>
+              </div>
             </div>
           </div>
+          <canvas ref={canvasRef} style={{ display: 'none' }} />
         </div>
       )}
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
-      <div style={{ padding: '0.75rem 1.5rem', textAlign: 'center' }}>
-        <p style={{ color: hintError ? '#ff6b6b' : '#666', fontSize: '0.9rem', margin: 0 }}>
-          {hintText}
-        </p>
-      </div>
     </div>
   ) : (
     <div
@@ -258,13 +237,25 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
         alignItems: 'center',
         justifyContent: 'center',
         padding: '2rem',
-        gap: '1rem',
+        gap: '0.75rem',
       }}
     >
+      <label
+        style={{
+          fontSize: '0.85rem',
+          color: theme.colors.muted,
+          fontWeight: 500,
+          alignSelf: 'flex-start',
+          width: '100%',
+          maxWidth: 320,
+        }}
+      >
+        Enter ISBN-10 or ISBN-13
+      </label>
       <input
         type="text"
         inputMode="numeric"
-        placeholder="Enter ISBN-10 or ISBN-13"
+        placeholder="e.g. 9780743273565"
         value={isbn}
         onChange={(e) => setIsbn(e.target.value)}
         autoFocus
@@ -273,18 +264,15 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
           maxWidth: 320,
           padding: '0.75rem 1rem',
           fontSize: '1.1rem',
-          background: '#111',
-          color: '#fff',
-          border: '1px solid #444',
+          background: '#fff',
+          color: theme.colors.text,
+          border: `1px solid ${theme.colors.border}`,
           borderRadius: 8,
           outline: 'none',
           textAlign: 'center',
-          fontFamily: 'inherit',
+          fontFamily: theme.font.sans,
         }}
       />
-      <p style={{ color: hintError ? '#ff6b6b' : '#666', fontSize: '0.9rem', margin: 0, textAlign: 'center' }}>
-        {hintText}
-      </p>
     </div>
   )
 
@@ -292,6 +280,7 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
     <WorkflowWrapper
       step="lookup"
       controls={mode === 'camera' ? cameraControls : keyboardControls}
+      hintText={hintText}
       primaryLabel={looking ? 'Looking up…' : 'LOOKUP'}
       primaryDisabled={looking}
       onPrimary={mode === 'camera' ? handleCameraLookup : handleKeyboardLookup}

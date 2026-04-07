@@ -72,7 +72,7 @@ describe('LookupStep', () => {
       <LookupStep onLookupComplete={vi.fn()} onCancel={vi.fn()} />,
       { wrapper }
     )
-    expect(screen.getByText('Align barcode and tap Lookup, or use keyboard')).toBeInTheDocument()
+    expect(screen.getByText('Align barcode then tap Lookup, or use keyboard')).toBeInTheDocument()
   })
 
   it('shows keyboard-mode hint text after switching', () => {
@@ -81,7 +81,7 @@ describe('LookupStep', () => {
       { wrapper }
     )
     fireEvent.click(screen.getByLabelText('Switch to keyboard input'))
-    expect(screen.getByText('Type ISBN-10 or ISBN-13')).toBeInTheDocument()
+    expect(screen.getByText('Type ISBN and tap Lookup')).toBeInTheDocument()
   })
 
   it('in keyboard mode, calls lookupIsbn with entered value on LOOKUP press', async () => {
