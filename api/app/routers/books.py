@@ -13,6 +13,7 @@ from app.schemas import (
     BookCreate,
     BookListResponse,
     BookLookupResponse,
+    BookPhotoResponse,
     BookResponse,
     BookUpdate,
 )
@@ -68,6 +69,7 @@ async def create_book(
         asyncio.create_task(
             _store_cover(book.id, book.isbn, book.cover_image_url)
         )
+    # Return BookResponse with no photos (new books have no photos)
     return BookResponse(
         id=book.id,
         isbn=book.isbn,
@@ -181,39 +183,12 @@ async def get_book(
     book = result.scalar_one_or_none()
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
-    from app.schemas import BookPhotoResponse
-    photos = [
-        BookPhotoResponse(
-            id=p.id,
-            book_id=p.book_id,
-            filename=p.filename,
-            created_at=p.created_at,
-        )
-        for p in book.photos
-    ]
-    return BookResponse(
-        id=book.id,
-        isbn=book.isbn,
-        title=book.title,
-        author=book.author,
-        publisher=book.publisher,
-        edition=book.edition,
-        year=book.year,
-        pages=book.pages,
-        dimensions=book.dimensions,
-        weight=book.weight,
-        subject=book.subject,
-        description=book.description,
-        cover_image_url=book.cover_image_url,
-        cover_image_local=book.cover_image_local,
-        data_sources=book.data_sources,
-        data_complete=book.data_complete,
-        condition=book.condition,
-        has_photos=len(book.photos) > 0,
-        photos=photos,
-        created_at=book.created_at,
-        updated_at=book.updated_at,
-    )
+    photos = [BookPhotoResponse.model_validate(p) for p in book.photos]
+    resp = BookResponse.model_validate(book)
+    return resp.model_copy(update={
+        "has_photos": len(book.photos) > 0,
+        "photos": photos,
+    })
 
 
 @router.patch("/{book_id}", response_model=BookResponse)
@@ -234,30 +209,17 @@ async def update_book(
         key_fields = ("title", "author", "publisher", "year")
         book.data_complete = bool(book.isbn) and all(getattr(book, f) for f in key_fields)
     await db.commit()
-    await db.refresh(book)
-    return BookResponse(
-        id=book.id,
-        isbn=book.isbn,
-        title=book.title,
-        author=book.author,
-        publisher=book.publisher,
-        edition=book.edition,
-        year=book.year,
-        pages=book.pages,
-        dimensions=book.dimensions,
-        weight=book.weight,
-        subject=book.subject,
-        description=book.description,
-        cover_image_url=book.cover_image_url,
-        cover_image_local=book.cover_image_local,
-        data_sources=book.data_sources,
-        data_complete=book.data_complete,
-        condition=book.condition,
-        has_photos=False,
-        photos=[],
-        created_at=book.created_at,
-        updated_at=book.updated_at,
-    )
+
+    # Reload with photos for accurate has_photos
+    stmt = select(Book).where(Book.id == book_id).options(selectinload(Book.photos))
+    result = await db.execute(stmt)
+    book = result.scalar_one()
+    photos = [BookPhotoResponse.model_validate(p) for p in book.photos]
+    resp = BookResponse.model_validate(book)
+    return resp.model_copy(update={
+        "has_photos": len(book.photos) > 0,
+        "photos": photos,
+    })
 
 
 @router.delete("/{book_id}", status_code=204)
