@@ -3,8 +3,7 @@ import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './hooks/useAuth'
 import { useBreakpoint } from './hooks/useBreakpoint'
 import LoginPage from './pages/LoginPage'
-import ScanPage from './pages/ScanPage'
-
+import PhotoWorkflowPage from './pages/PhotoWorkflowPage'
 import DashboardPage from './pages/DashboardPage'
 
 function ProtectedRoutes() {
@@ -15,7 +14,7 @@ function ProtectedRoutes() {
 
   return (
     <Routes>
-      <Route path="/scan" element={<ScanPage />} />
+      <Route path="/scan" element={<PhotoWorkflowPage />} />
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="*" element={<Navigate to={isMobile ? '/scan' : '/dashboard'} replace />} />
     </Routes>

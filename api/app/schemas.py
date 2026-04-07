@@ -62,6 +62,15 @@ class BookUpdate(BaseModel):
     condition: Optional[str] = None
 
 
+class BookPhotoResponse(BaseModel):
+    id: uuid.UUID
+    book_id: uuid.UUID
+    filename: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class BookResponse(BaseModel):
     id: uuid.UUID
     isbn: str
@@ -80,6 +89,8 @@ class BookResponse(BaseModel):
     data_sources: Optional[dict] = None
     data_complete: bool
     condition: Optional[str] = None
+    has_photos: bool = False
+    photos: list[BookPhotoResponse] = []
     created_at: datetime
     updated_at: datetime
 

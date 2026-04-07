@@ -21,6 +21,7 @@ const makeBook = (overrides: Partial<Book> = {}): Book => ({
   cover_image_local: null,
   data_sources: null,
   data_complete: true,
+  has_photos: false,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
   ...overrides,
@@ -56,5 +57,17 @@ describe('BookTable', () => {
     render(<BookTable books={[book]} onEdit={vi.fn()} onDelete={onDelete} onGenerateListing={vi.fn()} />)
     fireEvent.click(screen.getByLabelText('Delete book'))
     expect(onDelete).toHaveBeenCalledWith(book.id)
+  })
+
+  it('shows no-photos indicator when has_photos is false', () => {
+    const books = [makeBook({ has_photos: false, title: 'No Photos Book' })]
+    render(<BookTable books={books} onEdit={vi.fn()} onDelete={vi.fn()} onGenerateListing={vi.fn()} />)
+    expect(screen.getByTitle('No photos')).toBeInTheDocument()
+  })
+
+  it('does not show no-photos indicator when has_photos is true', () => {
+    const books = [makeBook({ has_photos: true, title: 'Has Photos Book' })]
+    render(<BookTable books={books} onEdit={vi.fn()} onDelete={vi.fn()} onGenerateListing={vi.fn()} />)
+    expect(screen.queryByTitle('No photos')).not.toBeInTheDocument()
   })
 })

@@ -34,6 +34,7 @@ class Book(Base):
     )
 
     listings: Mapped[list["Listing"]] = relationship(back_populates="book", passive_deletes=True)
+    photos: Mapped[list["BookPhoto"]] = relationship(back_populates="book", passive_deletes=True)
 
 
 class Listing(Base):
@@ -51,3 +52,18 @@ class Listing(Base):
     ebay_status: Mapped[str] = mapped_column(String(20), default="draft")
 
     book: Mapped["Book"] = relationship(back_populates="listings")
+
+
+class BookPhoto(Base):
+    __tablename__ = "book_photos"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    book_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("books.id", ondelete="CASCADE")
+    )
+    filename: Mapped[str] = mapped_column(String(500))
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    book: Mapped["Book"] = relationship(back_populates="photos")

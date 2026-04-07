@@ -23,6 +23,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     volumes:
       - covers:/app/covers
+      - photos:/app/photos
     depends_on:
       db:
         condition: service_healthy
@@ -42,3 +43,4 @@ networks:
 volumes:
   postgres_data:
   covers:
+  photos:

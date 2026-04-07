@@ -156,8 +156,23 @@ to WASM, stronger for 1D/EAN barcodes) as a drop-in replacement.
 first button press (satisfies mobile user-gesture requirement). Success: ascending 880/1108Hz chime.
 Review: descending 440/330Hz tone.
 
-**Phone vs desktop UI.** `PhoneReview` is the post-scan save form (phone only). `BookForm` is the
-desktop edit form. `ScanPage` renders `PhoneReview`; `DashboardPage` renders `BookForm` for editing.
+**Phone vs desktop UI.** The old `PhoneReview` / `ScanPage` / `Scanner` components were deleted in CHANGES-04 and replaced by the photo workflow. `BookForm` is the desktop edit form rendered by `DashboardPage` for editing.
+
+**Photo workflow (CHANGES-04).** Multi-step flow: Photograph → Lookup → Review. Photos held in browser memory as `File` objects until Save; uploaded via `POST /api/books/{id}/photos` after book creation. Photo files stored at `/app/photos/{book_id}/{photo_id}.jpg` in a named Docker volume (`photos:/app/photos` in both `docker-compose.yml` and `docker-compose.dev.yml`).
+
+**book_photos table.** Separate table (not JSON column on books) enables individual row deletes and per-book queries. `has_photos: bool` computed via EXISTS subquery in the router — not a model column. `passive_deletes=True` on the relationship + `ON DELETE CASCADE` on the FK means the DB handles cascade, not SQLAlchemy. Book DELETE also removes files from disk via `shutil.rmtree` in the delete handler.
+
+**LookupStep barcode capture.** Verbatim copy of the capture logic from the deleted `Scanner.tsx`: high-res `getUserMedia` (via `useCameraStream`), 3-strategy crop loop. Do not simplify — this combination was hard-won. See Scanner.tsx in git history (search for "SCAN-01" in commit messages) if the logic needs review. `persistedTorchOn` now lives in `useCameraStream.ts`, not LookupStep.
+
+**Photo retry on save failure.** `PhotoWorkflowPage` stores `savedBookId` after successful `POST /api/books`. If the subsequent photo upload fails, `ReviewStep` retries only the upload on re-tap of SAVE — it does not re-create the book.
+
+**Blob URLs for photo display.** Dashboard photo grid fetches each photo via `GET /api/photos/{id}/file` (authenticated) and renders as blob URL. Blob URLs are revoked (`URL.revokeObjectURL`) when the edit view closes to prevent memory leaks.
+
+**useCameraStream hook.** Shared camera setup for PhotographStep and LookupStep. Module-level `persistedTorchOn` lives here. Pass `enabled: false` to disable (LookupStep passes `mode === 'camera'`; camera shuts off automatically in keyboard mode). A `cancelled` flag inside the effect body prevents a race where `getUserMedia` resolves after the component unmounts — the `.then()` handler checks `cancelled` and stops the stale stream. Both steps unmount their cameras cleanly via the hook's cleanup effect.
+
+**PhotographStep live camera.** Uses `useCameraStream` hook and Canvas API frame capture. `captureAndCompress` draws the current video frame to a canvas, resizes to max 1200px, encodes as JPEG at 85% quality, and wraps in a `File` object. No file picker — camera is always live on this step. Photo count target (1-5) persists in localStorage. Progress shown as □/■ indicators in controls bar.
+
+**WorkflowWrapper hintText prop.** Optional string rendered in a zone between main content and primary button. Pass `undefined` (or omit the prop) to hide the zone entirely. ReviewStep passes no hintText (no hint shown). The hint text zone is always positioned above the primary button regardless of content height.
 
 **Dashboard polling.** `DashboardPage` polls `GET /api/books` every 3 seconds via `setInterval`,
 paused when tab is not visible (`visibilitychange` event). No WebSocket or backend changes needed.
@@ -198,7 +213,8 @@ bookscan/
 │   ├── alembic/
 │   │   └── versions/
 │   │       ├── 001_initial_schema.py
-│   │       └── 002_add_condition.py   # adds condition VARCHAR(20) to books
+│   │       ├── 002_add_condition.py   # adds condition VARCHAR(20) to books
+│   │       └── 003_add_book_photos.py # adds book_photos table with book_id FK cascade
 │   ├── app/
 │   │   ├── main.py             # FastAPI app, slowapi, router registration
 │   │   ├── config.py           # pydantic-settings v2
@@ -208,7 +224,8 @@ bookscan/
 │   │   ├── schemas.py          # Pydantic request/response schemas
 │   │   ├── routers/
 │   │   │   ├── books.py        # /api/books/* CRUD + /api/books/lookup/{isbn}
-│   │   │   └── listings.py     # /api/books/{id}/listings + /api/listings
+│   │   │   ├── listings.py     # /api/books/{id}/listings + /api/listings
+│   │   │   └── photos.py       # /api/books/{id}/photos + /api/photos/* endpoints
 │   │   └── services/
 │   │       ├── lookup.py       # parallel fetch + merge (Open Library, Google Books, LoC)
 │   │       └── covers.py       # async cover download to /app/covers/
@@ -233,17 +250,21 @@ bookscan/
         ├── hooks/
         │   ├── useAuth.ts      # re-exports from AuthContext
         │   ├── useBreakpoint.ts # isMobile: window.innerWidth < 768
-        │   └── useScanAudio.ts  # Web Audio API scan feedback tones
+        │   ├── useScanAudio.ts  # Web Audio API scan feedback tones
+        │   └── useCameraStream.ts # getUserMedia, torch, stream cleanup — shared by PhotographStep and LookupStep
         ├── components/
-        │   ├── Scanner.tsx     # @zxing/browser camera, single-frame capture, targeting mask
+        │   ├── workflow/
+        │   │   ├── WorkflowWrapper.tsx  # shared 6-zone layout for all 3 steps
+        │   │   ├── PhotographStep.tsx   # step 1: live camera capture, portrait mask, □/■ progress
+        │   │   ├── LookupStep.tsx       # step 2: barcode camera + keyboard fallback
+        │   │   └── ReviewStep.tsx       # step 3: condition/flag/save with photo upload
         │   ├── BookForm.tsx    # desktop book edit form (condition, retain flag)
-        │   ├── BookTable.tsx   # sortable, filterable, aria-sort, confirm-delete
-        │   ├── PhoneReview.tsx  # post-scan mobile save form (phone only)
+        │   ├── BookTable.tsx   # sortable, filterable, aria-sort, has_photos indicator
         │   └── ListingGenerator.tsx # generate + copy-to-clipboard + history
         ├── pages/
         │   ├── LoginPage.tsx
-        │   ├── ScanPage.tsx    # state machine: scanning/loading/review/error
-        │   └── DashboardPage.tsx # search, filter, pagination, inline edit, listing overlay
+        │   ├── PhotoWorkflowPage.tsx  # state machine for Photograph→Lookup→Review
+        │   └── DashboardPage.tsx # search, filter, pagination, inline edit, photo grid
         ├── styles/
         │   └── theme.ts        # Geist design tokens (colors, fonts, radii)
         └── types.ts            # Book, BookLookup, Listing, BookListResponse
@@ -269,6 +290,11 @@ DELETE /api/books/{id}               # returns 204
 POST   /api/books/{id}/listings      # generate + save listing text
 GET    /api/books/{id}/listings
 GET    /api/listings                 # ?format=csv for bulk export
+
+POST   /api/books/{id}/photos        # upload 1+ photos (multipart/form-data)
+GET    /api/books/{id}/photos        # list BookPhotoResponse[]
+DELETE /api/photos/{photo_id}        # 204, deletes file + DB row
+GET    /api/photos/{photo_id}/file   # FileResponse (authenticated)
 ```
 
 ---
@@ -340,6 +366,34 @@ Apache VirtualHost (apply manually):
 - DATA-01: Investigated dimensions/weight — data unavailability confirmed (see "Dimensions and weight" gotcha above)
 - SCAN-01: Camera reliability overhaul — high resolution request, 3-strategy multi-crop decode loop, torch toggle, module-level torch state persistence; see "Manual barcode scanning" gotcha above
 - Scan UI: 3-section flexbox layout (`100dvh`) — camera (flex:4), button (flex:2), messages (flex:3); targeting mask vertically centered at `top/bottom: 25%`; torch button overlaid top-right of viewfinder
+
+**CHANGES-04** — all items implemented:
+- FEAT-01: Multi-step Photograph → Lookup → Review workflow replaces old /scan flow
+- Photo storage: `book_photos` table (separate from cover images); individual photos deletable
+- `has_photos: bool` on `BookResponse` via EXISTS subquery — no denormalized column needed
+- "Flag for review" maps to `data_complete = false` (explicit override preserved on save)
+- Barcode capture logic in `LookupStep` copied verbatim from deleted `Scanner.tsx`
+- `Poor` added as 5th condition option across `ReviewStep` and `BookForm`
+- Dashboard: photo grid in book edit view; missing-photos indicator in `BookTable`
+- `WorkflowWrapper` enforces consistent six-zone layout across all three steps
+- Old `ScanPage`, `Scanner`, `PhoneReview` deleted (recoverable via git)
+- Migration 003: `book_photos` table with FK cascade and `book_id` index
+
+**CHANGES-05** — both items fixed:
+- BUG-05: Audio triggers reinstated — `useScanAudio` now resumes suspended `AudioContext` before scheduling tones (`ctx.resume().then(schedule)`), so tones play even when the context was created post-async (after `await lookupIsbn()`). Removed `ctx.close()` from cleanup to prevent the save-success chime from being cut off when `ReviewStep` unmounts immediately after `onSaveComplete()`.
+- BUG-06: Cancel guard added — `stepRef` in `PhotoWorkflowPage` tracks current step immediately (before React re-renders); `handleLookupComplete` bails if `stepRef.current !== 'lookup'`, preventing in-flight lookup API responses from overriding a cancel press and sending the user to the Review screen against their intent.
+
+**CHANGES-06** — all items implemented:
+- Live camera capture in PhotographStep: replaces native file picker with getUserMedia stream, frame capture via canvas, compression to max 1200px/85% JPEG
+- useCameraStream hook: extracted from LookupStep; shared by both PhotographStep and LookupStep; handles getUserMedia, torch detection/toggle, persistedTorchOn module-level state, stream cleanup; cancelled flag guards against unmount race on async getUserMedia
+- WorkflowWrapper redesign: #FAFAFA background throughout; step indicator with ●/○ markers and "Metadata" label for lookup step; hintText prop adds optional hint text zone between content and primary button; Dashboard|Cancel as equal-width secondary buttons at bottom; old top header zone removed
+- PhotographStep controls bar: # photo count dropdown (left), □/■ progress indicators (center), torch button (right)
+- Portrait mask: 3:4 portrait orientation target rectangle with blue corner brackets and dynamic hint text (front cover/back cover/spine/additional) overlaid inside mask
+- Landscape mask in LookupStep: updated to rounded rectangle with same corner bracket style as portrait mask
+- ReviewStep: light theme; cover thumbnail 2:3 aspect ratio; condition buttons highlight in #0070F3 when selected; checkbox label updated to "Mark for Review?"
+- New theme tokens added: subtle (#F5F5F5), subtleText (#333333), disabled (#D1D5DB), disabledText (#9CA3AF)
+- BUG-01 (cancel paths): confirmed functional after redesign
+- BUG-02 (audio triggers): confirmed all 5 trigger points functional after redesign
 
 ---
 

@@ -125,6 +125,14 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
               </td>
               <td style={{ padding: '0.6rem 0.75rem', fontWeight: 500 }}>
                 {book.title ?? '—'}
+                {!book.has_photos && (
+                  <span
+                    title="No photos"
+                    style={{ marginLeft: '0.35rem', fontSize: '0.75rem', color: '#555', verticalAlign: 'middle' }}
+                  >
+                    📷
+                  </span>
+                )}
               </td>
               <td style={{ padding: '0.6rem 0.75rem', color: theme.colors.muted }}>
                 {book.author ?? '—'}

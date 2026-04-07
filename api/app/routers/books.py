@@ -1,17 +1,24 @@
+import asyncio
+import shutil
 import uuid
+from pathlib import Path
 from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from app.auth import get_current_user
 from app.database import get_db, async_session_maker
-from app.models import Book
+from app.models import Book, BookPhoto
+
+PHOTOS_DIR = Path("/app/photos")
 from app.schemas import (
     BookCreate,
     BookListResponse,
     BookLookupResponse,
+    BookPhotoResponse,
     BookResponse,
     BookUpdate,
 )
@@ -67,7 +74,30 @@ async def create_book(
         asyncio.create_task(
             _store_cover(book.id, book.isbn, book.cover_image_url)
         )
-    return book
+    # Return BookResponse with no photos (new books have no photos)
+    return BookResponse(
+        id=book.id,
+        isbn=book.isbn,
+        title=book.title,
+        author=book.author,
+        publisher=book.publisher,
+        edition=book.edition,
+        year=book.year,
+        pages=book.pages,
+        dimensions=book.dimensions,
+        weight=book.weight,
+        subject=book.subject,
+        description=book.description,
+        cover_image_url=book.cover_image_url,
+        cover_image_local=book.cover_image_local,
+        data_sources=book.data_sources,
+        data_complete=book.data_complete,
+        condition=book.condition,
+        has_photos=False,
+        photos=[],
+        created_at=book.created_at,
+        updated_at=book.updated_at,
+    )
 
 
 async def _store_cover(book_id: uuid.UUID, isbn: str, url: str) -> None:
@@ -102,7 +132,45 @@ async def list_books(
     total = await db.scalar(select(func.count()).select_from(q.subquery()))
     q = q.order_by(Book.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
     books = (await db.scalars(q)).all()
-    return BookListResponse(items=books, total=total, page=page, page_size=page_size)
+
+    # Batch check which books have photos (single IN query, no N+1)
+    book_ids = [b.id for b in books]
+    photo_book_ids: set = set()
+    if book_ids:
+        rows = await db.scalars(
+            select(BookPhoto.book_id)
+            .where(BookPhoto.book_id.in_(book_ids))
+            .distinct()
+        )
+        photo_book_ids = set(rows.all())
+
+    items = [
+        BookResponse(
+            id=b.id,
+            isbn=b.isbn,
+            title=b.title,
+            author=b.author,
+            publisher=b.publisher,
+            edition=b.edition,
+            year=b.year,
+            pages=b.pages,
+            dimensions=b.dimensions,
+            weight=b.weight,
+            subject=b.subject,
+            description=b.description,
+            cover_image_url=b.cover_image_url,
+            cover_image_local=b.cover_image_local,
+            data_sources=b.data_sources,
+            data_complete=b.data_complete,
+            condition=b.condition,
+            has_photos=b.id in photo_book_ids,
+            photos=[],
+            created_at=b.created_at,
+            updated_at=b.updated_at,
+        )
+        for b in books
+    ]
+    return BookListResponse(items=items, total=total, page=page, page_size=page_size)
 
 
 @router.get("/{book_id}", response_model=BookResponse)
@@ -111,10 +179,21 @@ async def get_book(
     db: Annotated[AsyncSession, Depends(get_db)],
     _user: Annotated[str, Depends(get_current_user)],
 ):
-    book = await db.get(Book, book_id)
+    stmt = (
+        select(Book)
+        .where(Book.id == book_id)
+        .options(selectinload(Book.photos))
+    )
+    result = await db.execute(stmt)
+    book = result.scalar_one_or_none()
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
-    return book
+    photos = [BookPhotoResponse.model_validate(p) for p in book.photos]
+    resp = BookResponse.model_validate(book)
+    return resp.model_copy(update={
+        "has_photos": len(book.photos) > 0,
+        "photos": photos,
+    })
 
 
 @router.patch("/{book_id}", response_model=BookResponse)
@@ -135,8 +214,17 @@ async def update_book(
         key_fields = ("title", "author", "publisher", "year")
         book.data_complete = bool(book.isbn) and all(getattr(book, f) for f in key_fields)
     await db.commit()
-    await db.refresh(book)
-    return book
+
+    # Reload with photos for accurate has_photos
+    stmt = select(Book).where(Book.id == book_id).options(selectinload(Book.photos))
+    result = await db.execute(stmt)
+    book = result.scalar_one()
+    photos = [BookPhotoResponse.model_validate(p) for p in book.photos]
+    resp = BookResponse.model_validate(book)
+    return resp.model_copy(update={
+        "has_photos": len(book.photos) > 0,
+        "photos": photos,
+    })
 
 
 @router.delete("/{book_id}", status_code=204)
@@ -148,5 +236,12 @@ async def delete_book(
     book = await db.get(Book, book_id)
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
+
+    # Delete photo files from disk before removing the DB record
+    photos = (await db.scalars(select(BookPhoto).where(BookPhoto.book_id == book_id))).all()
+    for photo in photos:
+        await asyncio.to_thread((PHOTOS_DIR / photo.filename).unlink, missing_ok=True)
+    await asyncio.to_thread(shutil.rmtree, str(PHOTOS_DIR / str(book_id)), ignore_errors=True)
+
     await db.delete(book)
     await db.commit()

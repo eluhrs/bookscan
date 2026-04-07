@@ -11,6 +11,10 @@ export const theme = {
     warning:   '#F59E0B',
     warningBg:   '#FFFBEB',
     warningText: '#92400E',
+    subtle:       '#F5F5F5',   // secondary button bg
+    subtleText:   '#333333',   // secondary button text
+    disabled:     '#D1D5DB',   // disabled primary button bg
+    disabledText: '#9CA3AF',   // disabled primary button text
   },
   font: {
     sans: "'Geist', 'Inter', system-ui, sans-serif",

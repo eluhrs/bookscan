@@ -19,7 +19,7 @@ const TEXT_FIELDS: Array<{ key: keyof BookLookup; label: string; type?: string }
   { key: 'subject', label: 'Subject' },
 ]
 
-const CONDITIONS = ['', 'New', 'Very Good', 'Good', 'Acceptable'] as const
+const CONDITIONS = ['', 'New', 'Very Good', 'Good', 'Acceptable', 'Poor'] as const
 
 const inputStyle: CSSProperties = {
   width: '100%',

@@ -16,8 +16,16 @@ export interface Book {
   cover_image_local: string | null
   data_sources: Record<string, string> | null
   data_complete: boolean
+  has_photos: boolean
   created_at: string
   updated_at: string
+}
+
+export interface BookPhoto {
+  id: string
+  book_id: string
+  filename: string
+  created_at: string
 }
 
 export interface BookLookup {
