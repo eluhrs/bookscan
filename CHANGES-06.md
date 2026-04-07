@@ -19,10 +19,10 @@ Legend:
 ## Pre-existing Bugs to Confirm
 
 ### BUG-01: Verify Cancel buttons remain functional
-✅ Confirmed — all Cancel paths work after redesign.
+✅ Confirmed on hardware — all Cancel paths work after redesign.
 
 ### BUG-02: Verify audio feedback remains functional
-✅ Confirmed — all 5 audio trigger points work after redesign.
+✅ Confirmed on hardware — all 5 audio trigger points work after redesign.
 
 ---
 
