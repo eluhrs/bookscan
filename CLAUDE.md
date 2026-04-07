@@ -162,7 +162,7 @@ Review: descending 440/330Hz tone.
 
 **book_photos table.** Separate table (not JSON column on books) enables individual row deletes and per-book queries. `has_photos: bool` computed via EXISTS subquery in the router — not a model column. `passive_deletes=True` on the relationship + `ON DELETE CASCADE` on the FK means the DB handles cascade, not SQLAlchemy. Book DELETE also removes files from disk via `shutil.rmtree` in the delete handler.
 
-**LookupStep barcode capture.** Verbatim copy of the capture logic from the deleted `Scanner.tsx`: high-res `getUserMedia`, 3-strategy crop loop, module-level `persistedTorchOn`. Do not simplify — this combination was hard-won. See Scanner.tsx in git history (search for "SCAN-01" in commit messages) if the logic needs review.
+**LookupStep barcode capture.** Verbatim copy of the capture logic from the deleted `Scanner.tsx`: high-res `getUserMedia` (via `useCameraStream`), 3-strategy crop loop. Do not simplify — this combination was hard-won. See Scanner.tsx in git history (search for "SCAN-01" in commit messages) if the logic needs review. `persistedTorchOn` now lives in `useCameraStream.ts`, not LookupStep.
 
 **Photo retry on save failure.** `PhotoWorkflowPage` stores `savedBookId` after successful `POST /api/books`. If the subsequent photo upload fails, `ReviewStep` retries only the upload on re-tap of SAVE — it does not re-create the book.
 
@@ -255,7 +255,7 @@ bookscan/
         ├── components/
         │   ├── workflow/
         │   │   ├── WorkflowWrapper.tsx  # shared 6-zone layout for all 3 steps
-        │   │   ├── PhotographStep.tsx   # step 1: native camera file input, thumbnails
+        │   │   ├── PhotographStep.tsx   # step 1: live camera capture, portrait mask, □/■ progress
         │   │   ├── LookupStep.tsx       # step 2: barcode camera + keyboard fallback
         │   │   └── ReviewStep.tsx       # step 3: condition/flag/save with photo upload
         │   ├── BookForm.tsx    # desktop book edit form (condition, retain flag)
