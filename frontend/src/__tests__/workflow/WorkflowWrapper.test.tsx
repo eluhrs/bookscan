@@ -23,7 +23,7 @@ describe('WorkflowWrapper', () => {
     expect(screen.getAllByText('○')).toHaveLength(2)
   })
 
-  it('labels the steps: Photograph, Lookup, Review', () => {
+  it('labels the steps: Photograph, Metadata, Review', () => {
     render(<WorkflowWrapper {...defaultProps} />, { wrapper })
     expect(screen.getByText('Photograph')).toBeInTheDocument()
     expect(screen.getByText('Metadata')).toBeInTheDocument()

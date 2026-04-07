@@ -23,7 +23,7 @@ const PHOTO_HINTS = [
 ]
 
 async function captureAndCompress(video: HTMLVideoElement): Promise<File> {
-  return new Promise((resolve) => {
+  return new Promise<File>((resolve, reject) => {
     const maxEdge = 1200
     let w = video.videoWidth
     let h = video.videoHeight
@@ -37,7 +37,7 @@ async function captureAndCompress(video: HTMLVideoElement): Promise<File> {
     canvas.getContext('2d')!.drawImage(video, 0, 0, w, h)
     canvas.toBlob(
       (blob) => {
-        if (!blob) return
+        if (!blob) { reject(new Error('Frame capture failed')); return }
         resolve(new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' }))
       },
       'image/jpeg',
@@ -60,6 +60,7 @@ export default function PhotographStep({
 
   async function handleCapture() {
     if (capturingRef.current || !videoRef.current) return
+    if (videoRef.current.videoWidth === 0) return
     capturingRef.current = true
     try {
       const file = await captureAndCompress(videoRef.current)
