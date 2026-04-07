@@ -168,6 +168,12 @@ Review: descending 440/330Hz tone.
 
 **Blob URLs for photo display.** Dashboard photo grid fetches each photo via `GET /api/photos/{id}/file` (authenticated) and renders as blob URL. Blob URLs are revoked (`URL.revokeObjectURL`) when the edit view closes to prevent memory leaks.
 
+**useCameraStream hook.** Shared camera setup for PhotographStep and LookupStep. Module-level `persistedTorchOn` lives here. Pass `enabled: false` to disable (LookupStep passes `mode === 'camera'`; camera shuts off automatically in keyboard mode). A `cancelled` flag inside the effect body prevents a race where `getUserMedia` resolves after the component unmounts — the `.then()` handler checks `cancelled` and stops the stale stream. Both steps unmount their cameras cleanly via the hook's cleanup effect.
+
+**PhotographStep live camera.** Uses `useCameraStream` hook and Canvas API frame capture. `captureAndCompress` draws the current video frame to a canvas, resizes to max 1200px, encodes as JPEG at 85% quality, and wraps in a `File` object. No file picker — camera is always live on this step. Photo count target (1-5) persists in localStorage. Progress shown as □/■ indicators in controls bar.
+
+**WorkflowWrapper hintText prop.** Optional string rendered in a zone between main content and primary button. Pass `undefined` (or omit the prop) to hide the zone entirely. ReviewStep passes no hintText (no hint shown). The hint text zone is always positioned above the primary button regardless of content height.
+
 **Dashboard polling.** `DashboardPage` polls `GET /api/books` every 3 seconds via `setInterval`,
 paused when tab is not visible (`visibilitychange` event). No WebSocket or backend changes needed.
 
@@ -244,7 +250,8 @@ bookscan/
         ├── hooks/
         │   ├── useAuth.ts      # re-exports from AuthContext
         │   ├── useBreakpoint.ts # isMobile: window.innerWidth < 768
-        │   └── useScanAudio.ts  # Web Audio API scan feedback tones
+        │   ├── useScanAudio.ts  # Web Audio API scan feedback tones
+        │   └── useCameraStream.ts # getUserMedia, torch, stream cleanup — shared by PhotographStep and LookupStep
         ├── components/
         │   ├── workflow/
         │   │   ├── WorkflowWrapper.tsx  # shared 6-zone layout for all 3 steps
@@ -375,6 +382,18 @@ Apache VirtualHost (apply manually):
 **CHANGES-05** — both items fixed:
 - BUG-05: Audio triggers reinstated — `useScanAudio` now resumes suspended `AudioContext` before scheduling tones (`ctx.resume().then(schedule)`), so tones play even when the context was created post-async (after `await lookupIsbn()`). Removed `ctx.close()` from cleanup to prevent the save-success chime from being cut off when `ReviewStep` unmounts immediately after `onSaveComplete()`.
 - BUG-06: Cancel guard added — `stepRef` in `PhotoWorkflowPage` tracks current step immediately (before React re-renders); `handleLookupComplete` bails if `stepRef.current !== 'lookup'`, preventing in-flight lookup API responses from overriding a cancel press and sending the user to the Review screen against their intent.
+
+**CHANGES-06** — all items implemented:
+- Live camera capture in PhotographStep: replaces native file picker with getUserMedia stream, frame capture via canvas, compression to max 1200px/85% JPEG
+- useCameraStream hook: extracted from LookupStep; shared by both PhotographStep and LookupStep; handles getUserMedia, torch detection/toggle, persistedTorchOn module-level state, stream cleanup; cancelled flag guards against unmount race on async getUserMedia
+- WorkflowWrapper redesign: #FAFAFA background throughout; step indicator with ●/○ markers and "Metadata" label for lookup step; hintText prop adds optional hint text zone between content and primary button; Dashboard|Cancel as equal-width secondary buttons at bottom; old top header zone removed
+- PhotographStep controls bar: # photo count dropdown (left), □/■ progress indicators (center), torch button (right)
+- Portrait mask: 3:4 portrait orientation target rectangle with blue corner brackets and dynamic hint text (front cover/back cover/spine/additional) overlaid inside mask
+- Landscape mask in LookupStep: updated to rounded rectangle with same corner bracket style as portrait mask
+- ReviewStep: light theme; cover thumbnail 2:3 aspect ratio; condition buttons highlight in #0070F3 when selected; checkbox label updated to "Mark for Review?"
+- New theme tokens added: subtle (#F5F5F5), subtleText (#333333), disabled (#D1D5DB), disabledText (#9CA3AF)
+- BUG-01 (cancel paths): confirmed functional after redesign
+- BUG-02 (audio triggers): confirmed all 5 trigger points functional after redesign
 
 ---
 
