@@ -293,6 +293,7 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
       step="lookup"
       controls={mode === 'camera' ? cameraControls : keyboardControls}
       primaryLabel={looking ? 'Looking up…' : 'LOOKUP'}
+      primaryDisabled={looking}
       onPrimary={mode === 'camera' ? handleCameraLookup : handleKeyboardLookup}
       onCancel={onCancel}
     >
