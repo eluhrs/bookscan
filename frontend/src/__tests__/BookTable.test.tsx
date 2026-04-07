@@ -21,6 +21,7 @@ const makeBook = (overrides: Partial<Book> = {}): Book => ({
   cover_image_local: null,
   data_sources: null,
   data_complete: true,
+  has_photos: false,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
   ...overrides,

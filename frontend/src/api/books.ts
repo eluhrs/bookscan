@@ -6,7 +6,7 @@ export async function lookupIsbn(isbn: string): Promise<BookLookup> {
 }
 
 export async function saveBook(
-  book: Omit<Book, 'id' | 'cover_image_local' | 'created_at' | 'updated_at'>
+  book: Omit<Book, 'id' | 'cover_image_local' | 'created_at' | 'updated_at' | 'has_photos'>
 ): Promise<Book> {
   return apiFetch('/api/books', { method: 'POST', body: JSON.stringify(book) })
 }
