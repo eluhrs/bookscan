@@ -31,30 +31,44 @@ export function useScanAudio() {
   const ctxRef = useRef<AudioContext | null>(null)
 
   useEffect(() => {
-    return () => {
-      ctxRef.current?.close()
-    }
+    // No ctx.close() on cleanup: tones scheduled just before unmount (e.g., save sound)
+    // need time to finish playing. The AudioContext will be garbage collected naturally.
+    return () => {}
   }, [])
 
-  // Ascending chime — data complete
+  // Ascending chime — data complete / save success
   const playSuccess = useCallback(() => {
     try {
       const ctx = getOrCreateCtx(ctxRef)
-      const t = ctx.currentTime
-      playTone(ctx, 880, t, 0.08, 0.4)
-      playTone(ctx, 1108, t + 0.08, 0.12, 0.4)
+      const schedule = () => {
+        const t = ctx.currentTime
+        playTone(ctx, 880, t, 0.08, 0.4)
+        playTone(ctx, 1108, t + 0.08, 0.12, 0.4)
+      }
+      if (ctx.state === 'suspended') {
+        ctx.resume().then(schedule).catch(() => {})
+      } else {
+        schedule()
+      }
     } catch {
       // Audio not available — silently ignore
     }
   }, [])
 
-  // Descending tone — incomplete data
+  // Descending tone — incomplete data / scan failure
   const playReview = useCallback(() => {
     try {
       const ctx = getOrCreateCtx(ctxRef)
-      const t = ctx.currentTime
-      playTone(ctx, 440, t, 0.15, 0.3)
-      playTone(ctx, 330, t + 0.15, 0.10, 0.3)
+      const schedule = () => {
+        const t = ctx.currentTime
+        playTone(ctx, 440, t, 0.15, 0.3)
+        playTone(ctx, 330, t + 0.15, 0.10, 0.3)
+      }
+      if (ctx.state === 'suspended') {
+        ctx.resume().then(schedule).catch(() => {})
+      } else {
+        schedule()
+      }
     } catch {
       // Audio not available — silently ignore
     }
