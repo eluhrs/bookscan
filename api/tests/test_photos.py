@@ -116,17 +116,19 @@ async def test_delete_photo(client, auth_headers, tmp_path, monkeypatch):
 @pytest.mark.asyncio
 async def test_delete_book_cascades_photos(client, auth_headers, tmp_path, monkeypatch):
     monkeypatch.setattr("app.routers.photos.PHOTOS_DIR", tmp_path)
+    monkeypatch.setattr("app.routers.books.PHOTOS_DIR", tmp_path)
 
     create = await client.post(
         "/api/books", json={"isbn": "PHOTO-005", "title": "Cascade Test"}, headers=auth_headers
     )
     book_id = create.json()["id"]
 
-    await client.post(
+    upload = await client.post(
         f"/api/books/{book_id}/photos",
         files=[("files", ("z.jpg", b"zzz", "image/jpeg"))],
         headers=auth_headers,
     )
+    photo_id = upload.json()[0]["id"]
 
     del_resp = await client.delete(f"/api/books/{book_id}", headers=auth_headers)
     assert del_resp.status_code == 204
@@ -134,6 +136,10 @@ async def test_delete_book_cascades_photos(client, auth_headers, tmp_path, monke
     # Verify the book is gone (photo rows cascade via FK)
     gone = await client.get(f"/api/books/{book_id}", headers=auth_headers)
     assert gone.status_code == 404
+
+    # File should also be cleaned up
+    photo_file = tmp_path / book_id / f"{photo_id}.jpg"
+    assert not photo_file.exists()
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,7 @@
+import asyncio
+import shutil
 import uuid
+from pathlib import Path
 from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select, func
@@ -9,6 +12,8 @@ from slowapi.util import get_remote_address
 from app.auth import get_current_user
 from app.database import get_db, async_session_maker
 from app.models import Book, BookPhoto
+
+PHOTOS_DIR = Path("/app/photos")
 from app.schemas import (
     BookCreate,
     BookListResponse,
@@ -231,5 +236,12 @@ async def delete_book(
     book = await db.get(Book, book_id)
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
+
+    # Delete photo files from disk before removing the DB record
+    photos = (await db.scalars(select(BookPhoto).where(BookPhoto.book_id == book_id))).all()
+    for photo in photos:
+        await asyncio.to_thread((PHOTOS_DIR / photo.filename).unlink, missing_ok=True)
+    await asyncio.to_thread(shutil.rmtree, str(PHOTOS_DIR / str(book_id)), ignore_errors=True)
+
     await db.delete(book)
     await db.commit()

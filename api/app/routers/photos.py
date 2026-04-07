@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from pathlib import Path
 from typing import Annotated
@@ -29,7 +30,7 @@ async def upload_photos(
         raise HTTPException(status_code=404, detail="Book not found")
 
     book_dir = PHOTOS_DIR / str(book_id)
-    book_dir.mkdir(parents=True, exist_ok=True)
+    await asyncio.to_thread(book_dir.mkdir, parents=True, exist_ok=True)
 
     results = []
     for upload in files:
@@ -37,7 +38,7 @@ async def upload_photos(
         filename = f"{book_id}/{photo_id}.jpg"
         file_path = PHOTOS_DIR / filename
         content = await upload.read()
-        file_path.write_bytes(content)
+        await asyncio.to_thread(file_path.write_bytes, content)
 
         photo = BookPhoto(id=photo_id, book_id=book_id, filename=filename)
         db.add(photo)
@@ -77,8 +78,9 @@ async def delete_photo(
         raise HTTPException(status_code=404, detail="Photo not found")
 
     file_path = PHOTOS_DIR / photo.filename
-    if file_path.exists():
-        file_path.unlink()
+    file_exists = await asyncio.to_thread(file_path.exists)
+    if file_exists:
+        await asyncio.to_thread(file_path.unlink)
 
     await db.delete(photo)
     await db.commit()
@@ -95,7 +97,8 @@ async def get_photo_file(
         raise HTTPException(status_code=404, detail="Photo not found")
 
     file_path = PHOTOS_DIR / photo.filename
-    if not file_path.exists():
+    file_exists = await asyncio.to_thread(file_path.exists)
+    if not file_exists:
         raise HTTPException(status_code=404, detail="Photo file not found")
 
     return FileResponse(str(file_path), media_type="image/jpeg")
