@@ -372,6 +372,10 @@ Apache VirtualHost (apply manually):
 - Old `ScanPage`, `Scanner`, `PhoneReview` deleted (recoverable via git)
 - Migration 003: `book_photos` table with FK cascade and `book_id` index
 
+**CHANGES-05** — both items fixed:
+- BUG-05: Audio triggers reinstated — `useScanAudio` now resumes suspended `AudioContext` before scheduling tones (`ctx.resume().then(schedule)`), so tones play even when the context was created post-async (after `await lookupIsbn()`). Removed `ctx.close()` from cleanup to prevent the save-success chime from being cut off when `ReviewStep` unmounts immediately after `onSaveComplete()`.
+- BUG-06: Cancel guard added — `stepRef` in `PhotoWorkflowPage` tracks current step immediately (before React re-renders); `handleLookupComplete` bails if `stepRef.current !== 'lookup'`, preventing in-flight lookup API responses from overriding a cancel press and sending the user to the Review screen against their intent.
+
 ---
 
 ## Future Work
