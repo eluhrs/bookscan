@@ -1,6 +1,7 @@
 // frontend/src/components/workflow/LookupStep.tsx
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
+import { Camera } from 'lucide-react'
 import { BrowserMultiFormatReader } from '@zxing/browser'
 import WorkflowWrapper from './WorkflowWrapper'
 import { lookupIsbn } from '../../api/books'
@@ -29,6 +30,20 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
   const [isbn, setIsbn] = useState('')
   const [looking, setLooking] = useState(false)
   const [hintError, setHintError] = useState<string | null>(null)
+  const [viewportHeight, setViewportHeight] = useState<number | undefined>(undefined)
+
+  useEffect(() => {
+    if (mode !== 'keyboard') {
+      setViewportHeight(undefined)
+      return
+    }
+    const vv = window.visualViewport
+    if (!vv) return
+    const handler = () => setViewportHeight(vv.height)
+    vv.addEventListener('resize', handler)
+    setViewportHeight(vv.height)
+    return () => vv.removeEventListener('resize', handler)
+  }, [mode])
 
   const { videoRef, canvasRef, torchAvailable, torchOn, cameraError, handleTorchToggle } =
     useCameraStream({ enabled: mode === 'camera' })
@@ -148,23 +163,36 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
   )
 
   const keyboardControls = (
-    <button
-      aria-label="Switch to camera"
-      onClick={() => { setMode('camera'); setHintError(null) }}
+    <div
       style={{
-        background: theme.colors.subtle,
-        border: `1px solid ${theme.colors.border}`,
-        color: theme.colors.text,
-        cursor: 'pointer',
-        fontSize: '1.1rem',
-        padding: '0.3rem 0.5rem',
+        display: 'flex',
+        alignItems: 'center',
+        width: '100%',
+        border: `1px solid ${theme.colors.controlsBorder}`,
         borderRadius: 8,
-        lineHeight: 1,
+        padding: '0.2rem 0.5rem',
       }}
-      title="Switch to camera"
     >
-      📷
-    </button>
+      <button
+        aria-label="Switch to camera"
+        onClick={() => { setMode('camera'); setHintError(null) }}
+        style={{
+          background: theme.colors.subtle,
+          border: `1px solid ${theme.colors.border}`,
+          color: theme.colors.text,
+          cursor: 'pointer',
+          padding: '0.3rem 0.5rem',
+          borderRadius: 8,
+          lineHeight: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+        title="Switch to camera"
+      >
+        <Camera size={18} />
+      </button>
+    </div>
   )
 
   const hintText = hintError ?? undefined
@@ -243,25 +271,14 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
         alignItems: 'center',
         justifyContent: 'center',
         padding: '2rem',
-        gap: '0.75rem',
       }}
     >
-      <label
-        style={{
-          fontSize: '0.85rem',
-          color: theme.colors.muted,
-          fontWeight: 500,
-          alignSelf: 'flex-start',
-          width: '100%',
-          maxWidth: 320,
-        }}
-      >
-        Enter ISBN-10 or ISBN-13
-      </label>
+      <style>{`.isbn-input::placeholder { color: #6B7280; }`}</style>
       <input
+        className="isbn-input"
         type="text"
         inputMode="numeric"
-        placeholder="e.g. 9780743273565"
+        placeholder="Type ISBN-10 or ISBN-13, then tap Lookup"
         value={isbn}
         onChange={(e) => setIsbn(e.target.value)}
         autoFocus
@@ -291,6 +308,7 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
       primaryDisabled={looking}
       onPrimary={mode === 'camera' ? handleCameraLookup : handleKeyboardLookup}
       onCancel={onCancel}
+      viewportHeight={mode === 'keyboard' ? viewportHeight : undefined}
     >
       {mainContent}
     </WorkflowWrapper>
