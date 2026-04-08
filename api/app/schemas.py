@@ -44,6 +44,7 @@ class BookCreate(BaseModel):
     data_sources: Optional[dict] = None
     data_complete: bool = False
     condition: Optional[str] = None
+    needs_photo_review: bool = False
 
 
 class BookUpdate(BaseModel):
@@ -60,6 +61,7 @@ class BookUpdate(BaseModel):
     cover_image_url: Optional[str] = None
     data_complete: Optional[bool] = None
     condition: Optional[str] = None
+    needs_photo_review: Optional[bool] = None
 
 
 class BookPhotoResponse(BaseModel):
@@ -89,6 +91,7 @@ class BookResponse(BaseModel):
     data_sources: Optional[dict] = None
     data_complete: bool
     condition: Optional[str] = None
+    needs_photo_review: bool = False
     has_photos: bool = False
     photos: list[BookPhotoResponse] = []
     created_at: datetime

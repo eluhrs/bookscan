@@ -125,3 +125,38 @@ async def test_delete_book_with_listing(client, auth_headers):
     assert resp.status_code == 204
     gone = await client.get(f"/api/books/{book_id}", headers=auth_headers)
     assert gone.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_create_book_needs_photo_review_default(client, auth_headers):
+    resp = await client.post(
+        "/api/books", json={"isbn": "9780001000001"}, headers=auth_headers
+    )
+    assert resp.status_code == 201
+    assert resp.json()["needs_photo_review"] is False
+
+
+@pytest.mark.asyncio
+async def test_create_book_needs_photo_review_true(client, auth_headers):
+    resp = await client.post(
+        "/api/books",
+        json={"isbn": "9780001000002", "needs_photo_review": True},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201
+    assert resp.json()["needs_photo_review"] is True
+
+
+@pytest.mark.asyncio
+async def test_update_book_needs_photo_review(client, auth_headers):
+    create = await client.post(
+        "/api/books", json={"isbn": "9780001000003"}, headers=auth_headers
+    )
+    book_id = create.json()["id"]
+    resp = await client.patch(
+        f"/api/books/{book_id}",
+        json={"needs_photo_review": True},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["needs_photo_review"] is True
