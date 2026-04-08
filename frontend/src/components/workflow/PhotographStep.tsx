@@ -11,16 +11,9 @@ interface PhotographStepProps {
   targetCount: number
   onTargetCountChange: (n: number) => void
   onPhotoAdded: (file: File) => void
+  onSkip: () => void
   onCancel: () => void
 }
-
-const PHOTO_HINTS = [
-  'Position front cover',
-  'Position back cover',
-  'Position spine',
-  'Position additional view',
-  'Position additional view',
-]
 
 async function captureAndCompress(video: HTMLVideoElement): Promise<File> {
   return new Promise<File>((resolve, reject) => {
@@ -51,6 +44,7 @@ export default function PhotographStep({
   targetCount,
   onTargetCountChange,
   onPhotoAdded,
+  onSkip,
   onCancel,
 }: PhotographStepProps) {
   const { videoRef, torchAvailable, torchOn, cameraError, handleTorchToggle } =
@@ -71,11 +65,10 @@ export default function PhotographStep({
     }
   }
 
-  const hintIdx = Math.min(photos.length, PHOTO_HINTS.length - 1)
-  const overlayHint = PHOTO_HINTS[hintIdx]
+  const isSkipMode = targetCount === 0
 
-  // □/■ progress indicators
-  const progressIndicators = Array.from({ length: targetCount }, (_, i) => (
+  // □/■ progress indicators — hidden when targetCount === 0 (FEAT-06)
+  const progressIndicators = isSkipMode ? null : Array.from({ length: targetCount }, (_, i) => (
     <span
       key={i}
       style={{
@@ -88,6 +81,7 @@ export default function PhotographStep({
     </span>
   ))
 
+  // FEAT-05: controls bar has 1px border, interactive controls get subtle background
   const controls = (
     <div
       style={{
@@ -95,9 +89,12 @@ export default function PhotographStep({
         alignItems: 'center',
         justifyContent: 'space-between',
         width: '100%',
+        border: '1px solid #E5E5E5',
+        borderRadius: 8,
+        padding: '0.2rem 0.5rem',
       }}
     >
-      {/* Left: photo count dropdown */}
+      {/* Left: photo count dropdown — FEAT-06: 0-5 range */}
       <label
         style={{
           display: 'flex',
@@ -122,7 +119,7 @@ export default function PhotographStep({
             fontFamily: theme.font.sans,
           }}
         >
-          {[1, 2, 3, 4, 5].map((n) => (
+          {[0, 1, 2, 3, 4, 5].map((n) => (
             <option key={n} value={n}>{n}</option>
           ))}
         </select>
@@ -133,7 +130,7 @@ export default function PhotographStep({
         {progressIndicators}
       </div>
 
-      {/* Right: torch toggle */}
+      {/* Right: torch toggle — FEAT-05: already has subtle background */}
       {torchAvailable ? (
         <button
           onClick={handleTorchToggle}
@@ -200,9 +197,8 @@ export default function PhotographStep({
           playsInline
         />
 
-        {/* Portrait target mask overlay */}
+        {/* Portrait target mask overlay — square mask implemented in Task 6 */}
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-          {/* Semi-transparent overlay with portrait cutout */}
           <div
             style={{
               position: 'absolute',
@@ -220,16 +216,8 @@ export default function PhotographStep({
             <div style={{ position: 'absolute', bottom: -2, left: -2, width: 22, height: 22, borderBottom: `3px solid ${theme.colors.accent}`, borderLeft: `3px solid ${theme.colors.accent}`, borderRadius: '0 0 0 2px' }} />
             <div style={{ position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderBottom: `3px solid ${theme.colors.accent}`, borderRight: `3px solid ${theme.colors.accent}`, borderRadius: '0 0 2px 0' }} />
 
-            {/* Hint text: bottom-aligned inside mask */}
-            <div
-              style={{
-                position: 'absolute',
-                bottom: 12,
-                left: 8,
-                right: 8,
-                textAlign: 'center',
-              }}
-            >
+            {/* Hint text: inside mask, bottom-aligned — BUG-02 */}
+            <div style={{ position: 'absolute', bottom: 12, left: 8, right: 8, textAlign: 'center' }}>
               <span
                 style={{
                   display: 'inline-block',
@@ -240,7 +228,7 @@ export default function PhotographStep({
                   borderRadius: 20,
                 }}
               >
-                {overlayHint}
+                Set number of images, position book, then Capture
               </span>
             </div>
           </div>
@@ -253,9 +241,8 @@ export default function PhotographStep({
     <WorkflowWrapper
       step="photograph"
       controls={controls}
-      hintText="Set number of images, position book, then capture"
-      primaryLabel="CAPTURE"
-      onPrimary={handleCapture}
+      primaryLabel={isSkipMode ? 'SKIP' : 'CAPTURE'}
+      onPrimary={isSkipMode ? onSkip : handleCapture}
       onCancel={onCancel}
     >
       {cameraContent}
