@@ -433,12 +433,12 @@ Apache VirtualHost (apply manually):
 - Dashboard display of `needs_photo_review` deferred to future CHANGES file
 
 **CHANGES-08** — all items implemented:
-- FEAT-01: WorkflowWrapper Zone 2 (controls bar wrapper div) collapsed entirely when `controls === null`; Review screen shows no empty bar — #F0F0F0 step indicator zone provides sufficient visual separation
-- FEAT-02/03: Horizontal scrollable filmstrip replaces old cover+metadata side-by-side layout; cover image renders first (leftmost) with 2px accent-colored border (signals lookup result, not deletable); user photos follow with ✕ delete buttons overlaid top-right
-- FEAT-04: "Review Photography?" checkbox auto-checks when all user photos deleted from filmstrip; `localPhotos` state tracks remaining photos independently from prop; deletion is reversible until Save is tapped. DB field: uses existing `needs_photo_review` from migration 004. **Naming note:** CHANGES-08.md spec used the name `needs_photography` — this is the same field as `needs_photo_review` added in migration 004. No new migration was needed. Always use `needs_photo_review` in code.
-- BUG-01: Title (bold, 2-line `-webkit-line-clamp:2`, `overflow:hidden`) and author (1-line, `text-overflow:ellipsis`, `white-space:nowrap`) in both ReviewStep and BookTable
-- BUG-02: SAVE button state confirmed correct after filmstrip changes — blue (`theme.colors.accent`) when condition selected, `theme.colors.disabled` + disabled attr when not
-- FEAT-05: Layout order confirmed: step indicator (#F0F0F0) → no controls bar → filmstrip → title → author → year·publisher → conditions → checkboxes → SAVE → secondary bar (#F0F0F0)
+- FEAT-01: Review screen controls bar has no border and no interactive content. Zone 2 always renders at standard height (`minHeight: 2.75rem`, no background, no border) for consistent vertical rhythm across steps — the border lives inside the controls content for Photograph/Lookup steps, so it is simply absent on Review.
+- FEAT-02/03: Horizontal scrollable filmstrip replaces old cover+metadata side-by-side layout; cover image renders first (leftmost) with 2px `theme.colors.accent` border (signals lookup result, not deletable); user photos follow with ✕ delete buttons overlaid top-right; filmstrip separated from metadata by a `1px theme.colors.border` bottom border.
+- FEAT-04: "Review Photography?" checkbox auto-checks when all user photos deleted from filmstrip; `localPhotos` state (copy of `photos` prop) tracks remaining photos independently — deletions reversible until Save is tapped; blob URLs created/revoked via `useEffect` on `localPhotos`. DB field: uses existing `needs_photo_review` from migration 004. **Naming note:** CHANGES-08.md spec used the name `needs_photography` — this is the same field as `needs_photo_review` added in migration 004. No new migration was needed. Always use `needs_photo_review` in code.
+- BUG-01: Title (bold, 2-line `-webkit-line-clamp:2`, `overflow:hidden`) and author (1-line, `text-overflow:ellipsis`, `white-space:nowrap`) in both ReviewStep and BookTable; BookTable title `maxWidth:220`, author `maxWidth:160`.
+- BUG-02: SAVE button state confirmed correct after filmstrip changes — blue (`theme.colors.accent`) when condition selected, `theme.colors.disabled` + `disabled` attr when not.
+- FEAT-05: Layout order confirmed: step indicator (#F0F0F0) → empty controls bar (whitespace only) → filmstrip → title → author → year·publisher → conditions → checkboxes → SAVE → secondary bar (#F0F0F0).
 
 ---
 
