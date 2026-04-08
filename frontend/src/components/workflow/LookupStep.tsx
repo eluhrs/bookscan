@@ -99,7 +99,17 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
   }
 
   const cameraControls = (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        width: '100%',
+        border: `1px solid ${theme.colors.controlsBorder}`,
+        borderRadius: 8,
+        padding: '0.2rem 0.5rem',
+      }}
+    >
       <button
         aria-label="Switch to keyboard input"
         onClick={() => { setMode('keyboard'); setHintError(null) }}
@@ -157,11 +167,7 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
     </button>
   )
 
-  const hintText = hintError
-    ? hintError
-    : mode === 'camera'
-      ? 'Align barcode then tap Lookup, or use keyboard'
-      : 'Type ISBN and tap Lookup'
+  const hintText = hintError ?? undefined
 
   const mainContent = mode === 'camera' ? (
     <div style={{ height: '100%', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -193,10 +199,10 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
             <div
               style={{
                 position: 'absolute',
-                left: '10%',
-                right: '10%',
-                top: '25%',
-                bottom: '25%',
+                left: '5%',
+                right: '5%',
+                top: '32%',
+                bottom: '32%',
                 boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)',
                 borderRadius: 4,
               }}
@@ -219,7 +225,7 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
                     borderRadius: 20,
                   }}
                 >
-                  Align barcode within frame
+                  Align barcode then tap Lookup, or use keyboard
                 </span>
               </div>
             </div>
