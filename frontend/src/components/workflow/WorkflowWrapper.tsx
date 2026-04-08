@@ -81,20 +81,20 @@ export default function WorkflowWrapper({
         ))}
       </div>
 
-      {/* Zone 2: Controls bar — collapsed when controls is null (FEAT-01) */}
-      {controls !== null && (
-        <div
-          style={{
-            padding: '0.4rem 1rem',
-            minHeight: '2.75rem',
-            display: 'flex',
-            alignItems: 'center',
-            flexShrink: 0,
-          }}
-        >
-          {controls}
-        </div>
-      )}
+      {/* Zone 2: Controls bar — always rendered for consistent vertical rhythm (FEAT-01).
+          When controls is null (Review screen), renders as empty whitespace at standard height.
+          Border lives inside controls content, so no border appears when controls is null. */}
+      <div
+        style={{
+          padding: '0.4rem 1rem',
+          minHeight: '2.75rem',
+          display: 'flex',
+          alignItems: 'center',
+          flexShrink: 0,
+        }}
+      >
+        {controls}
+      </div>
 
       {/* Zone 3: Main content */}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
