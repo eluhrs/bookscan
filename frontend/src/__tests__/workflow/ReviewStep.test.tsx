@@ -78,4 +78,22 @@ describe('ReviewStep', () => {
     expect(screen.getByText('Test Book')).toBeInTheDocument()
     expect(screen.getByText('Test Author')).toBeInTheDocument()
   })
+
+  it('Review Photography checkbox is unchecked when skippedPhotography is false', () => {
+    render(<ReviewStep {...defaultProps} skippedPhotography={false} />, { wrapper })
+    expect(screen.getByRole('checkbox', { name: /Review Photography/ })).not.toBeChecked()
+  })
+
+  it('Review Photography checkbox is pre-checked when skippedPhotography is true', () => {
+    render(<ReviewStep {...defaultProps} skippedPhotography={true} />, { wrapper })
+    expect(screen.getByRole('checkbox', { name: /Review Photography/ })).toBeChecked()
+  })
+
+  it('user can override the Review Photography checkbox', () => {
+    render(<ReviewStep {...defaultProps} skippedPhotography={true} />, { wrapper })
+    const checkbox = screen.getByRole('checkbox', { name: /Review Photography/ })
+    expect(checkbox).toBeChecked()
+    fireEvent.click(checkbox)
+    expect(checkbox).not.toBeChecked()
+  })
 })

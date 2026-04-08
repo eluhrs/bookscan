@@ -96,6 +96,22 @@ container receives the correct `$2b$12$...` hash.
 
 ---
 
+## Design Conventions
+
+**Button labels (workflow screens):** Primary action buttons use ALL CAPS — `CAPTURE`, `LOOKUP`, `SAVE`, `SKIP`. Hint text references to buttons use Title Case — "tap Capture", "tap Lookup".
+
+**Primary button height:** All three primary buttons (CAPTURE, LOOKUP, SAVE) render via `WorkflowWrapper` Zone 5 and share `minHeight: 56px`. Never add per-step height overrides.
+
+**Controls bar styling:** Controls bars on workflow screens have `border: 1px solid theme.colors.controlsBorder` (`#E5E5E5`). Interactive controls within (dropdowns, icon buttons) get `background: theme.colors.subtle` so they read as tappable.
+
+**Step indicator zone:** `background: theme.colors.zoneBg` (`#F0F0F0`) — Zone 1 in WorkflowWrapper.
+
+**Secondary button bar:** `background: theme.colors.zoneBg` (`#F0F0F0`) — Zone 6 in WorkflowWrapper. Secondary buttons within use `background: theme.colors.subtle`. The second button is labelled "Start Over" (not "Cancel").
+
+**Colors:** All colors reference `theme.colors.*` from `frontend/src/styles/theme.ts`. Do not add hardcoded hex values to components. New tokens added in CHANGES-07: `zoneBg` (`#F0F0F0`), `controlsBorder` (`#E5E5E5`).
+
+---
+
 ## Key Decisions & Gotchas
 
 **Docker Compose dev override strips migration step.** `docker-compose.dev.yml` overrides the CMD to
@@ -396,6 +412,25 @@ Apache VirtualHost (apply manually):
 - New theme tokens added: subtle (#F5F5F5), subtleText (#333333), disabled (#D1D5DB), disabledText (#9CA3AF)
 - BUG-01 (cancel paths): confirmed functional after redesign
 - BUG-02 (audio triggers): confirmed all 5 trigger points functional after redesign
+
+**CHANGES-07** — all items implemented:
+- FEAT-01: Button case convention documented; hint text "then capture" → "then Capture" fixed
+- FEAT-02/03: Step indicator and secondary button bar zones get `theme.colors.zoneBg` (`#F0F0F0`) background via WorkflowWrapper
+- FEAT-04: "Cancel" renamed "Start Over" across all workflow screens
+- FEAT-05/08/09: Controls bar treatment — `1px theme.colors.controlsBorder` border, interactive controls get `theme.colors.subtle` fill
+- FEAT-06: Photo count dropdown extends to 0–5; at 0, progress indicators hidden and button label changes to SKIP
+- FEAT-07: SKIP advances to Metadata step; sets `skippedPhotography=true` in page state
+- BUG-01: Portrait mask replaced with largest square using `ResizeObserver`
+- BUG-02: Hint text "Set number of images, position book, then Capture" moved inside mask pill; duplicate below camera removed
+- BUG-03/06/12: All primary buttons share `minHeight: 56px` via WorkflowWrapper
+- BUG-04: Landscape barcode mask widened to ~3:1 ratio (`top:32% bottom:32%`)
+- BUG-05: Hint text "Align barcode then tap Lookup, or use keyboard" moved inside mask pill; errors surface via WorkflowWrapper `hintText` only
+- BUG-07/08/09: `visualViewport` resize detection in keyboard mode — LOOKUP + secondary buttons stay above keyboard, step indicator + controls anchored top, input centered in remaining space
+- BUG-10: 📷 emoji replaced with Lucide `<Camera />` icon
+- BUG-11: Field heading removed; placeholder: "Type ISBN-10 or ISBN-13, then tap Lookup" with darker placeholder color via injected `<style>`
+- Migration 004: `needs_photo_review BOOLEAN NOT NULL DEFAULT FALSE` added to books table
+- ReviewStep: "Mark for Review?" → "Review Metadata?"; new "Review Photography?" checkbox (auto-checked on SKIP); `needs_photo_review` saved to DB on book creation
+- Dashboard display of `needs_photo_review` deferred to future CHANGES file
 
 ---
 
