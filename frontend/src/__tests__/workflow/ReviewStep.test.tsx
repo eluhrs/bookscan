@@ -96,4 +96,52 @@ describe('ReviewStep', () => {
     fireEvent.click(checkbox)
     expect(checkbox).not.toBeChecked()
   })
+
+  it('filmstrip renders cover image when cover_image_url is provided', () => {
+    const lookup = { ...baseLookup, cover_image_url: 'https://example.com/cover.jpg' }
+    render(<ReviewStep {...defaultProps} lookupResult={lookup} />, { wrapper })
+    const imgs = screen.getAllByRole('img')
+    expect(imgs.some((img) => (img as HTMLImageElement).src.includes('example.com/cover.jpg'))).toBe(true)
+  })
+
+  it('filmstrip renders delete buttons for user photos', () => {
+    const fakeFile = new File(['x'], 'photo.jpg', { type: 'image/jpeg' })
+    render(<ReviewStep {...defaultProps} photos={[fakeFile]} />, { wrapper })
+    expect(screen.getByRole('button', { name: /delete photo/i })).toBeInTheDocument()
+  })
+
+  it('filmstrip renders one delete button per user photo', () => {
+    const file1 = new File(['x'], 'photo1.jpg', { type: 'image/jpeg' })
+    const file2 = new File(['y'], 'photo2.jpg', { type: 'image/jpeg' })
+    render(<ReviewStep {...defaultProps} photos={[file1, file2]} />, { wrapper })
+    expect(screen.getAllByRole('button', { name: /delete photo/i })).toHaveLength(2)
+  })
+
+  it('deleting all user photos auto-checks Review Photography?', () => {
+    const fakeFile = new File(['x'], 'photo.jpg', { type: 'image/jpeg' })
+    render(<ReviewStep {...defaultProps} photos={[fakeFile]} skippedPhotography={false} />, { wrapper })
+    expect(screen.getByRole('checkbox', { name: /Review Photography/ })).not.toBeChecked()
+    fireEvent.click(screen.getByRole('button', { name: /delete photo/i }))
+    expect(screen.getByRole('checkbox', { name: /Review Photography/ })).toBeChecked()
+  })
+
+  it('deleting a photo when others remain does not auto-check Review Photography?', () => {
+    const file1 = new File(['x'], 'photo1.jpg', { type: 'image/jpeg' })
+    const file2 = new File(['y'], 'photo2.jpg', { type: 'image/jpeg' })
+    render(<ReviewStep {...defaultProps} photos={[file1, file2]} skippedPhotography={false} />, { wrapper })
+    const deleteBtns = screen.getAllByRole('button', { name: /delete photo/i })
+    fireEvent.click(deleteBtns[0])
+    expect(screen.getByRole('checkbox', { name: /Review Photography/ })).not.toBeChecked()
+  })
+
+  it('user can manually re-check Review Photography? after auto-uncheck', () => {
+    // Start with skippedPhotography true (auto-checked), then manually uncheck
+    render(<ReviewStep {...defaultProps} skippedPhotography={true} />, { wrapper })
+    const checkbox = screen.getByRole('checkbox', { name: /Review Photography/ })
+    expect(checkbox).toBeChecked()
+    fireEvent.click(checkbox)
+    expect(checkbox).not.toBeChecked()
+    fireEvent.click(checkbox)
+    expect(checkbox).toBeChecked()
+  })
 })
