@@ -1,6 +1,6 @@
 // frontend/src/components/workflow/PhotographStep.tsx
 
-import { useRef } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import WorkflowWrapper from './WorkflowWrapper'
 import { useCameraStream } from '../../hooks/useCameraStream'
 import { useScanAudio } from '../../hooks/useScanAudio'
@@ -51,6 +51,20 @@ export default function PhotographStep({
     useCameraStream({ enabled: true })
   const { playSuccess } = useScanAudio()
   const capturingRef = useRef(false)
+
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [squareSide, setSquareSide] = useState(0)
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect
+      setSquareSide(Math.min(width, height) - 24)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   async function handleCapture() {
     if (capturingRef.current || !videoRef.current) return
@@ -179,6 +193,7 @@ export default function PhotographStep({
     >
       {/* Camera view container with rounded border */}
       <div
+        ref={containerRef}
         style={{
           position: 'relative',
           width: '100%',
@@ -197,42 +212,45 @@ export default function PhotographStep({
           playsInline
         />
 
-        {/* Portrait target mask overlay — square mask implemented in Task 6 */}
-        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-          <div
-            style={{
-              position: 'absolute',
-              left: '15%',
-              right: '15%',
-              top: '5%',
-              bottom: '5%',
-              boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)',
-              borderRadius: 4,
-            }}
-          >
-            {/* Blue corner brackets */}
-            <div style={{ position: 'absolute', top: -2, left: -2, width: 22, height: 22, borderTop: `3px solid ${theme.colors.accent}`, borderLeft: `3px solid ${theme.colors.accent}`, borderRadius: '2px 0 0 0' }} />
-            <div style={{ position: 'absolute', top: -2, right: -2, width: 22, height: 22, borderTop: `3px solid ${theme.colors.accent}`, borderRight: `3px solid ${theme.colors.accent}`, borderRadius: '0 2px 0 0' }} />
-            <div style={{ position: 'absolute', bottom: -2, left: -2, width: 22, height: 22, borderBottom: `3px solid ${theme.colors.accent}`, borderLeft: `3px solid ${theme.colors.accent}`, borderRadius: '0 0 0 2px' }} />
-            <div style={{ position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderBottom: `3px solid ${theme.colors.accent}`, borderRight: `3px solid ${theme.colors.accent}`, borderRadius: '0 0 2px 0' }} />
+        {/* Square mask overlay — BUG-01: centered square, side = min(containerW, containerH) - 24px */}
+        {squareSide > 0 && (
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+            <div
+              style={{
+                position: 'absolute',
+                width: squareSide,
+                height: squareSide,
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)',
+                borderRadius: 4,
+              }}
+            >
+              {/* Blue corner brackets */}
+              <div style={{ position: 'absolute', top: -2, left: -2, width: 22, height: 22, borderTop: `3px solid ${theme.colors.accent}`, borderLeft: `3px solid ${theme.colors.accent}`, borderRadius: '2px 0 0 0' }} />
+              <div style={{ position: 'absolute', top: -2, right: -2, width: 22, height: 22, borderTop: `3px solid ${theme.colors.accent}`, borderRight: `3px solid ${theme.colors.accent}`, borderRadius: '0 2px 0 0' }} />
+              <div style={{ position: 'absolute', bottom: -2, left: -2, width: 22, height: 22, borderBottom: `3px solid ${theme.colors.accent}`, borderLeft: `3px solid ${theme.colors.accent}`, borderRadius: '0 0 0 2px' }} />
+              <div style={{ position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderBottom: `3px solid ${theme.colors.accent}`, borderRight: `3px solid ${theme.colors.accent}`, borderRadius: '0 0 2px 0' }} />
 
-            {/* Hint text: inside mask, bottom-aligned — BUG-02 */}
-            <div style={{ position: 'absolute', bottom: 12, left: 8, right: 8, textAlign: 'center' }}>
-              <span
-                style={{
-                  display: 'inline-block',
-                  background: 'rgba(0,0,0,0.55)',
-                  color: '#fff',
-                  fontSize: '0.78rem',
-                  padding: '0.25rem 0.75rem',
-                  borderRadius: 20,
-                }}
-              >
-                Set number of images, position book, then Capture
-              </span>
+              {/* Hint text: bottom-aligned inside mask */}
+              <div style={{ position: 'absolute', bottom: 12, left: 8, right: 8, textAlign: 'center' }}>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    background: 'rgba(0,0,0,0.55)',
+                    color: '#fff',
+                    fontSize: '0.78rem',
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: 20,
+                  }}
+                >
+                  Set number of images, position book, then Capture
+                </span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )
