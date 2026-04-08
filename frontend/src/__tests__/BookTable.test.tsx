@@ -70,4 +70,27 @@ describe('BookTable', () => {
     render(<BookTable books={books} onEdit={vi.fn()} onDelete={vi.fn()} onGenerateListing={vi.fn()} />)
     expect(screen.queryByTitle('No photos')).not.toBeInTheDocument()
   })
+
+  it('title cell has two-line clamp and overflow hidden', () => {
+    const books = [makeBook({ title: 'Test Book' })]
+    const { container } = render(
+      <BookTable books={books} onEdit={vi.fn()} onDelete={vi.fn()} onGenerateListing={vi.fn()} />
+    )
+    const rows = container.querySelectorAll('tbody tr')
+    const titleTd = rows[0].querySelectorAll('td')[1] as HTMLElement
+    expect(titleTd.style.overflow).toBe('hidden')
+    expect(titleTd.style.maxWidth).toBeTruthy()
+  })
+
+  it('author cell has one-line ellipsis styles', () => {
+    const books = [makeBook({ author: 'Test Author' })]
+    const { container } = render(
+      <BookTable books={books} onEdit={vi.fn()} onDelete={vi.fn()} onGenerateListing={vi.fn()} />
+    )
+    const rows = container.querySelectorAll('tbody tr')
+    const authorTd = rows[0].querySelectorAll('td')[2] as HTMLElement
+    expect(authorTd.style.overflow).toBe('hidden')
+    expect(authorTd.style.textOverflow).toBe('ellipsis')
+    expect(authorTd.style.whiteSpace).toBe('nowrap')
+  })
 })

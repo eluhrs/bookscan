@@ -123,7 +123,18 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
                   </span>
                 )}
               </td>
-              <td style={{ padding: '0.6rem 0.75rem', fontWeight: 500 }}>
+              <td
+                style={{
+                  padding: '0.6rem 0.75rem',
+                  fontWeight: 500,
+                  maxWidth: 220,
+                  overflow: 'hidden',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  lineHeight: 1.4,
+                }}
+              >
                 {book.title ?? '—'}
                 {!book.has_photos && (
                   <span
@@ -134,7 +145,16 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
                   </span>
                 )}
               </td>
-              <td style={{ padding: '0.6rem 0.75rem', color: theme.colors.muted }}>
+              <td
+                style={{
+                  padding: '0.6rem 0.75rem',
+                  color: theme.colors.muted,
+                  maxWidth: 160,
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap',
+                  textOverflow: 'ellipsis',
+                }}
+              >
                 {book.author ?? '—'}
               </td>
               <td style={{ padding: '0.6rem 0.75rem', color: theme.colors.muted }}>
