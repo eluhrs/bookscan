@@ -17,6 +17,7 @@ export interface Book {
   data_sources: Record<string, string> | null
   data_complete: boolean
   has_photos: boolean
+  needs_photo_review: boolean
   created_at: string
   updated_at: string
 }
