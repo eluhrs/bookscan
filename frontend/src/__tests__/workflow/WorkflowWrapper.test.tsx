@@ -50,7 +50,7 @@ describe('WorkflowWrapper', () => {
   it('calls onCancel when cancel is clicked', () => {
     const onCancel = vi.fn()
     render(<WorkflowWrapper {...defaultProps} onCancel={onCancel} />, { wrapper })
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Start Over' }))
     expect(onCancel).toHaveBeenCalledOnce()
   })
 

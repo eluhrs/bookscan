@@ -67,21 +67,23 @@ describe('LookupStep', () => {
     expect(document.querySelector('video')).toBeInTheDocument()
   })
 
-  it('shows camera-mode hint text by default', () => {
+  it('shows camera-mode hint text inside the mask overlay', () => {
     render(
       <LookupStep onLookupComplete={vi.fn()} onCancel={vi.fn()} />,
       { wrapper }
     )
+    // Hint text is rendered inside the camera mask overlay, not in the hintText zone
     expect(screen.getByText('Align barcode then tap Lookup, or use keyboard')).toBeInTheDocument()
   })
 
-  it('shows keyboard-mode hint text after switching', () => {
+  it('shows no static hint text in keyboard mode (only errors when they occur)', () => {
     render(
       <LookupStep onLookupComplete={vi.fn()} onCancel={vi.fn()} />,
       { wrapper }
     )
     fireEvent.click(screen.getByLabelText('Switch to keyboard input'))
-    expect(screen.getByText('Type ISBN and tap Lookup')).toBeInTheDocument()
+    // Keyboard mode has no static hint text; hintText zone only shows errors
+    expect(screen.queryByText('Type ISBN and tap Lookup')).not.toBeInTheDocument()
   })
 
   it('in keyboard mode, calls lookupIsbn with entered value on LOOKUP press', async () => {

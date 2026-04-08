@@ -1,7 +1,22 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { vi } from 'vitest'
+import { vi, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import PhotographStep from '../../components/workflow/PhotographStep'
+
+beforeEach(() => {
+  global.ResizeObserver = class ResizeObserver {
+    private cb: ResizeObserverCallback
+    constructor(cb: ResizeObserverCallback) { this.cb = cb }
+    observe(el: Element) {
+      this.cb(
+        [{ contentRect: { width: 300, height: 400 } } as ResizeObserverEntry],
+        this,
+      )
+    }
+    unobserve() {}
+    disconnect() {}
+  }
+})
 
 vi.mock('../../hooks/useCameraStream', () => ({
   useCameraStream: () => ({
@@ -30,15 +45,16 @@ const defaultProps = {
   targetCount: 3,
   onTargetCountChange: vi.fn(),
   onPhotoAdded: vi.fn(),
+  onSkip: vi.fn(),
   onCancel: vi.fn(),
 }
 
 describe('PhotographStep', () => {
-  it('renders select with options 1–5', () => {
+  it('renders select with options 0–5', () => {
     render(<PhotographStep {...defaultProps} />, { wrapper })
     const options = screen.getAllByRole('option')
-    expect(options).toHaveLength(5)
-    expect(options.map((o) => o.textContent)).toEqual(['1', '2', '3', '4', '5'])
+    expect(options).toHaveLength(6)
+    expect(options.map((o) => o.textContent)).toEqual(['0', '1', '2', '3', '4', '5'])
   })
 
   it('shows □/■ progress indicators matching photo count', () => {
@@ -67,12 +83,10 @@ describe('PhotographStep', () => {
     expect(captureBtn).not.toBeDisabled()
   })
 
-  it('shows dynamic hint text for current photo position', () => {
-    const { rerender } = render(<PhotographStep {...defaultProps} photos={[]} />, { wrapper })
-    expect(screen.getByText('Position front cover')).toBeInTheDocument()
-
-    rerender(<PhotographStep {...defaultProps} photos={[new File(['a'], 'a.jpg')]} />)
-    expect(screen.getByText('Position back cover')).toBeInTheDocument()
+  it('shows hint text inside the square mask overlay', () => {
+    render(<PhotographStep {...defaultProps} photos={[]} />, { wrapper })
+    // Hint text is rendered inside the square mask when squareSide > 0 (ResizeObserver fires)
+    expect(screen.getByText('Set number of images, position book, then Capture')).toBeInTheDocument()
   })
 
   it('primary button label is CAPTURE', () => {
