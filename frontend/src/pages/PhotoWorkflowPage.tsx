@@ -15,6 +15,7 @@ export default function PhotoWorkflowPage() {
   )
   const [lookupResult, setLookupResult] = useState<BookLookup | null>(null)
   const [savedBookId, setSavedBookId] = useState<string | null>(null)
+  const [skippedPhotography, setSkippedPhotography] = useState(false)
 
   // Tracks current step immediately (before React re-renders) so handleLookupComplete
   // can detect stale calls caused by cancel being pressed while a lookup is in-flight.
@@ -36,6 +37,12 @@ export default function PhotoWorkflowPage() {
   function handleTargetCountChange(n: number) {
     setTargetCount(n)
     localStorage.setItem('photoTargetCount', String(n))
+  }
+
+  function handleSkip() {
+    setSkippedPhotography(true)
+    stepRef.current = 'lookup'
+    setStep('lookup')
   }
 
   const handleLookupComplete = useCallback(
@@ -60,6 +67,7 @@ export default function PhotoWorkflowPage() {
     setPhotos([])
     setLookupResult(null)
     setSavedBookId(null)
+    setSkippedPhotography(false)
     setStep('photograph')
   }
 
@@ -68,6 +76,7 @@ export default function PhotoWorkflowPage() {
     setPhotos([])
     setLookupResult(null)
     setSavedBookId(null)
+    setSkippedPhotography(false)
     setStep('photograph')
   }
 
@@ -78,6 +87,7 @@ export default function PhotoWorkflowPage() {
         targetCount={targetCount}
         onTargetCountChange={handleTargetCountChange}
         onPhotoAdded={handlePhotoAdded}
+        onSkip={handleSkip}
         onCancel={handleCancel}
       />
     )
@@ -101,6 +111,7 @@ export default function PhotoWorkflowPage() {
         onSavedBookId={setSavedBookId}
         onSaveComplete={handleSaveComplete}
         onCancel={handleCancel}
+        skippedPhotography={skippedPhotography}
       />
     )
   }
