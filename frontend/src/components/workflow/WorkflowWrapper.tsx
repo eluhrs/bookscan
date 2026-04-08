@@ -81,18 +81,20 @@ export default function WorkflowWrapper({
         ))}
       </div>
 
-      {/* Zone 2: Controls bar */}
-      <div
-        style={{
-          padding: '0.4rem 1rem',
-          minHeight: '2.75rem',
-          display: 'flex',
-          alignItems: 'center',
-          flexShrink: 0,
-        }}
-      >
-        {controls}
-      </div>
+      {/* Zone 2: Controls bar — collapsed when controls is null (FEAT-01) */}
+      {controls !== null && (
+        <div
+          style={{
+            padding: '0.4rem 1rem',
+            minHeight: '2.75rem',
+            display: 'flex',
+            alignItems: 'center',
+            flexShrink: 0,
+          }}
+        >
+          {controls}
+        </div>
+      )}
 
       {/* Zone 3: Main content */}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>

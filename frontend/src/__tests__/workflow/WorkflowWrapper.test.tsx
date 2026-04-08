@@ -63,4 +63,34 @@ describe('WorkflowWrapper', () => {
     render(<WorkflowWrapper {...defaultProps} children={<div>unique-content</div>} />, { wrapper })
     expect(screen.getByText('unique-content')).toBeInTheDocument()
   })
+
+  it('renders controls content when controls is non-null', () => {
+    render(
+      <WorkflowWrapper {...defaultProps} controls={<div>controls-content</div>} />,
+      { wrapper }
+    )
+    expect(screen.getByText('controls-content')).toBeInTheDocument()
+  })
+
+  it('Zone 2 wrapper div is absent from DOM when controls is null', () => {
+    // When controls is non-null, the Zone 2 wrapper renders and contains the controls
+    const { container } = render(
+      <WorkflowWrapper {...defaultProps} controls={<div data-testid="zone2-content">ctrl</div>} />,
+      { wrapper }
+    )
+    expect(container.querySelector('[data-testid="zone2-content"]')).toBeInTheDocument()
+
+    // When controls is null, Zone 2 should not render — no empty wrapper div taking space
+    const { container: c2 } = render(
+      <WorkflowWrapper {...defaultProps} controls={null} />,
+      { wrapper }
+    )
+    // The outer flex container should have exactly: step-indicator, main-content, (optional hint), primary-btn, secondary-bar
+    // Zone 2 wrapper has minHeight style — verify no child has that style
+    const outerChildren = Array.from(c2.firstChild?.childNodes ?? []) as HTMLElement[]
+    const hasZone2 = outerChildren.some(
+      (el) => el instanceof HTMLElement && el.style?.minHeight === '2.75rem'
+    )
+    expect(hasZone2).toBe(false)
+  })
 })
