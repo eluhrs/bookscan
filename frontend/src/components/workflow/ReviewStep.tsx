@@ -18,6 +18,7 @@ interface ReviewStepProps {
   onSavedBookId: (id: string) => void
   onSaveComplete: () => void
   onCancel: () => void
+  skippedPhotography: boolean
 }
 
 async function compressPhoto(file: File): Promise<Blob> {
@@ -50,9 +51,11 @@ export default function ReviewStep({
   onSavedBookId,
   onSaveComplete,
   onCancel,
+  skippedPhotography,
 }: ReviewStepProps) {
   const [condition, setCondition] = useState<Condition | null>(null)
-  const [flagForReview, setFlagForReview] = useState(!lookupResult.data_complete)
+  const [reviewMetadata, setReviewMetadata] = useState(!lookupResult.data_complete)
+  const [reviewPhotography, setReviewPhotography] = useState(skippedPhotography)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const { playSuccess } = useScanAudio()
@@ -70,15 +73,18 @@ export default function ReviewStep({
         const book = await saveBook({
           ...lookupResult,
           condition,
-          data_complete: flagForReview ? false : lookupResult.data_complete,
+          data_complete: reviewMetadata ? false : lookupResult.data_complete,
+          needs_photo_review: reviewPhotography,
         })
         bookId = book.id
         onSavedBookId(bookId)
       }
 
-      // Step 2: Compress and upload photos
-      const blobs = await Promise.all(photos.map(compressPhoto))
-      await uploadPhotos(bookId, blobs)
+      // Step 2: Compress and upload photos (skip if none)
+      if (photos.length > 0) {
+        const blobs = await Promise.all(photos.map(compressPhoto))
+        await uploadPhotos(bookId, blobs)
+      }
 
       playSuccess()
       onSaveComplete()
@@ -200,7 +206,27 @@ export default function ReviewStep({
           ))}
         </div>
 
-        {/* Flag for review */}
+        {/* Review Metadata? (renamed from "Mark for Review?") */}
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            cursor: 'pointer',
+            marginBottom: '0.5rem',
+            fontSize: '0.875rem',
+            color: theme.colors.text,
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={reviewMetadata}
+            onChange={(e) => setReviewMetadata(e.target.checked)}
+          />
+          Review Metadata?
+        </label>
+
+        {/* Review Photography? — new checkbox, auto-checked when skippedPhotography */}
         <label
           style={{
             display: 'flex',
@@ -214,10 +240,10 @@ export default function ReviewStep({
         >
           <input
             type="checkbox"
-            checked={flagForReview}
-            onChange={(e) => setFlagForReview(e.target.checked)}
+            checked={reviewPhotography}
+            onChange={(e) => setReviewPhotography(e.target.checked)}
           />
-          Mark for Review?
+          Review Photography?
         </label>
 
         {error && (

@@ -34,6 +34,7 @@ describe('ReviewStep', () => {
     onSavedBookId: vi.fn(),
     onSaveComplete: vi.fn(),
     onCancel: vi.fn(),
+    skippedPhotography: false,
   }
 
   it('SAVE button is disabled before condition is selected', () => {
@@ -56,17 +57,17 @@ describe('ReviewStep', () => {
 
   it('flag for review is unchecked when data_complete is true', () => {
     render(<ReviewStep {...defaultProps} lookupResult={{ ...baseLookup, data_complete: true }} />, { wrapper })
-    expect(screen.getByRole('checkbox', { name: /Mark for Review/ })).not.toBeChecked()
+    expect(screen.getByRole('checkbox', { name: /Review Metadata/ })).not.toBeChecked()
   })
 
   it('flag for review is pre-checked when data_complete is false', () => {
     render(<ReviewStep {...defaultProps} lookupResult={{ ...baseLookup, data_complete: false }} />, { wrapper })
-    expect(screen.getByRole('checkbox', { name: /Mark for Review/ })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: /Review Metadata/ })).toBeChecked()
   })
 
   it('user can override the flag for review checkbox', () => {
     render(<ReviewStep {...defaultProps} lookupResult={{ ...baseLookup, data_complete: false }} />, { wrapper })
-    const checkbox = screen.getByRole('checkbox', { name: /Mark for Review/ })
+    const checkbox = screen.getByRole('checkbox', { name: /Review Metadata/ })
     expect(checkbox).toBeChecked()
     fireEvent.click(checkbox)
     expect(checkbox).not.toBeChecked()
