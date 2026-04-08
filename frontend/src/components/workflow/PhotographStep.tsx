@@ -89,7 +89,7 @@ export default function PhotographStep({
         alignItems: 'center',
         justifyContent: 'space-between',
         width: '100%',
-        border: '1px solid #E5E5E5',
+        border: `1px solid ${theme.colors.controlsBorder}`,
         borderRadius: 8,
         padding: '0.2rem 0.5rem',
       }}

@@ -16,6 +16,7 @@ export const theme = {
     disabled:     '#D1D5DB',   // disabled primary button bg
     disabledText: '#9CA3AF',   // disabled primary button text
     zoneBg:       '#F0F0F0',   // step indicator + secondary button bar background
+    controlsBorder: '#E5E5E5', // controls bar border on workflow screens
   },
   font: {
     sans: "'Geist', 'Inter', system-ui, sans-serif",
