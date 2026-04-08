@@ -22,6 +22,8 @@ export interface WorkflowWrapperProps {
   onPrimary: () => void
   onCancel: () => void
   children: ReactNode
+  /** Overrides 100dvh — used by LookupStep keyboard mode to track visualViewport height */
+  viewportHeight?: number
 }
 
 export default function WorkflowWrapper({
@@ -33,11 +35,12 @@ export default function WorkflowWrapper({
   onPrimary,
   onCancel,
   children,
+  viewportHeight,
 }: WorkflowWrapperProps) {
   return (
     <div
       style={{
-        height: '100dvh',
+        height: viewportHeight ? `${viewportHeight}px` : '100dvh',
         background: theme.colors.surface,
         color: theme.colors.text,
         display: 'flex',
@@ -46,7 +49,7 @@ export default function WorkflowWrapper({
         fontFamily: theme.font.sans,
       }}
     >
-      {/* Zone 1: Step indicator */}
+      {/* Zone 1: Step indicator — #F0F0F0 background (FEAT-02) */}
       <div
         style={{
           display: 'flex',
@@ -55,6 +58,7 @@ export default function WorkflowWrapper({
           gap: '0.5rem',
           padding: '0.75rem 1rem 0.25rem',
           flexShrink: 0,
+          background: '#F0F0F0',
         }}
       >
         {STEPS.map((s, i) => (
@@ -90,12 +94,12 @@ export default function WorkflowWrapper({
         {controls}
       </div>
 
-      {/* Zone 3: Main content — grows to fill remaining space */}
+      {/* Zone 3: Main content */}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
         {children}
       </div>
 
-      {/* Zone 4: Hint text */}
+      {/* Zone 4: Hint text (errors or instructions) */}
       {hintText !== undefined && (
         <div
           style={{
@@ -110,7 +114,7 @@ export default function WorkflowWrapper({
         </div>
       )}
 
-      {/* Zone 5: Primary button */}
+      {/* Zone 5: Primary button — shared minHeight 56px (BUG-03/06/12) */}
       <div style={{ padding: '0.5rem 1rem 0.25rem', flexShrink: 0 }}>
         <button
           onClick={onPrimary}
@@ -118,7 +122,8 @@ export default function WorkflowWrapper({
           style={{
             display: 'block',
             width: '100%',
-            padding: '1rem',
+            minHeight: 56,
+            padding: '0.75rem 1rem',
             fontSize: '1.1rem',
             fontWeight: 700,
             letterSpacing: '0.06em',
@@ -134,13 +139,14 @@ export default function WorkflowWrapper({
         </button>
       </div>
 
-      {/* Zone 6: Secondary buttons — Dashboard | Cancel */}
+      {/* Zone 6: Secondary buttons — #F0F0F0 background (FEAT-03), "Start Over" label (FEAT-04) */}
       <div
         style={{
           display: 'flex',
           gap: '0.5rem',
           padding: '0.25rem 1rem 1rem',
           flexShrink: 0,
+          background: '#F0F0F0',
         }}
       >
         <Link
@@ -174,7 +180,7 @@ export default function WorkflowWrapper({
             fontFamily: theme.font.sans,
           }}
         >
-          Cancel
+          Start Over
         </button>
       </div>
     </div>
