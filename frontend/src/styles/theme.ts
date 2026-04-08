@@ -15,6 +15,7 @@ export const theme = {
     subtleText:   '#333333',   // secondary button text
     disabled:     '#D1D5DB',   // disabled primary button bg
     disabledText: '#9CA3AF',   // disabled primary button text
+    zoneBg:       '#F0F0F0',   // step indicator + secondary button bar background
   },
   font: {
     sans: "'Geist', 'Inter', system-ui, sans-serif",

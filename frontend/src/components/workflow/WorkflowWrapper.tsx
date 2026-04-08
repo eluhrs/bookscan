@@ -58,7 +58,7 @@ export default function WorkflowWrapper({
           gap: '0.5rem',
           padding: '0.75rem 1rem 0.25rem',
           flexShrink: 0,
-          background: '#F0F0F0',
+          background: theme.colors.zoneBg,
         }}
       >
         {STEPS.map((s, i) => (
@@ -146,7 +146,7 @@ export default function WorkflowWrapper({
           gap: '0.5rem',
           padding: '0.25rem 1rem 1rem',
           flexShrink: 0,
-          background: '#F0F0F0',
+          background: theme.colors.zoneBg,
         }}
       >
         <Link
