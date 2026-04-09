@@ -23,25 +23,28 @@ vi.mock('../hooks/useAuth', () => ({
   useAuth: () => ({ logout: vi.fn() }),
 }))
 
+const mockIsMobileDevice = vi.fn()
+vi.mock('../utils/deviceDetect', () => ({
+  isMobileDevice: () => mockIsMobileDevice(),
+}))
+
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <MemoryRouter>{children}</MemoryRouter>
 )
 
 describe('DashboardPage scan link', () => {
-  const originalWidth = window.innerWidth
-
   afterEach(() => {
-    Object.defineProperty(window, 'innerWidth', { value: originalWidth, configurable: true })
+    mockIsMobileDevice.mockReset()
   })
 
-  it('shows scan button on mobile (< 768px)', () => {
-    Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true })
+  it('shows scan button on mobile', () => {
+    mockIsMobileDevice.mockReturnValue(true)
     render(<DashboardPage />, { wrapper })
     expect(screen.getByRole('button', { name: /scan books/i })).toBeInTheDocument()
   })
 
-  it('hides scan button on desktop (>= 768px)', () => {
-    Object.defineProperty(window, 'innerWidth', { value: 1200, configurable: true })
+  it('hides scan button on desktop', () => {
+    mockIsMobileDevice.mockReturnValue(false)
     render(<DashboardPage />, { wrapper })
     expect(screen.queryByRole('button', { name: /scan books/i })).not.toBeInTheDocument()
   })

@@ -22,6 +22,7 @@ const makeBook = (overrides: Partial<Book> = {}): Book => ({
   data_sources: null,
   data_complete: true,
   has_photos: false,
+  needs_photo_review: false,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
   ...overrides,
@@ -48,7 +49,7 @@ describe('BookTable', () => {
     const books = [makeBook({ data_complete: false, title: 'Incomplete Book' })]
     render(<BookTable books={books} onEdit={vi.fn()} onDelete={vi.fn()} onGenerateListing={vi.fn()} />)
     expect(screen.getByText('Incomplete Book')).toBeInTheDocument()
-    expect(screen.getByTitle('Incomplete data')).toBeInTheDocument()
+    expect(screen.getByTitle('Metadata needs review')).toBeInTheDocument()
   })
 
   it('calls onDelete immediately when delete button is clicked', () => {
@@ -59,16 +60,16 @@ describe('BookTable', () => {
     expect(onDelete).toHaveBeenCalledWith(book.id)
   })
 
-  it('shows no-photos indicator when has_photos is false', () => {
-    const books = [makeBook({ has_photos: false, title: 'No Photos Book' })]
+  it('shows photo review indicator when needs_photo_review is true', () => {
+    const books = [makeBook({ needs_photo_review: true, title: 'Needs Photos Book' })]
     render(<BookTable books={books} onEdit={vi.fn()} onDelete={vi.fn()} onGenerateListing={vi.fn()} />)
-    expect(screen.getByTitle('No photos')).toBeInTheDocument()
+    expect(screen.getByTitle('Photography needs review')).toBeInTheDocument()
   })
 
-  it('does not show no-photos indicator when has_photos is true', () => {
-    const books = [makeBook({ has_photos: true, title: 'Has Photos Book' })]
+  it('does not show photo review indicator when needs_photo_review is false', () => {
+    const books = [makeBook({ needs_photo_review: false, title: 'Has Photos Book' })]
     render(<BookTable books={books} onEdit={vi.fn()} onDelete={vi.fn()} onGenerateListing={vi.fn()} />)
-    expect(screen.queryByTitle('No photos')).not.toBeInTheDocument()
+    expect(screen.queryByTitle('Photography needs review')).not.toBeInTheDocument()
   })
 
   it('title cell has two-line clamp and overflow hidden', () => {

@@ -72,7 +72,7 @@ describe('WorkflowWrapper', () => {
     expect(screen.getByText('controls-content')).toBeInTheDocument()
   })
 
-  it('Zone 2 always renders at standard height for consistent vertical rhythm', () => {
+  it('Zone 2 renders controls when provided and is absent when controls is null', () => {
     // When controls is non-null, Zone 2 renders and contains the controls
     const { container } = render(
       <WorkflowWrapper {...defaultProps} controls={<div data-testid="zone2-content">ctrl</div>} />,
@@ -80,15 +80,11 @@ describe('WorkflowWrapper', () => {
     )
     expect(container.querySelector('[data-testid="zone2-content"]')).toBeInTheDocument()
 
-    // When controls is null, Zone 2 still renders as an empty spacer (no border, no background)
+    // When controls is null, Zone 2 is not rendered — gap spacing handles vertical rhythm instead
     const { container: c2 } = render(
       <WorkflowWrapper {...defaultProps} controls={null} />,
       { wrapper }
     )
-    const outerChildren = Array.from(c2.firstChild?.childNodes ?? []) as HTMLElement[]
-    const hasZone2 = outerChildren.some(
-      (el) => el instanceof HTMLElement && el.style?.minHeight === '2.75rem'
-    )
-    expect(hasZone2).toBe(true)
+    expect(c2.querySelector('[data-testid="zone2-content"]')).not.toBeInTheDocument()
   })
 })

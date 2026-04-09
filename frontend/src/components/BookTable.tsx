@@ -117,21 +117,19 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
               <td style={{ padding: '0.6rem 0.5rem', width: 48 }}>
                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                   {/* Slot 1: metadata warning — FileWarning when data_complete is false */}
-                  <div style={{ width: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Metadata needs review">
+                  <div style={{ width: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {!book.data_complete && (
-                      <FileWarning
-                        size={16}
-                        color={theme.colors.warning}
-                      />
+                      <span title="Metadata needs review" style={{ display: 'flex' }}>
+                        <FileWarning size={16} color={theme.colors.warning} />
+                      </span>
                     )}
                   </div>
                   {/* Slot 2: photography review — Camera when needs_photo_review is true */}
-                  <div style={{ width: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Photography needs review">
+                  <div style={{ width: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {book.needs_photo_review && (
-                      <CameraIcon
-                        size={16}
-                        color={theme.colors.accent}
-                      />
+                      <span title="Photography needs review" style={{ display: 'flex' }}>
+                        <CameraIcon size={16} color={theme.colors.accent} />
+                      </span>
                     )}
                   </div>
                 </div>
