@@ -17,6 +17,7 @@ const STEP_LABELS: Record<WorkflowStep, string> = {
 // so content is not underlapped by the fixed header.
 const ZONE_1_HEIGHT = '3rem'    // step indicator bar
 const ZONE_2_HEIGHT = '2.75rem' // controls bar (absent on ReviewStep)
+const ZONE_6_HEIGHT = '3rem'    // secondary buttons footer bar
 const GAP = '0.75rem'           // gap between header bottom and content top
 
 export interface WorkflowWrapperProps {
@@ -128,7 +129,7 @@ export default function WorkflowWrapper({
           display: 'flex',
           flexDirection: 'column',
           paddingTop: middlePaddingTop,
-          paddingBottom: '0.75rem',
+          paddingBottom: `calc(${ZONE_6_HEIGHT} + 0.75rem)`,
           paddingLeft: '1rem',
           paddingRight: '1rem',
           gap: '0.75rem',
@@ -178,15 +179,19 @@ export default function WorkflowWrapper({
 
       {/* Zone 6: Secondary buttons — #E0E0E0 background, equal height to Zone 1.
           Footer buttons use #FFFFFF fill to stand out against the zone background.
-          Stays in normal flow at the bottom of the flex container. */}
+          position:fixed at the bottom so it stays visible above the keyboard on iOS. */}
       <div
         style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
           display: 'flex',
           gap: '0.5rem',
           padding: '0 1rem',
-          minHeight: '3rem',
+          minHeight: ZONE_6_HEIGHT,
           alignItems: 'center',
-          flexShrink: 0,
           background: theme.colors.zoneBg,
         }}
       >
