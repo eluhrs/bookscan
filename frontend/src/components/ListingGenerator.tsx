@@ -1,6 +1,7 @@
 import { useState, useEffect, type CSSProperties } from 'react'
 import { Book, Listing } from '../types'
 import { generateListing, getBookListings } from '../api/listings'
+import { downloadPhotosZip } from '../api/photos'
 import { theme } from '../styles/theme'
 
 interface ListingGeneratorProps {
@@ -42,6 +43,14 @@ export default function ListingGenerator({ book, onClose }: ListingGeneratorProp
       setTimeout(() => setCopied(false), 2000)
     } catch {
       setError('Could not copy to clipboard')
+    }
+  }
+
+  async function handleDownload() {
+    try {
+      await downloadPhotosZip(book.id)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Download failed')
     }
   }
 
@@ -92,13 +101,39 @@ export default function ListingGenerator({ book, onClose }: ListingGeneratorProp
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+      {/* Description — only shown when present */}
+      {book.description && (
+        <div style={{ marginBottom: '1rem' }}>
+          <p
+            style={{
+              margin: '0 0 0.25rem',
+              fontSize: '0.78rem',
+              fontWeight: 500,
+              color: theme.colors.muted,
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+            }}
+          >
+            Description
+          </p>
+          <p style={{ margin: 0, fontSize: '0.85rem', color: theme.colors.text, lineHeight: 1.5 }}>
+            {book.description}
+          </p>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
         <button onClick={handleGenerate} disabled={generating} style={btnStyle('primary')}>
           {generating ? 'Generating…' : 'Generate Listing'}
         </button>
         {listing && (
           <button onClick={handleCopy} style={btnStyle('secondary')}>
             {copied ? 'Copied!' : 'Copy'}
+          </button>
+        )}
+        {book.has_photos && (
+          <button onClick={handleDownload} style={btnStyle('secondary')}>
+            Download Photos
           </button>
         )}
       </div>

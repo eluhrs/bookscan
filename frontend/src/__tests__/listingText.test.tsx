@@ -1,6 +1,22 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import ListingGenerator from '../components/ListingGenerator'
 
+vi.mock('../api/listings', () => ({
+  generateListing: vi.fn().mockResolvedValue({
+    id: 'listing-1',
+    book_id: '123',
+    listing_text: 'LISTING TITLE: Test Book by Test Author\nCONDITION: Used',
+    created_at: new Date().toISOString(),
+    ebay_listing_id: null,
+    ebay_status: 'draft',
+  }),
+  getBookListings: vi.fn().mockResolvedValue([]),
+}))
+
+vi.mock('../api/photos', () => ({
+  downloadPhotosZip: vi.fn().mockResolvedValue(undefined),
+}))
+
 const mockBook = {
   id: '123',
   isbn: '9781234567890',
@@ -14,25 +30,16 @@ const mockBook = {
   weight: null,
   subject: null,
   description: null,
+  condition: null,
   cover_image_url: null,
   cover_image_local: null,
   data_sources: null,
   data_complete: true,
+  has_photos: false,
+  needs_photo_review: false,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 }
-
-vi.mock('../api/listings', () => ({
-  generateListing: vi.fn().mockResolvedValue({
-    id: 'listing-1',
-    book_id: '123',
-    listing_text: 'TITLE: Test Book by Test Author\nCONDITION: Used',
-    created_at: new Date().toISOString(),
-    ebay_listing_id: null,
-    ebay_status: 'draft',
-  }),
-  getBookListings: vi.fn().mockResolvedValue([]),
-}))
 
 describe('ListingGenerator', () => {
   it('shows generate button', () => {
@@ -43,7 +50,33 @@ describe('ListingGenerator', () => {
   it('shows listing text after generate', async () => {
     render(<ListingGenerator book={mockBook} onClose={vi.fn()} />)
     fireEvent.click(screen.getByText('Generate Listing'))
-    await waitFor(() => screen.getByText(/TITLE: Test Book by Test Author/))
+    await waitFor(() => screen.getByText(/LISTING TITLE: Test Book by Test Author/))
     expect(screen.getByText('Copy')).toBeInTheDocument()
+  })
+
+  it('shows description field when book has a description', () => {
+    render(
+      <ListingGenerator
+        book={{ ...mockBook, description: 'A fascinating exploration of the subject.' }}
+        onClose={vi.fn()}
+      />
+    )
+    expect(screen.getByText('A fascinating exploration of the subject.')).toBeInTheDocument()
+    expect(screen.getByText('Description')).toBeInTheDocument()
+  })
+
+  it('does not show description field when book has no description', () => {
+    render(<ListingGenerator book={mockBook} onClose={vi.fn()} />)
+    expect(screen.queryByText('Description')).not.toBeInTheDocument()
+  })
+
+  it('shows Download Photos button when book has photos', () => {
+    render(<ListingGenerator book={{ ...mockBook, has_photos: true }} onClose={vi.fn()} />)
+    expect(screen.getByText('Download Photos')).toBeInTheDocument()
+  })
+
+  it('does not show Download Photos button when book has no photos', () => {
+    render(<ListingGenerator book={mockBook} onClose={vi.fn()} />)
+    expect(screen.queryByText('Download Photos')).not.toBeInTheDocument()
   })
 })
