@@ -110,6 +110,16 @@ container receives the correct `$2b$12$...` hash.
 
 **Colors:** All colors reference `theme.colors.*` from `frontend/src/styles/theme.ts`. Do not add hardcoded hex values to components. New tokens added in CHANGES-07: `zoneBg` (`#F0F0F0`), `controlsBorder` (`#E5E5E5`).
 
+**Lucide line art icons throughout:** All icons use Lucide React components — no emoji. Standard sizes: 18px in toolbar buttons, 16px in table cells. Components used: `Flashlight` (torch), `Keyboard` (keyboard mode toggle), `Camera` (camera mode toggle, camera mode button in keyboard controls), `FileWarning` and `Camera` in BookTable status icon column.
+
+**Mobile device detection:** Use `isMobileDevice()` from `frontend/src/utils/deviceDetect.ts` for features that should only appear on genuine mobile devices. Checks `navigator.userAgent` regex and `navigator.maxTouchPoints > 0`. Do not use `useBreakpoint` (viewport width) for this purpose — it incorrectly triggers on resized desktop browsers.
+
+**Workflow screen color zones:** Content background `theme.colors.surface` (`#FFFFFF`), header/footer zones `theme.colors.zoneBg` (`#E0E0E0`), footer buttons `theme.colors.footerButtonBg` (`#FFFFFF`) with `1px solid theme.colors.controlsBorder` border. Toolbar buttons use `theme.colors.subtle` (`#F4F4F4`) fill with `1px solid theme.colors.controlsBorder` (`#CCCCCC`) border — no container border around the toolbar row.
+
+**Consistent inner spacing:** `WorkflowWrapper` uses a middle flex container with `gap: 0.75rem` and `padding: 0.75rem 1rem` for equal whitespace between controls bar, content area, hint text, and primary button. Camera view content inside workflow steps must NOT add its own outer padding — the wrapper gap handles it.
+
+**Primary button height:** 64px (`minHeight: 64`) across all workflow screens, via `WorkflowWrapper` Zone 5.
+
 ---
 
 ## Key Decisions & Gotchas
@@ -211,7 +221,7 @@ and the LoC MODS schema does not include them. ISBNdb (paid, ~$10/month) is the 
 source for physical specs and would be the right call once eBay listing accuracy matters enough to
 justify the cost. Until then, dimensions and weight will be blank in all listings.
 
-**Haptic feedback (Web Vibration API).** All key events call `navigator.vibrate?.(25)` (medium intensity, 25ms). Safari/iOS does not support `navigator.vibrate` — the optional chain (`?.`) makes it a silent no-op on unsupported platforms; no error is thrown. Android browsers support it fully. Do not treat iOS lack of haptics as a bug.
+**Haptic feedback (Web Vibration API).** All key events call `navigator.vibrate?.(25)` (medium intensity, 25ms). Safari/iOS does not support `navigator.vibrate` — the optional chain (`?.`) makes it a silent no-op on unsupported platforms; no error is thrown. Android browsers support it fully. Haptic feedback via Web Vibration API is not supported on iOS/Safari or any iOS browser — this is an Apple platform restriction at the WebKit level with no available workaround. Chrome, Firefox, and all other browsers on iOS are also affected (Apple forces all iOS browsers to use WebKit). Android Chrome supports haptics fully. The haptic code is intentionally retained to benefit Android users. Do not treat iOS lack of haptics as a bug.
 
 **Save confirmation overlay.** After successful save, `PhotoWorkflowPage` transitions to a `'confirmation'` step (added to the `WorkflowStep` union) that renders a full-screen Check icon for 800ms, then resets all state and transitions to `'photograph'`. `playSuccess()` fires in the `useEffect` that handles the `'confirmation'` step, not in `ReviewStep.handleSave`. `ReviewStep` no longer imports `useScanAudio`.
 
@@ -450,6 +460,16 @@ Apache VirtualHost (apply manually):
 - BUG-02: Already completed in CHANGES-08 — `BookTable.tsx` already had two-line title clamp and one-line author ellipsis.
 - FEAT-02: 800ms full-screen save confirmation overlay (Check icon, `#FAFAFA` background) appears after successful save. Transitions automatically to fresh Photograph screen. `playSuccess()` moved from `ReviewStep` to `PhotoWorkflowPage`'s confirmation `useEffect` so sound fires at the moment the checkmark appears.
 - FEAT-03: Haptic feedback (`navigator.vibrate?.(25)`, medium intensity) on all four key events: photo captured (`PhotographStep.handleCapture`), lookup success (`PhotoWorkflowPage.handleLookupComplete`), lookup failure (`LookupStep` — both barcode-not-found and API-failure paths), save success (`PhotoWorkflowPage` confirmation useEffect). Safari/iOS does not support the Web Vibration API — this is a known limitation, not a bug. Android browsers support it fully.
+
+**CHANGES-10** — all items implemented:
+- FIX-01: Primary button height increased to 64px via WorkflowWrapper Zone 5
+- FIX-02: Unified color system — `surface` #FFFFFF, `zoneBg` #E0E0E0, footer buttons `footerButtonBg` #FFFFFF; toolbar container border removed, individual button borders via `controlsBorder` #CCCCCC; equal header/footer height (minHeight 3rem); consistent inner spacing via middle wrapper gap
+- FIX-03: Emoji icons replaced with Lucide line art — `Flashlight` (torch), `Keyboard` (keyboard mode), `Camera` (camera mode)
+- FIX-04: Header/footer scrolling in keyboard mode resolved by FIX-02 refactor (flexShrink:0 + visualViewport height)
+- FIX-05: ISBN placeholder font size reduced to 0.82rem via CSS placeholder rule
+- FIX-07: Mobile detection changed from viewport width to user-agent + maxTouchPoints (`isMobileDevice()` utility)
+- FEAT-01: BookTable status icon column — two fixed-width slots: FileWarning (amber, when !data_complete) + Camera (#0070F3, when needs_photo_review); camera emoji removed from title column
+- FEAT-02: Per-book photo ZIP download — `GET /books/{id}/photos/download` backend endpoint (stdlib zipfile, no new deps) + Download Photos button in dashboard edit view
 
 ---
 
