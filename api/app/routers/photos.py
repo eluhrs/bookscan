@@ -1,9 +1,12 @@
 import asyncio
+import io
+import re
 import uuid
+import zipfile
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -102,3 +105,51 @@ async def get_photo_file(
         raise HTTPException(status_code=404, detail="Photo file not found")
 
     return FileResponse(str(file_path), media_type="image/jpeg")
+
+
+def _title_slug(title: str) -> str:
+    """Convert title to a safe filename slug, max 50 chars."""
+    slug = title.lower()
+    slug = re.sub(r'[^a-z0-9]+', '_', slug)
+    return slug.strip('_')[:50]
+
+
+@router.get("/books/{book_id}/photos/download")
+async def download_photos_zip(
+    book_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _user: Annotated[str, Depends(get_current_user)],
+):
+    """Stream a ZIP of all user-uploaded photos for a book, named photo_1.jpg etc."""
+    book = await db.get(Book, book_id)
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    result = await db.scalars(
+        select(BookPhoto)
+        .where(BookPhoto.book_id == book_id)
+        .order_by(BookPhoto.created_at)
+    )
+    photos = result.all()
+
+    if not photos:
+        raise HTTPException(status_code=404, detail="No photos to download")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for i, photo in enumerate(photos, 1):
+            file_path = PHOTOS_DIR / photo.filename
+            exists = await asyncio.to_thread(file_path.exists)
+            if exists:
+                content = await asyncio.to_thread(file_path.read_bytes)
+                zf.writestr(f"photo_{i}.jpg", content)
+    buf.seek(0)
+
+    slug = _title_slug(book.title or "untitled")
+    filename = f"{book.isbn}_{slug}.zip"
+
+    return Response(
+        content=buf.read(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

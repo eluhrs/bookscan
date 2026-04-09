@@ -1,5 +1,6 @@
 import pytest
 from pathlib import Path
+from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
@@ -186,3 +187,31 @@ async def test_list_books_has_photos_field(client, auth_headers, tmp_path, monke
     resp = await client.get("/api/books", headers=auth_headers)
     item = next(i for i in resp.json()["items"] if i["id"] == book_id)
     assert item["has_photos"] is True
+
+
+@pytest.mark.asyncio
+async def test_download_photos_zip_no_photos(client: AsyncClient, auth_headers: dict):
+    """Returns 404 when the book has no photos."""
+    resp = await client.post(
+        "/api/books",
+        json={"isbn": "9780000000001", "title": "Test Book", "data_complete": False},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201
+    book_id = resp.json()["id"]
+
+    resp = await client.get(f"/api/books/{book_id}/photos/download", headers=auth_headers)
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == "No photos to download"
+
+
+@pytest.mark.asyncio
+async def test_download_photos_zip_book_not_found(client: AsyncClient, auth_headers: dict):
+    """Returns 404 for a non-existent book."""
+    import uuid
+    resp = await client.get(
+        f"/api/books/{uuid.uuid4()}/photos/download",
+        headers=auth_headers,
+    )
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == "Book not found"
