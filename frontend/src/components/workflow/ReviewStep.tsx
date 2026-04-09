@@ -5,7 +5,6 @@ import WorkflowWrapper from './WorkflowWrapper'
 import { BookLookup } from '../../types'
 import { saveBook } from '../../api/books'
 import { uploadPhotos } from '../../api/photos'
-import { useScanAudio } from '../../hooks/useScanAudio'
 import { theme } from '../../styles/theme'
 
 const CONDITIONS = ['New', 'Very Good', 'Good', 'Acceptable', 'Poor'] as const
@@ -64,7 +63,6 @@ export default function ReviewStep({
   const [blobUrls, setBlobUrls] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const { playSuccess } = useScanAudio()
 
   // Create and revoke blob URLs whenever localPhotos changes
   useEffect(() => {
@@ -109,7 +107,6 @@ export default function ReviewStep({
         await uploadPhotos(bookId, blobs)
       }
 
-      playSuccess()
       onSaveComplete()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed — tap Save to retry photo upload')

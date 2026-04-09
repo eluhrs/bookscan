@@ -1,11 +1,13 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
+import { Check } from 'lucide-react'
 import PhotographStep from '../components/workflow/PhotographStep'
 import LookupStep from '../components/workflow/LookupStep'
 import ReviewStep from '../components/workflow/ReviewStep'
 import { useScanAudio } from '../hooks/useScanAudio'
 import { BookLookup } from '../types'
+import { theme } from '../styles/theme'
 
-type WorkflowStep = 'photograph' | 'lookup' | 'review'
+type WorkflowStep = 'photograph' | 'lookup' | 'review' | 'confirmation'
 
 export default function PhotoWorkflowPage() {
   const [step, setStep] = useState<WorkflowStep>('photograph')
@@ -22,6 +24,21 @@ export default function PhotoWorkflowPage() {
   const stepRef = useRef<WorkflowStep>('photograph')
 
   const { playSuccess, playReview } = useScanAudio()
+
+  // Confirmation overlay: fires playSuccess + haptic, then resets state after 800ms
+  useEffect(() => {
+    if (step !== 'confirmation') return
+    playSuccess()
+    navigator.vibrate?.(25)
+    const t = setTimeout(() => {
+      setPhotos([])
+      setLookupResult(null)
+      setSavedBookId(null)
+      setSkippedPhotography(false)
+      setStep('photograph')
+    }, 800)
+    return () => clearTimeout(t)
+  }, [step, playSuccess])
 
   function handlePhotoAdded(file: File) {
     setPhotos((prev) => {
@@ -54,6 +71,7 @@ export default function PhotoWorkflowPage() {
       setSavedBookId(null)
       if (result.data_complete) playSuccess()
       else playReview()
+      navigator.vibrate?.(25)
       stepRef.current = 'review'
       setStep('review')
     },
@@ -73,11 +91,25 @@ export default function PhotoWorkflowPage() {
 
   function handleSaveComplete() {
     stepRef.current = 'photograph'
-    setPhotos([])
-    setLookupResult(null)
-    setSavedBookId(null)
-    setSkippedPhotography(false)
-    setStep('photograph')
+    setStep('confirmation')
+    // State reset (photos, lookupResult, etc.) happens in the useEffect after 800ms
+  }
+
+  if (step === 'confirmation') {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: '#FAFAFA',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Check size={80} color={theme.colors.accent} strokeWidth={2.5} />
+      </div>
+    )
   }
 
   if (step === 'photograph') {
