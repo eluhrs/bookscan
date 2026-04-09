@@ -100,15 +100,13 @@ container receives the correct `$2b$12$...` hash.
 
 **Button labels (workflow screens):** Primary action buttons use ALL CAPS — `CAPTURE`, `LOOKUP`, `SAVE`, `SKIP`. Hint text references to buttons use Title Case — "tap Capture", "tap Lookup".
 
-**Primary button height:** All three primary buttons (CAPTURE, LOOKUP, SAVE) render via `WorkflowWrapper` Zone 5 and share `minHeight: 56px`. Never add per-step height overrides.
+**Controls bar styling:** Controls bars on workflow screens have `border: 1px solid theme.colors.controlsBorder` (`#CCCCCC`). Interactive controls within (dropdowns, icon buttons) get `background: theme.colors.subtle` so they read as tappable.
 
-**Controls bar styling:** Controls bars on workflow screens have `border: 1px solid theme.colors.controlsBorder` (`#E5E5E5`). Interactive controls within (dropdowns, icon buttons) get `background: theme.colors.subtle` so they read as tappable.
+**Step indicator zone:** `background: theme.colors.zoneBg` (`#E0E0E0`) — Zone 1 in WorkflowWrapper.
 
-**Step indicator zone:** `background: theme.colors.zoneBg` (`#F0F0F0`) — Zone 1 in WorkflowWrapper.
+**Secondary button bar:** `background: theme.colors.zoneBg` (`#E0E0E0`) — Zone 6 in WorkflowWrapper. Secondary buttons within use `background: theme.colors.subtle`. The second button is labelled "Start Over" (not "Cancel").
 
-**Secondary button bar:** `background: theme.colors.zoneBg` (`#F0F0F0`) — Zone 6 in WorkflowWrapper. Secondary buttons within use `background: theme.colors.subtle`. The second button is labelled "Start Over" (not "Cancel").
-
-**Colors:** All colors reference `theme.colors.*` from `frontend/src/styles/theme.ts`. Do not add hardcoded hex values to components. New tokens added in CHANGES-07: `zoneBg` (`#F0F0F0`), `controlsBorder` (`#E5E5E5`).
+**Colors:** All colors reference `theme.colors.*` from `frontend/src/styles/theme.ts`. Do not add hardcoded hex values to components. New tokens added in CHANGES-07: `zoneBg`, `controlsBorder`. Updated values in CHANGES-10: `zoneBg` (`#E0E0E0`), `controlsBorder` (`#CCCCCC`), added `footerButtonBg` (`#FFFFFF`).
 
 **Lucide line art icons throughout:** All icons use Lucide React components — no emoji. Standard sizes: 18px in toolbar buttons, 16px in table cells. Components used: `Flashlight` (torch), `Keyboard` (keyboard mode toggle), `Camera` (camera mode toggle, camera mode button in keyboard controls), `FileWarning` and `Camera` in BookTable status icon column.
 
@@ -221,7 +219,7 @@ and the LoC MODS schema does not include them. ISBNdb (paid, ~$10/month) is the 
 source for physical specs and would be the right call once eBay listing accuracy matters enough to
 justify the cost. Until then, dimensions and weight will be blank in all listings.
 
-**Haptic feedback (Web Vibration API).** All key events call `navigator.vibrate?.(25)` (medium intensity, 25ms). Safari/iOS does not support `navigator.vibrate` — the optional chain (`?.`) makes it a silent no-op on unsupported platforms; no error is thrown. Android browsers support it fully. Haptic feedback via Web Vibration API is not supported on iOS/Safari or any iOS browser — this is an Apple platform restriction at the WebKit level with no available workaround. Chrome, Firefox, and all other browsers on iOS are also affected (Apple forces all iOS browsers to use WebKit). Android Chrome supports haptics fully. The haptic code is intentionally retained to benefit Android users. Do not treat iOS lack of haptics as a bug.
+**Haptic feedback (Web Vibration API).** All key events call `navigator.vibrate?.(25)` (medium intensity, 25ms). Safari/iOS does not support `navigator.vibrate` — the optional chain (`?.`) makes it a silent no-op on unsupported platforms; no error is thrown. Haptic feedback via Web Vibration API is not supported on iOS/Safari or any iOS browser — this is an Apple platform restriction at the WebKit level with no available workaround. Chrome, Firefox, and all other browsers on iOS are also affected (Apple forces all iOS browsers to use WebKit). Android Chrome supports haptics fully. The haptic code is intentionally retained to benefit Android users. Do not treat iOS lack of haptics as a bug.
 
 **Save confirmation overlay.** After successful save, `PhotoWorkflowPage` transitions to a `'confirmation'` step (added to the `WorkflowStep` union) that renders a full-screen Check icon for 800ms, then resets all state and transitions to `'photograph'`. `playSuccess()` fires in the `useEffect` that handles the `'confirmation'` step, not in `ReviewStep.handleSave`. `ReviewStep` no longer imports `useScanAudio`.
 
