@@ -73,6 +73,7 @@ export default function PhotographStep({
     try {
       const file = await captureAndCompress(videoRef.current)
       playSuccess()
+      navigator.vibrate?.(25)
       onPhotoAdded(file)
     } finally {
       capturingRef.current = false

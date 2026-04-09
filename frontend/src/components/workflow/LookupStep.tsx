@@ -85,6 +85,7 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
 
       // All strategies failed
       playReview()
+      navigator.vibrate?.(25)
       setHintError('No barcode found — try again')
     } finally {
       setLooking(false)
@@ -109,6 +110,7 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
       onLookupComplete(result)
     } catch (e) {
       playReview()
+      navigator.vibrate?.(25)
       setHintError(e instanceof Error ? e.message : 'Lookup failed — try again')
     }
   }
