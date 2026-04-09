@@ -1,6 +1,6 @@
 // frontend/src/components/workflow/WorkflowWrapper.tsx
 
-import { ReactNode } from 'react'
+import { ReactNode, useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { theme } from '../../styles/theme'
 
@@ -13,12 +13,9 @@ const STEP_LABELS: Record<WorkflowStep, string> = {
   review: 'Review',
 }
 
-// Heights of fixed zones — used to compute the middle section's padding-top
-// so content is not underlapped by the fixed header.
 const ZONE_1_HEIGHT = '3rem'    // step indicator bar
 const ZONE_2_HEIGHT = '2.75rem' // controls bar (absent on ReviewStep)
 const ZONE_6_HEIGHT = '3rem'    // secondary buttons footer bar
-const GAP = '0.75rem'           // gap between header bottom and content top
 
 export interface WorkflowWrapperProps {
   step: WorkflowStep
@@ -43,16 +40,43 @@ export default function WorkflowWrapper({
 }: WorkflowWrapperProps) {
   const hasControls = controls !== null
 
-  // Padding-top of the middle section compensates for the height of fixed Zone 1
-  // and (when present) fixed Zone 2, plus the visual gap before content.
-  const middlePaddingTop = hasControls
-    ? `calc(${ZONE_1_HEIGHT} + ${ZONE_2_HEIGHT} + ${GAP})`
-    : `calc(${ZONE_1_HEIGHT} + ${GAP})`
+  // Track the visual viewport so the container always matches what the user sees.
+  // On iOS Safari, opening the keyboard does not resize the layout viewport, so
+  // position:fixed children scroll off-screen with the keyboard. The fix is to
+  // size our container to window.visualViewport and use normal flex flow for all
+  // zones — no position:fixed on any child element.
+  const [vpHeight, setVpHeight] = useState(
+    () => window.visualViewport?.height ?? window.innerHeight
+  )
+  const [vpOffset, setVpOffset] = useState(
+    () => window.visualViewport?.offsetTop ?? 0
+  )
+
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const update = () => {
+      setVpHeight(vv.height)
+      setVpOffset(vv.offsetTop)
+    }
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+    }
+  }, [])
 
   return (
     <div
       style={{
-        height: '100dvh',
+        // Pinned to layout viewport top-left; height and translateY track visual viewport
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: vpHeight,
+        transform: `translateY(${vpOffset}px)`,
         background: theme.colors.surface,
         color: theme.colors.text,
         display: 'flex',
@@ -61,15 +85,10 @@ export default function WorkflowWrapper({
         fontFamily: theme.font.sans,
       }}
     >
-      {/* Zone 1: Step indicator — position:fixed so it always stays visible at the top,
-          even when iOS Safari opens the keyboard and the page scrolls. */}
+      {/* Zone 1: Step indicator — normal flex child, always at top of container */}
       <div
         style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 10,
+          flexShrink: 0,
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
@@ -99,16 +118,11 @@ export default function WorkflowWrapper({
         ))}
       </div>
 
-      {/* Zone 2: Controls bar — position:fixed directly below Zone 1.
-          Only rendered when controls !== null (ReviewStep passes null). */}
+      {/* Zone 2: Controls bar — normal flex child, only when controls !== null */}
       {hasControls && (
         <div
           style={{
-            position: 'fixed',
-            top: ZONE_1_HEIGHT,
-            left: 0,
-            right: 0,
-            zIndex: 10,
+            flexShrink: 0,
             background: theme.colors.surface,
             padding: '0 1rem',
             minHeight: ZONE_2_HEIGHT,
@@ -121,17 +135,13 @@ export default function WorkflowWrapper({
       )}
 
       {/* Middle: Zones 3–5 in a flex column with consistent gap.
-          padding-top offsets the height of the fixed Zone 1 + Zone 2 so content
-          starts below the fixed header. Zone 2 is out of this flex flow. */}
+          flex:1 fills the space between the header zones and Zone 6. */}
       <div
         style={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          paddingTop: middlePaddingTop,
-          paddingBottom: `calc(${ZONE_6_HEIGHT} + 0.75rem)`,
-          paddingLeft: '1rem',
-          paddingRight: '1rem',
+          padding: '0.75rem 1rem',
           gap: '0.75rem',
           overflow: 'hidden',
           background: theme.colors.surface,
@@ -177,16 +187,11 @@ export default function WorkflowWrapper({
         </div>
       </div>
 
-      {/* Zone 6: Secondary buttons — #E0E0E0 background, equal height to Zone 1.
-          Footer buttons use #FFFFFF fill to stand out against the zone background.
-          position:fixed at the bottom so it stays visible above the keyboard on iOS. */}
+      {/* Zone 6: Secondary buttons — normal flex child, always at bottom of container.
+          Background matches Zone 1 header for visual symmetry. */}
       <div
         style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 10,
+          flexShrink: 0,
           display: 'flex',
           gap: '0.5rem',
           padding: '0 1rem',

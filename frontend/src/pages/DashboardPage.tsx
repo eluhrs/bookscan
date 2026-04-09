@@ -253,7 +253,7 @@ export default function DashboardPage() {
             Download Photos
           </button>
         </div>
-        <BookForm initial={asLookup} onSave={handleEdit} onCancel={() => setEditingBook(null)} />
+        <BookForm initial={asLookup} onSave={handleEdit} onCancel={() => setEditingBook(null)} hideCover />
       </div>
     )
   }

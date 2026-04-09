@@ -6,6 +6,7 @@ interface BookFormProps {
   initial: BookLookup
   onSave: (book: BookLookup, retainFlag?: boolean) => Promise<void>
   onCancel: () => void
+  hideCover?: boolean
 }
 
 const TEXT_FIELDS: Array<{ key: keyof BookLookup; label: string; type?: string }> = [
@@ -41,7 +42,7 @@ const labelStyle: CSSProperties = {
   letterSpacing: '0.04em',
 }
 
-export default function BookForm({ initial, onSave, onCancel }: BookFormProps) {
+export default function BookForm({ initial, onSave, onCancel, hideCover = false }: BookFormProps) {
   const [book, setBook] = useState<BookLookup>(initial)
   const [retainFlag, setRetainFlag] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -67,7 +68,7 @@ export default function BookForm({ initial, onSave, onCancel }: BookFormProps) {
 
   return (
     <div style={{ padding: '0.25rem', fontFamily: theme.font.sans }}>
-      {book.cover_image_url && (
+      {!hideCover && book.cover_image_url && (
         <img
           src={book.cover_image_url}
           alt="Cover"
