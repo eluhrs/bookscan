@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { FileWarning, Camera as CameraIcon } from 'lucide-react'
 import { Book } from '../types'
 import { theme } from '../styles/theme'
 
@@ -76,7 +77,7 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
       >
         <thead>
           <tr style={{ borderBottom: `1px solid ${theme.colors.border}`, background: theme.colors.surface }}>
-            <th style={{ padding: '0.6rem 0.75rem', width: 20 }} />
+            <th style={{ padding: '0.6rem 0.5rem', width: 48 }} />
             {colHeader('Title', 'title')}
             {colHeader('Author', 'author')}
             {colHeader('Publisher', 'publisher')}
@@ -113,15 +114,27 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
               key={book.id}
               style={{ borderBottom: `1px solid ${theme.colors.border}` }}
             >
-              <td style={{ padding: '0.6rem 0.75rem', width: 20 }}>
-                {!book.data_complete && (
-                  <span
-                    title="Incomplete data"
-                    style={{ color: theme.colors.warning, fontSize: '1rem' }}
-                  >
-                    ⚠
-                  </span>
-                )}
+              <td style={{ padding: '0.6rem 0.5rem', width: 48 }}>
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  {/* Slot 1: metadata warning — FileWarning when data_complete is false */}
+                  <div style={{ width: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Metadata needs review">
+                    {!book.data_complete && (
+                      <FileWarning
+                        size={16}
+                        color={theme.colors.warning}
+                      />
+                    )}
+                  </div>
+                  {/* Slot 2: photography review — Camera when needs_photo_review is true */}
+                  <div style={{ width: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Photography needs review">
+                    {book.needs_photo_review && (
+                      <CameraIcon
+                        size={16}
+                        color={theme.colors.accent}
+                      />
+                    )}
+                  </div>
+                </div>
               </td>
               <td
                 style={{
@@ -136,14 +149,6 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
                 }}
               >
                 {book.title ?? '—'}
-                {!book.has_photos && (
-                  <span
-                    title="No photos"
-                    style={{ marginLeft: '0.35rem', fontSize: '0.75rem', color: '#555', verticalAlign: 'middle' }}
-                  >
-                    📷
-                  </span>
-                )}
               </td>
               <td
                 style={{
