@@ -1,6 +1,7 @@
 // frontend/src/components/workflow/PhotographStep.tsx
 
 import { useRef, useState, useEffect } from 'react'
+import { Flashlight } from 'lucide-react'
 import WorkflowWrapper from './WorkflowWrapper'
 import { useCameraStream } from '../../hooks/useCameraStream'
 import { useScanAudio } from '../../hooks/useScanAudio'
@@ -96,7 +97,6 @@ export default function PhotographStep({
     </span>
   ))
 
-  // FEAT-05: controls bar has 1px border, interactive controls get subtle background
   const controls = (
     <div
       style={{
@@ -104,12 +104,9 @@ export default function PhotographStep({
         alignItems: 'center',
         justifyContent: 'space-between',
         width: '100%',
-        border: `1px solid ${theme.colors.controlsBorder}`,
-        borderRadius: 8,
-        padding: '0.2rem 0.5rem',
       }}
     >
-      {/* Left: photo count dropdown — FEAT-06: 0-5 range */}
+      {/* Left: photo count dropdown */}
       <label
         style={{
           display: 'flex',
@@ -127,7 +124,7 @@ export default function PhotographStep({
           style={{
             background: theme.colors.subtle,
             color: theme.colors.text,
-            border: `1px solid ${theme.colors.border}`,
+            border: `1px solid ${theme.colors.controlsBorder}`,
             borderRadius: 6,
             padding: '0.2rem 0.4rem',
             fontSize: '0.85rem',
@@ -145,22 +142,25 @@ export default function PhotographStep({
         {progressIndicators}
       </div>
 
-      {/* Right: torch toggle — FEAT-05: already has subtle background */}
+      {/* Right: torch toggle — Lucide Flashlight icon */}
       {torchAvailable ? (
         <button
           onClick={handleTorchToggle}
           style={{
             padding: '0.35rem 0.5rem',
-            fontSize: '1.1rem',
             lineHeight: 1,
             background: torchOn ? '#FEF08A' : theme.colors.subtle,
-            border: `1px solid ${theme.colors.border}`,
+            border: `1px solid ${torchOn ? '#B8A800' : theme.colors.controlsBorder}`,
             borderRadius: 8,
             cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: torchOn ? '#5a4500' : theme.colors.text,
           }}
           aria-label={torchOn ? 'Turn off torch' : 'Turn on torch'}
         >
-          🔦
+          <Flashlight size={18} />
         </button>
       ) : (
         <div style={{ width: '2.25rem' }} />
@@ -186,7 +186,6 @@ export default function PhotographStep({
     <div
       style={{
         height: '100%',
-        padding: '0.5rem 1rem',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
