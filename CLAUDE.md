@@ -122,6 +122,8 @@ container receives the correct `$2b$12$...` hash.
 
 ## Key Decisions & Gotchas
 
+**iOS keyboard and WorkflowWrapper layout.** `position: fixed` on child zones does not reliably keep them visible when the iOS Safari keyboard opens — iOS repositions fixed elements relative to the layout viewport, which scrolls when the keyboard appears. The working approach: the outer container is `position: fixed` with `top:0, left:0, right:0` and its `height` and `transform: translateY()` are set to `window.visualViewport.height` and `window.visualViewport.offsetTop` respectively, updated via `visualViewport` `resize`/`scroll` event listeners. All zones inside use normal flex column flow — no `position: fixed` on any child. In jsdom (tests), `visualViewport` is undefined; the `if (!vv) return` guard in the useEffect handles this gracefully.
+
 **Docker Compose dev override strips migration step.** `docker-compose.dev.yml` overrides the CMD to
 run uvicorn with `--reload`, skipping the `alembic upgrade head` that's baked into the prod Dockerfile
 CMD. Always run migrations manually after first start or schema changes.
@@ -469,13 +471,15 @@ Apache VirtualHost (apply manually):
 - FEAT-01: BookTable status icon column — two fixed-width slots: FileWarning (amber, when !data_complete) + Camera (#0070F3, when needs_photo_review); camera emoji removed from title column
 - FEAT-02: Per-book photo ZIP download — `GET /books/{id}/photos/download` backend endpoint (stdlib zipfile, no new deps) + Download Photos button in dashboard edit view
 
-**CHANGES-11** — all items implemented:
+**CHANGES-11** — all items implemented (plus two QA-discovered fixes):
 - FIX-08: Camera stream health monitoring and automatic recovery — `sampleIsBlack()` (16×16 canvas, luminance < 5 threshold), black frame check every 2s via `setInterval`, 'ended' event listener on track, `visibilitychange` listener; `restartRef` pattern lets async handlers always call current `startStream` closure; recovery is silent (no permission re-prompt)
-- FIX-09: Header and step indicator fixed positioning on iOS keyboard — Zones 1, 2, and 6 use `position: fixed` (top/bottom anchored); middle content div has `paddingTop`/`paddingBottom` to compensate; `visualViewport` resize approach removed entirely
+- FIX-09: iOS keyboard layout — `WorkflowWrapper` outer container is `position: fixed` tracking `window.visualViewport.height` and `offsetTop` via resize/scroll listeners; all zones (1, 2, 6) use normal flex flow inside the container — no `position: fixed` on child zones; container shrinks/translates to match visual viewport when keyboard opens
 - FIX-10A: Listing panel first field renamed from "TITLE:" to "LISTING TITLE:" in `generate_listing_text()` in `api/app/routers/listings.py`
 - FIX-10B: Description/blurb field added to listing panel in `ListingGenerator.tsx` — shown only when `book.description` is non-empty
 - FIX-10C: Download Photos ZIP button added to listing panel — shown only when `book.has_photos` is true; `downloading` state guard prevents double-tap; reuses `downloadPhotosZip` from `api/photos`
 - FIX-11: `PhotoFilmstrip` component extracted from `ReviewStep` into `frontend/src/components/PhotoFilmstrip.tsx`; reused in `DashboardPage` edit view (replaces old photo grid); API: `coverUrl`, `photos: Array<{key, url}>`, `onDelete: (key) => void`; stable UUID keys in `ReviewStep` via `crypto.randomUUID()` at state entry
+- QA fix: `BookForm` gained `hideCover?: boolean` prop; `DashboardPage` passes `hideCover` so `BookForm` doesn't render a second cover when the filmstrip already shows it
+- Note: description field rarely populated — sourced from Google Books only (OL fetcher never extracts description; OL Works endpoint not called); many books have no description in Google Books
 
 ---
 
