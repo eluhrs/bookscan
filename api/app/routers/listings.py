@@ -36,7 +36,7 @@ def generate_listing_text(book: Book) -> str:
         lines.append(f"\nDescription: {book.description}")
     body = "\n".join(lines)
 
-    return f"TITLE: {title_line}\n\nCONDITION: {condition}\n\nDESCRIPTION:\n{body}"
+    return f"LISTING TITLE: {title_line}\n\nCONDITION: {condition}\n\nDESCRIPTION:\n{body}"
 
 
 @router.post("/books/{book_id}/listings", response_model=ListingResponse, status_code=201)

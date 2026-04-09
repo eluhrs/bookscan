@@ -32,7 +32,7 @@ def make_book(**kwargs) -> Book:
 def test_listing_title_format():
     book = make_book()
     text = generate_listing_text(book)
-    assert "TITLE: Refactoring by Martin Fowler (2018) 2nd ed. - Addison-Wesley" in text
+    assert "LISTING TITLE: Refactoring by Martin Fowler (2018) 2nd ed. - Addison-Wesley" in text
 
 
 def test_listing_includes_condition():
@@ -50,13 +50,13 @@ def test_listing_includes_description():
 def test_listing_handles_missing_fields():
     book = make_book(title=None, author=None, year=None, publisher=None, edition=None)
     text = generate_listing_text(book)
-    assert "TITLE: Unknown by Unknown (n.d.) - Unknown" in text
+    assert "LISTING TITLE: Unknown by Unknown (n.d.) - Unknown" in text
 
 
 def test_listing_no_edition_in_title():
     book = make_book(edition=None)
     text = generate_listing_text(book)
-    assert "TITLE: Refactoring by Martin Fowler (2018) - Addison-Wesley" in text
+    assert "LISTING TITLE: Refactoring by Martin Fowler (2018) - Addison-Wesley" in text
 
 
 @pytest.mark.asyncio
@@ -70,7 +70,7 @@ async def test_create_listing_endpoint(client, auth_headers):
     book_id = book_resp.json()["id"]
     resp = await client.post(f"/api/books/{book_id}/listings", headers=auth_headers)
     assert resp.status_code == 201
-    assert "TITLE: Refactoring" in resp.json()["listing_text"]
+    assert "LISTING TITLE: Refactoring" in resp.json()["listing_text"]
 
 
 @pytest.mark.asyncio
