@@ -56,22 +56,24 @@ export default function ReviewStep({
   const [condition, setCondition] = useState<Condition | null>(null)
   const [reviewMetadata, setReviewMetadata] = useState(!lookupResult.data_complete)
   const [reviewPhotography, setReviewPhotography] = useState(skippedPhotography)
-  const [localPhotos, setLocalPhotos] = useState<File[]>(photos)
+  const [localPhotos, setLocalPhotos] = useState<Array<{ id: string; file: File }>>(
+    () => photos.map((file) => ({ id: crypto.randomUUID(), file }))
+  )
   const [blobUrls, setBlobUrls] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   // Create and revoke blob URLs whenever localPhotos changes
   useEffect(() => {
-    const urls = localPhotos.map((f) => URL.createObjectURL(f))
+    const urls = localPhotos.map(({ file }) => URL.createObjectURL(file))
     setBlobUrls(urls)
     return () => {
       urls.forEach((u) => URL.revokeObjectURL(u))
     }
   }, [localPhotos])
 
-  function handleDeletePhoto(index: number) {
-    const next = localPhotos.filter((_, i) => i !== index)
+  function handleDeletePhoto(id: string) {
+    const next = localPhotos.filter((p) => p.id !== id)
     setLocalPhotos(next)
     if (next.length === 0) {
       setReviewPhotography(true)
@@ -100,7 +102,7 @@ export default function ReviewStep({
 
       // Step 2: Compress and upload photos (skip if none remain)
       if (localPhotos.length > 0) {
-        const blobs = await Promise.all(localPhotos.map(compressPhoto))
+        const blobs = await Promise.all(localPhotos.map(({ file }) => compressPhoto(file)))
         await uploadPhotos(bookId, blobs)
       }
 
@@ -130,8 +132,8 @@ export default function ReviewStep({
       >
         <PhotoFilmstrip
           coverUrl={lookupResult.cover_image_url}
-          photos={blobUrls.map((url, i) => ({ key: String(i), url }))}
-          onDelete={(key) => handleDeletePhoto(parseInt(key, 10))}
+          photos={localPhotos.map(({ id }, i) => ({ key: id, url: blobUrls[i] ?? '' }))}
+          onDelete={handleDeletePhoto}
         />
 
         {/* Metadata: title, author, year · publisher */}
