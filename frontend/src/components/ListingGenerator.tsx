@@ -13,6 +13,7 @@ export default function ListingGenerator({ book, onClose }: ListingGeneratorProp
   const [listing, setListing] = useState<Listing | null>(null)
   const [history, setHistory] = useState<Listing[]>([])
   const [generating, setGenerating] = useState(false)
+  const [downloading, setDownloading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState('')
 
@@ -47,10 +48,13 @@ export default function ListingGenerator({ book, onClose }: ListingGeneratorProp
   }
 
   async function handleDownload() {
+    setDownloading(true)
     try {
       await downloadPhotosZip(book.id)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Download failed')
+    } finally {
+      setDownloading(false)
     }
   }
 
@@ -132,8 +136,8 @@ export default function ListingGenerator({ book, onClose }: ListingGeneratorProp
           </button>
         )}
         {book.has_photos && (
-          <button onClick={handleDownload} style={btnStyle('secondary')}>
-            Download Photos
+          <button onClick={handleDownload} disabled={downloading} style={btnStyle('secondary')}>
+            {downloading ? 'Downloading…' : 'Download Photos'}
           </button>
         )}
       </div>
