@@ -1,7 +1,7 @@
 // frontend/src/components/workflow/LookupStep.tsx
 
 import { useRef, useState, useEffect } from 'react'
-import { Camera } from 'lucide-react'
+import { Camera, Keyboard, Flashlight } from 'lucide-react'
 import { BrowserMultiFormatReader } from '@zxing/browser'
 import WorkflowWrapper from './WorkflowWrapper'
 import { lookupIsbn } from '../../api/books'
@@ -122,9 +122,6 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
         justifyContent: 'space-between',
         alignItems: 'center',
         width: '100%',
-        border: `1px solid ${theme.colors.controlsBorder}`,
-        borderRadius: 8,
-        padding: '0.2rem 0.5rem',
       }}
     >
       <button
@@ -132,33 +129,38 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
         onClick={() => { setMode('keyboard'); setHintError(null) }}
         style={{
           background: theme.colors.subtle,
-          border: `1px solid ${theme.colors.border}`,
+          border: `1px solid ${theme.colors.controlsBorder}`,
           color: theme.colors.text,
           cursor: 'pointer',
-          fontSize: '1.1rem',
-          padding: '0.3rem 0.5rem',
+          padding: '0.35rem 0.5rem',
           borderRadius: 8,
           lineHeight: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
         title="Switch to keyboard"
       >
-        ⌨
+        <Keyboard size={18} />
       </button>
       {torchAvailable && (
         <button
           onClick={handleTorchToggle}
           style={{
             padding: '0.35rem 0.5rem',
-            fontSize: '1.1rem',
             lineHeight: 1,
             background: torchOn ? '#FEF08A' : theme.colors.subtle,
-            border: `1px solid ${theme.colors.border}`,
+            border: `1px solid ${torchOn ? '#B8A800' : theme.colors.controlsBorder}`,
             borderRadius: 8,
             cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: torchOn ? '#5a4500' : theme.colors.text,
           }}
           aria-label={torchOn ? 'Turn off torch' : 'Turn on torch'}
         >
-          🔦
+          <Flashlight size={18} />
         </button>
       )}
     </div>
@@ -170,9 +172,6 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
         display: 'flex',
         alignItems: 'center',
         width: '100%',
-        border: `1px solid ${theme.colors.controlsBorder}`,
-        borderRadius: 8,
-        padding: '0.2rem 0.5rem',
       }}
     >
       <button
@@ -180,10 +179,10 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
         onClick={() => { setMode('camera'); setHintError(null) }}
         style={{
           background: theme.colors.subtle,
-          border: `1px solid ${theme.colors.border}`,
+          border: `1px solid ${theme.colors.controlsBorder}`,
           color: theme.colors.text,
           cursor: 'pointer',
-          padding: '0.3rem 0.5rem',
+          padding: '0.35rem 0.5rem',
           borderRadius: 8,
           lineHeight: 1,
           display: 'flex',
@@ -200,7 +199,7 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
   const hintText = hintError ?? undefined
 
   const mainContent = mode === 'camera' ? (
-    <div style={{ height: '100%', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {cameraError ? (
         <p style={{ color: theme.colors.danger, textAlign: 'center', fontSize: '0.9rem', margin: 0 }}>
           {cameraError}
@@ -275,7 +274,7 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
         padding: '2rem',
       }}
     >
-      <style>{`.isbn-input::placeholder { color: #6B7280; }`}</style>
+      <style>{`.isbn-input::placeholder { color: #6B7280; font-size: 0.82rem; }`}</style>
       <input
         className="isbn-input"
         type="text"
