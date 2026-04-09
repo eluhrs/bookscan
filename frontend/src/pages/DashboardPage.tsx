@@ -5,7 +5,7 @@ import BookTable from '../components/BookTable'
 import BookForm from '../components/BookForm'
 import ListingGenerator from '../components/ListingGenerator'
 import { listBooks, updateBook, deleteBook, exportListingsCSV } from '../api/books'
-import { listPhotos, deletePhoto, getPhotoUrl } from '../api/photos'
+import { listPhotos, deletePhoto, getPhotoUrl, downloadPhotosZip } from '../api/photos'
 import { Book, BookLookup, BookPhoto } from '../types'
 import { useAuth } from '../hooks/useAuth'
 import { isMobileDevice } from '../utils/deviceDetect'
@@ -263,6 +263,30 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+        {/* Download Photos button */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <button
+            onClick={() =>
+              downloadPhotosZip(editingBook.id).catch((e) =>
+                alert(e instanceof Error ? e.message : 'Download failed')
+              )
+            }
+            disabled={bookPhotos.length === 0}
+            title={bookPhotos.length === 0 ? 'No photos to download' : 'Download all photos as ZIP'}
+            style={{
+              padding: '0.4rem 0.85rem',
+              fontSize: '0.85rem',
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.radius.sm,
+              background: theme.colors.bg,
+              cursor: bookPhotos.length === 0 ? 'default' : 'pointer',
+              opacity: bookPhotos.length === 0 ? 0.45 : 1,
+              fontFamily: theme.font.sans,
+            }}
+          >
+            Download Photos
+          </button>
+        </div>
         <BookForm initial={asLookup} onSave={handleEdit} onCancel={() => setEditingBook(null)} />
       </div>
     )

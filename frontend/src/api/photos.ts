@@ -34,3 +34,24 @@ export async function getPhotoUrl(photoId: string): Promise<string> {
   const blob = await resp.blob()
   return URL.createObjectURL(blob)
 }
+
+export async function downloadPhotosZip(bookId: string): Promise<void> {
+  const token = localStorage.getItem('token')
+  const resp = await fetch(`/api/books/${bookId}/photos/download`, {
+    headers: { Authorization: `Bearer ${token ?? ''}` },
+  })
+  if (!resp.ok) {
+    if (resp.status === 404) throw new Error('No photos to download')
+    throw new Error('Download failed')
+  }
+  const blob = await resp.blob()
+  const url = URL.createObjectURL(blob)
+  const cd = resp.headers.get('Content-Disposition') ?? ''
+  const match = cd.match(/filename="([^"]+)"/)
+  const filename = match?.[1] ?? `${bookId}_photos.zip`
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
