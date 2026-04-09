@@ -49,14 +49,15 @@ export default function WorkflowWrapper({
         fontFamily: theme.font.sans,
       }}
     >
-      {/* Zone 1: Step indicator — #F0F0F0 background (FEAT-02) */}
+      {/* Zone 1: Step indicator — #E0E0E0 background, equal height to Zone 6 */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
           gap: '0.5rem',
-          padding: '0.75rem 1rem 0.25rem',
+          padding: '0 1rem',
+          minHeight: '3rem',
           flexShrink: 0,
           background: theme.colors.zoneBg,
         }}
@@ -81,72 +82,77 @@ export default function WorkflowWrapper({
         ))}
       </div>
 
-      {/* Zone 2: Controls bar — always rendered for consistent vertical rhythm (FEAT-01).
-          When controls is null (Review screen), renders as empty whitespace at standard height.
-          Border lives inside controls content, so no border appears when controls is null. */}
+      {/* Middle: Zones 2–5 in a flex column with consistent gap.
+          The gap value creates equal whitespace between controls bar,
+          main content, hint text, and primary button. */}
       <div
         style={{
-          padding: '0.4rem 1rem',
-          minHeight: '2.75rem',
+          flex: 1,
           display: 'flex',
-          alignItems: 'center',
-          flexShrink: 0,
+          flexDirection: 'column',
+          padding: '0.75rem 1rem',
+          gap: '0.75rem',
+          overflow: 'hidden',
+          background: theme.colors.surface,
         }}
       >
-        {controls}
-      </div>
+        {/* Zone 2: Controls bar — only rendered when controls !== null.
+            Review screen passes null; gap above content handles spacing. */}
+        {controls !== null && (
+          <div style={{ flexShrink: 0 }}>
+            {controls}
+          </div>
+        )}
 
-      {/* Zone 3: Main content */}
-      <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-        {children}
-      </div>
-
-      {/* Zone 4: Hint text (errors or instructions) */}
-      {hintText !== undefined && (
-        <div
-          style={{
-            padding: '0.5rem 1.5rem',
-            textAlign: 'center',
-            flexShrink: 0,
-          }}
-        >
-          <p style={{ margin: 0, fontSize: '0.82rem', color: theme.colors.muted }}>
-            {hintText}
-          </p>
+        {/* Zone 3: Main content — fills remaining space */}
+        <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+          {children}
         </div>
-      )}
 
-      {/* Zone 5: Primary button — shared minHeight 56px (BUG-03/06/12) */}
-      <div style={{ padding: '0.5rem 1rem 0.25rem', flexShrink: 0 }}>
-        <button
-          onClick={onPrimary}
-          disabled={primaryDisabled}
-          style={{
-            display: 'block',
-            width: '100%',
-            minHeight: 56,
-            padding: '0.75rem 1rem',
-            fontSize: '1.1rem',
-            fontWeight: 700,
-            letterSpacing: '0.06em',
-            background: primaryDisabled ? theme.colors.disabled : theme.colors.accent,
-            color: primaryDisabled ? theme.colors.disabledText : '#fff',
-            border: 'none',
-            borderRadius: 12,
-            cursor: primaryDisabled ? 'default' : 'pointer',
-            fontFamily: theme.font.sans,
-          }}
-        >
-          {primaryLabel}
-        </button>
+        {/* Zone 4: Hint text — only rendered when hintText is defined */}
+        {hintText !== undefined && (
+          <div style={{ flexShrink: 0, textAlign: 'center' }}>
+            <p style={{ margin: 0, fontSize: '0.82rem', color: theme.colors.muted }}>
+              {hintText}
+            </p>
+          </div>
+        )}
+
+        {/* Zone 5: Primary button — 64px min height (FIX-01) */}
+        <div style={{ flexShrink: 0 }}>
+          <button
+            onClick={onPrimary}
+            disabled={primaryDisabled}
+            style={{
+              display: 'block',
+              width: '100%',
+              minHeight: 64,
+              padding: '0.75rem 1rem',
+              fontSize: '1.1rem',
+              fontWeight: 700,
+              letterSpacing: '0.06em',
+              background: primaryDisabled ? theme.colors.disabled : theme.colors.accent,
+              color: primaryDisabled ? theme.colors.disabledText : '#fff',
+              border: 'none',
+              borderRadius: 12,
+              cursor: primaryDisabled ? 'default' : 'pointer',
+              fontFamily: theme.font.sans,
+            }}
+          >
+            {primaryLabel}
+          </button>
+        </div>
       </div>
 
-      {/* Zone 6: Secondary buttons — #F0F0F0 background (FEAT-03), "Start Over" label (FEAT-04) */}
+      {/* Zone 6: Secondary buttons — #E0E0E0 background, equal height to Zone 1.
+          Footer buttons use #FFFFFF fill to stand out against the zone background. */}
       <div
         style={{
           display: 'flex',
           gap: '0.5rem',
-          padding: '0.25rem 1rem 1rem',
+          padding: '0 1rem',
+          minHeight: '3rem',
+          alignItems: 'center',
           flexShrink: 0,
           background: theme.colors.zoneBg,
         }}
@@ -157,13 +163,14 @@ export default function WorkflowWrapper({
             flex: 1,
             display: 'block',
             textAlign: 'center',
-            padding: '0.6rem',
-            background: theme.colors.subtle,
+            padding: '0.5rem',
+            background: theme.colors.footerButtonBg,
             color: theme.colors.subtleText,
             borderRadius: 8,
             textDecoration: 'none',
             fontSize: '0.875rem',
             fontFamily: theme.font.sans,
+            border: `1px solid ${theme.colors.controlsBorder}`,
           }}
         >
           Dashboard
@@ -172,10 +179,10 @@ export default function WorkflowWrapper({
           onClick={onCancel}
           style={{
             flex: 1,
-            padding: '0.6rem',
-            background: theme.colors.subtle,
+            padding: '0.5rem',
+            background: theme.colors.footerButtonBg,
             color: theme.colors.subtleText,
-            border: 'none',
+            border: `1px solid ${theme.colors.controlsBorder}`,
             borderRadius: 8,
             cursor: 'pointer',
             fontSize: '0.875rem',
