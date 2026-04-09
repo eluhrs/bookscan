@@ -6,6 +6,7 @@ import { BookLookup } from '../../types'
 import { saveBook } from '../../api/books'
 import { uploadPhotos } from '../../api/photos'
 import { theme } from '../../styles/theme'
+import PhotoFilmstrip from '../PhotoFilmstrip'
 
 const CONDITIONS = ['New', 'Very Good', 'Good', 'Acceptable', 'Poor'] as const
 type Condition = (typeof CONDITIONS)[number]
@@ -42,10 +43,6 @@ async function compressPhoto(file: File): Promise<Blob> {
     img.src = url
   })
 }
-
-const FILMSTRIP_HEIGHT = 120
-const COVER_WIDTH = Math.round(FILMSTRIP_HEIGHT * (2 / 3))  // 80px (2:3 portrait)
-const PHOTO_WIDTH = Math.round(FILMSTRIP_HEIGHT * (3 / 4))  // 90px (4:3 landscape)
 
 export default function ReviewStep({
   lookupResult,
@@ -115,8 +112,6 @@ export default function ReviewStep({
     }
   }
 
-  const hasCover = Boolean(lookupResult.cover_image_url)
-
   return (
     <WorkflowWrapper
       step="review"
@@ -133,97 +128,11 @@ export default function ReviewStep({
           color: theme.colors.text,
         }}
       >
-        {/* Filmstrip: cover image (no ✕, accent border) + user photos (with ✕) */}
-        <div
-          style={{
-            display: 'flex',
-            gap: '0.5rem',
-            overflowX: 'auto',
-            padding: '0.75rem 1rem',
-            flexShrink: 0,
-            borderBottom: `1px solid ${theme.colors.border}`,
-          }}
-        >
-          {/* Cover image — accent border signals it is a lookup result, not deletable */}
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            {hasCover ? (
-              <img
-                src={lookupResult.cover_image_url!}
-                alt="Cover"
-                style={{
-                  width: COVER_WIDTH,
-                  height: FILMSTRIP_HEIGHT,
-                  objectFit: 'cover',
-                  borderRadius: 6,
-                  border: `2px solid ${theme.colors.accent}`,
-                  display: 'block',
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: COVER_WIDTH,
-                  height: FILMSTRIP_HEIGHT,
-                  background: theme.colors.subtle,
-                  borderRadius: 6,
-                  border: `2px solid ${theme.colors.accent}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.65rem',
-                  color: theme.colors.muted,
-                  textAlign: 'center',
-                  padding: '0 4px',
-                }}
-              >
-                No cover
-              </div>
-            )}
-          </div>
-
-          {/* User photos — standard filmstrip style with ✕ delete button */}
-          {blobUrls.map((url, i) => (
-            <div key={`${url}-${i}`} style={{ position: 'relative', flexShrink: 0 }}>
-              <img
-                src={url}
-                alt={`Photo ${i + 1}`}
-                style={{
-                  width: PHOTO_WIDTH,
-                  height: FILMSTRIP_HEIGHT,
-                  objectFit: 'cover',
-                  borderRadius: 6,
-                  border: `1px solid ${theme.colors.border}`,
-                  display: 'block',
-                }}
-              />
-              <button
-                aria-label="Delete photo"
-                onClick={() => handleDeletePhoto(i)}
-                style={{
-                  position: 'absolute',
-                  top: 3,
-                  right: 3,
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
-                  background: 'rgba(0,0,0,0.55)',
-                  color: '#fff',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.65rem',
-                  lineHeight: 1,
-                  padding: 0,
-                  fontFamily: theme.font.sans,
-                }}
-              >
-                ✕
-              </button>
-            </div>
-          ))}
-        </div>
+        <PhotoFilmstrip
+          coverUrl={lookupResult.cover_image_url}
+          photos={blobUrls.map((url, i) => ({ key: String(i), url }))}
+          onDelete={(key) => handleDeletePhoto(parseInt(key, 10))}
+        />
 
         {/* Metadata: title, author, year · publisher */}
         <div style={{ padding: '0.75rem 1.25rem 0' }}>

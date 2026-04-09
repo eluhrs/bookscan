@@ -10,6 +10,7 @@ import { Book, BookLookup, BookPhoto } from '../types'
 import { useAuth } from '../hooks/useAuth'
 import { isMobileDevice } from '../utils/deviceDetect'
 import { theme } from '../styles/theme'
+import PhotoFilmstrip from '../components/PhotoFilmstrip'
 
 export default function DashboardPage() {
   const { logout } = useAuth()
@@ -219,51 +220,16 @@ export default function DashboardPage() {
           </button>
           <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Edit Book</h2>
         </div>
-        {/* Photo grid */}
-        {bookPhotos.length > 0 && (
-          <div style={{ marginBottom: '1.5rem' }}>
-            <p style={{ margin: '0 0 0.5rem', fontSize: '0.78rem', fontWeight: 500, color: theme.colors.muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Photos ({bookPhotos.length})
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-              {bookPhotos.map((photo) => (
-                <div key={photo.id} style={{ position: 'relative' }}>
-                  <img
-                    src={photoUrls[photo.id] ?? ''}
-                    alt="Book photo"
-                    style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 4, display: 'block' }}
-                  />
-                  <button
-                    onClick={() => handleDeletePhoto(photo.id)}
-                    title="Delete photo"
-                    style={{
-                      position: 'absolute',
-                      top: 2,
-                      right: 2,
-                      width: 20,
-                      height: 20,
-                      background: 'rgba(0,0,0,0.6)',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '50%',
-                      cursor: 'pointer',
-                      fontSize: '0.65rem',
-                      lineHeight: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: 0,
-                    }}
-                    aria-label="Delete photo"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        {/* Download Photos button */}
+        {/* Filmstrip — cover (accent border, not deletable) + user photos (with ✕) */}
+        <div style={{ marginBottom: '0.75rem' }}>
+          <PhotoFilmstrip
+            coverUrl={editingBook.cover_image_url}
+            photos={bookPhotos.map((p) => ({ key: p.id, url: photoUrls[p.id] ?? '' }))}
+            onDelete={handleDeletePhoto}
+          />
+        </div>
+
+        {/* Download Photos button — below filmstrip, disabled when no user photos */}
         <div style={{ marginBottom: '1.5rem' }}>
           <button
             onClick={() =>
