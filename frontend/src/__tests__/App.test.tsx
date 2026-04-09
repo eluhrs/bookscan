@@ -1,28 +1,36 @@
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { vi } from 'vitest'
-import { MemoryRouter, Routes, Route } from 'react-router-dom'
+import App from '../App'
+
+vi.mock('../hooks/useAuth', () => ({
+  useAuth: () => ({ isAuthenticated: true, logout: vi.fn() }),
+}))
+vi.mock('../context/AuthContext', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
+vi.mock('../pages/DashboardPage', () => ({
+  default: () => <div data-testid="dashboard" />,
+}))
+vi.mock('../pages/PhotoWorkflowPage', () => ({
+  default: () => <div data-testid="scan" />,
+}))
+vi.mock('../pages/LoginPage', () => ({
+  default: () => <div data-testid="login" />,
+}))
 
 describe('root URL routing', () => {
-  it('wildcard route navigates to /dashboard regardless of window width', () => {
+  it('unknown path redirects to /dashboard when authenticated', () => {
+    window.history.pushState({}, '', '/some-unknown-path')
+    render(<App />)
+    expect(screen.getByTestId('dashboard')).toBeInTheDocument()
+    expect(screen.queryByTestId('scan')).not.toBeInTheDocument()
+  })
+
+  it('unknown path on mobile width also redirects to /dashboard (not /scan)', () => {
     Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true })
-
-    const destinations: string[] = []
-
-    function FakeNavigate({ to }: { to: string }) {
-      destinations.push(to)
-      return null
-    }
-
-    render(
-      <MemoryRouter initialEntries={['/unknown-path']}>
-        <Routes>
-          <Route path="/dashboard" element={<div data-testid="dashboard" />} />
-          <Route path="*" element={<FakeNavigate to="/dashboard" />} />
-        </Routes>
-      </MemoryRouter>
-    )
-
-    expect(destinations).toContain('/dashboard')
-    expect(destinations).not.toContain('/scan')
+    window.history.pushState({}, '', '/another-unknown-path')
+    render(<App />)
+    expect(screen.getByTestId('dashboard')).toBeInTheDocument()
+    expect(screen.queryByTestId('scan')).not.toBeInTheDocument()
   })
 })
