@@ -13,17 +13,21 @@ const STEP_LABELS: Record<WorkflowStep, string> = {
   review: 'Review',
 }
 
+// Heights of fixed zones — used to compute the middle section's padding-top
+// so content is not underlapped by the fixed header.
+const ZONE_1_HEIGHT = '3rem'    // step indicator bar
+const ZONE_2_HEIGHT = '2.75rem' // controls bar (absent on ReviewStep)
+const GAP = '0.75rem'           // gap between header bottom and content top
+
 export interface WorkflowWrapperProps {
   step: WorkflowStep
-  controls: ReactNode
+  controls: ReactNode | null
   hintText?: string
   primaryLabel: string
   primaryDisabled?: boolean
   onPrimary: () => void
   onCancel: () => void
   children: ReactNode
-  /** Overrides 100dvh — used by LookupStep keyboard mode to track visualViewport height */
-  viewportHeight?: number
 }
 
 export default function WorkflowWrapper({
@@ -35,12 +39,19 @@ export default function WorkflowWrapper({
   onPrimary,
   onCancel,
   children,
-  viewportHeight,
 }: WorkflowWrapperProps) {
+  const hasControls = controls !== null
+
+  // Padding-top of the middle section compensates for the height of fixed Zone 1
+  // and (when present) fixed Zone 2, plus the visual gap before content.
+  const middlePaddingTop = hasControls
+    ? `calc(${ZONE_1_HEIGHT} + ${ZONE_2_HEIGHT} + ${GAP})`
+    : `calc(${ZONE_1_HEIGHT} + ${GAP})`
+
   return (
     <div
       style={{
-        height: viewportHeight ? `${viewportHeight}px` : '100dvh',
+        height: '100dvh',
         background: theme.colors.surface,
         color: theme.colors.text,
         display: 'flex',
@@ -49,16 +60,21 @@ export default function WorkflowWrapper({
         fontFamily: theme.font.sans,
       }}
     >
-      {/* Zone 1: Step indicator — #E0E0E0 background, equal height to Zone 6 */}
+      {/* Zone 1: Step indicator — position:fixed so it always stays visible at the top,
+          even when iOS Safari opens the keyboard and the page scrolls. */}
       <div
         style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
           gap: '0.5rem',
           padding: '0 1rem',
-          minHeight: '3rem',
-          flexShrink: 0,
+          minHeight: ZONE_1_HEIGHT,
           background: theme.colors.zoneBg,
         }}
       >
@@ -82,28 +98,44 @@ export default function WorkflowWrapper({
         ))}
       </div>
 
-      {/* Middle: Zones 2–5 in a flex column with consistent gap.
-          The gap value creates equal whitespace between controls bar,
-          main content, hint text, and primary button. */}
+      {/* Zone 2: Controls bar — position:fixed directly below Zone 1.
+          Only rendered when controls !== null (ReviewStep passes null). */}
+      {hasControls && (
+        <div
+          style={{
+            position: 'fixed',
+            top: ZONE_1_HEIGHT,
+            left: 0,
+            right: 0,
+            zIndex: 10,
+            background: theme.colors.surface,
+            padding: '0 1rem',
+            minHeight: ZONE_2_HEIGHT,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          {controls}
+        </div>
+      )}
+
+      {/* Middle: Zones 3–5 in a flex column with consistent gap.
+          padding-top offsets the height of the fixed Zone 1 + Zone 2 so content
+          starts below the fixed header. Zone 2 is out of this flex flow. */}
       <div
         style={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          padding: '0.75rem 1rem',
+          paddingTop: middlePaddingTop,
+          paddingBottom: '0.75rem',
+          paddingLeft: '1rem',
+          paddingRight: '1rem',
           gap: '0.75rem',
           overflow: 'hidden',
           background: theme.colors.surface,
         }}
       >
-        {/* Zone 2: Controls bar — only rendered when controls !== null.
-            Review screen passes null; gap above content handles spacing. */}
-        {controls !== null && (
-          <div style={{ flexShrink: 0 }}>
-            {controls}
-          </div>
-        )}
-
         {/* Zone 3: Main content — fills remaining space */}
         <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
           {children}
@@ -118,7 +150,7 @@ export default function WorkflowWrapper({
           </div>
         )}
 
-        {/* Zone 5: Primary button — 64px min height (FIX-01) */}
+        {/* Zone 5: Primary button — 64px min height */}
         <div style={{ flexShrink: 0 }}>
           <button
             onClick={onPrimary}
@@ -145,7 +177,8 @@ export default function WorkflowWrapper({
       </div>
 
       {/* Zone 6: Secondary buttons — #E0E0E0 background, equal height to Zone 1.
-          Footer buttons use #FFFFFF fill to stand out against the zone background. */}
+          Footer buttons use #FFFFFF fill to stand out against the zone background.
+          Stays in normal flow at the bottom of the flex container. */}
       <div
         style={{
           display: 'flex',

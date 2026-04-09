@@ -30,20 +30,6 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
   const [isbn, setIsbn] = useState('')
   const [looking, setLooking] = useState(false)
   const [hintError, setHintError] = useState<string | null>(null)
-  const [viewportHeight, setViewportHeight] = useState<number | undefined>(undefined)
-
-  useEffect(() => {
-    if (mode !== 'keyboard') {
-      setViewportHeight(undefined)
-      return
-    }
-    const vv = window.visualViewport
-    if (!vv) return
-    const handler = () => setViewportHeight(vv.height)
-    vv.addEventListener('resize', handler)
-    setViewportHeight(vv.height)
-    return () => vv.removeEventListener('resize', handler)
-  }, [mode])
 
   const { videoRef, canvasRef, torchAvailable, torchOn, cameraError, handleTorchToggle } =
     useCameraStream({ enabled: mode === 'camera' })
@@ -309,7 +295,6 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
       primaryDisabled={looking}
       onPrimary={mode === 'camera' ? handleCameraLookup : handleKeyboardLookup}
       onCancel={onCancel}
-      viewportHeight={mode === 'keyboard' ? viewportHeight : undefined}
     >
       {mainContent}
     </WorkflowWrapper>
