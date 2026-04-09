@@ -8,13 +8,12 @@ import { listBooks, updateBook, deleteBook, exportListingsCSV } from '../api/boo
 import { listPhotos, deletePhoto, getPhotoUrl } from '../api/photos'
 import { Book, BookLookup, BookPhoto } from '../types'
 import { useAuth } from '../hooks/useAuth'
-import { useBreakpoint } from '../hooks/useBreakpoint'
+import { isMobileDevice } from '../utils/deviceDetect'
 import { theme } from '../styles/theme'
 
 export default function DashboardPage() {
   const { logout } = useAuth()
   const navigate = useNavigate()
-  const { isMobile } = useBreakpoint()
   const [books, setBooks] = useState<Book[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -290,7 +289,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          {isMobile && (
+          {isMobileDevice() && (
             <button
               aria-label="Scan books"
               onClick={() => navigate('/scan')}
