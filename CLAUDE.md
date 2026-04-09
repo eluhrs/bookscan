@@ -211,6 +211,10 @@ and the LoC MODS schema does not include them. ISBNdb (paid, ~$10/month) is the 
 source for physical specs and would be the right call once eBay listing accuracy matters enough to
 justify the cost. Until then, dimensions and weight will be blank in all listings.
 
+**Haptic feedback (Web Vibration API).** All key events call `navigator.vibrate?.(25)` (medium intensity, 25ms). Safari/iOS does not support `navigator.vibrate` — the optional chain (`?.`) makes it a silent no-op on unsupported platforms; no error is thrown. Android browsers support it fully. Do not treat iOS lack of haptics as a bug.
+
+**Save confirmation overlay.** After successful save, `PhotoWorkflowPage` transitions to a `'confirmation'` step (added to the `WorkflowStep` union) that renders a full-screen Check icon for 800ms, then resets all state and transitions to `'photograph'`. `playSuccess()` fires in the `useEffect` that handles the `'confirmation'` step, not in `ReviewStep.handleSave`. `ReviewStep` no longer imports `useScanAudio`.
+
 ---
 
 ## Project Structure
@@ -439,6 +443,13 @@ Apache VirtualHost (apply manually):
 - BUG-01: Title (bold, 2-line `-webkit-line-clamp:2`, `overflow:hidden`) and author (1-line, `text-overflow:ellipsis`, `white-space:nowrap`) in both ReviewStep and BookTable; BookTable title `maxWidth:220`, author `maxWidth:160`.
 - BUG-02: SAVE button state confirmed correct after filmstrip changes — blue (`theme.colors.accent`) when condition selected, `theme.colors.disabled` + `disabled` attr when not.
 - FEAT-05: Layout order confirmed: step indicator (#F0F0F0) → empty controls bar (whitespace only) → filmstrip → title → author → year·publisher → conditions → checkboxes → SAVE → secondary bar (#F0F0F0).
+
+**CHANGES-09** — all items implemented:
+- BUG-01: Root URL `/` always redirects to `/dashboard` regardless of device type. `useBreakpoint` removed from `App.tsx`.
+- FEAT-01: Mobile-only Camera scan button in dashboard header (left of Log out, only when `isMobile`). Navigates to `/scan`. Desktop sees no scan button.
+- BUG-02: Already completed in CHANGES-08 — `BookTable.tsx` already had two-line title clamp and one-line author ellipsis.
+- FEAT-02: 800ms full-screen save confirmation overlay (Check icon, `#FAFAFA` background) appears after successful save. Transitions automatically to fresh Photograph screen. `playSuccess()` moved from `ReviewStep` to `PhotoWorkflowPage`'s confirmation `useEffect` so sound fires at the moment the checkmark appears.
+- FEAT-03: Haptic feedback (`navigator.vibrate?.(25)`, medium intensity) on all four key events: photo captured (`PhotographStep.handleCapture`), lookup success (`PhotoWorkflowPage.handleLookupComplete`), lookup failure (`LookupStep` — both barcode-not-found and API-failure paths), save success (`PhotoWorkflowPage` confirmation useEffect). Safari/iOS does not support the Web Vibration API — this is a known limitation, not a bug. Android browsers support it fully.
 
 ---
 
