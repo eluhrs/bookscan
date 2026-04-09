@@ -469,6 +469,14 @@ Apache VirtualHost (apply manually):
 - FEAT-01: BookTable status icon column — two fixed-width slots: FileWarning (amber, when !data_complete) + Camera (#0070F3, when needs_photo_review); camera emoji removed from title column
 - FEAT-02: Per-book photo ZIP download — `GET /books/{id}/photos/download` backend endpoint (stdlib zipfile, no new deps) + Download Photos button in dashboard edit view
 
+**CHANGES-11** — all items implemented:
+- FIX-08: Camera stream health monitoring and automatic recovery — `sampleIsBlack()` (16×16 canvas, luminance < 5 threshold), black frame check every 2s via `setInterval`, 'ended' event listener on track, `visibilitychange` listener; `restartRef` pattern lets async handlers always call current `startStream` closure; recovery is silent (no permission re-prompt)
+- FIX-09: Header and step indicator fixed positioning on iOS keyboard — Zones 1, 2, and 6 use `position: fixed` (top/bottom anchored); middle content div has `paddingTop`/`paddingBottom` to compensate; `visualViewport` resize approach removed entirely
+- FIX-10A: Listing panel first field renamed from "TITLE:" to "LISTING TITLE:" in `generate_listing_text()` in `api/app/routers/listings.py`
+- FIX-10B: Description/blurb field added to listing panel in `ListingGenerator.tsx` — shown only when `book.description` is non-empty
+- FIX-10C: Download Photos ZIP button added to listing panel — shown only when `book.has_photos` is true; `downloading` state guard prevents double-tap; reuses `downloadPhotosZip` from `api/photos`
+- FIX-11: `PhotoFilmstrip` component extracted from `ReviewStep` into `frontend/src/components/PhotoFilmstrip.tsx`; reused in `DashboardPage` edit view (replaces old photo grid); API: `coverUrl`, `photos: Array<{key, url}>`, `onDelete: (key) => void`; stable UUID keys in `ReviewStep` via `crypto.randomUUID()` at state entry
+
 ---
 
 ## Future Work
