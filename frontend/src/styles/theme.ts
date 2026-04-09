@@ -1,7 +1,7 @@
 export const theme = {
   colors: {
     bg:        '#FFFFFF',
-    surface:   '#FAFAFA',
+    surface:   '#FFFFFF',        // was #FAFAFA
     border:    '#EAEAEA',
     text:      '#000000',
     muted:     '#666666',
@@ -11,12 +11,13 @@ export const theme = {
     warning:   '#F59E0B',
     warningBg:   '#FFFBEB',
     warningText: '#92400E',
-    subtle:       '#F5F5F5',   // secondary button bg
-    subtleText:   '#333333',   // secondary button text
-    disabled:     '#D1D5DB',   // disabled primary button bg
-    disabledText: '#9CA3AF',   // disabled primary button text
-    zoneBg:       '#F0F0F0',   // step indicator + secondary button bar background
-    controlsBorder: '#E5E5E5', // controls bar border on workflow screens
+    subtle:         '#F4F4F4',   // was #F5F5F5 — toolbar button fill
+    subtleText:     '#333333',
+    disabled:       '#D0D0D0',   // was #D1D5DB
+    disabledText:   '#909090',   // was #9CA3AF
+    zoneBg:         '#E0E0E0',   // was #F0F0F0 — header + footer zones
+    controlsBorder: '#CCCCCC',   // was #E5E5E5 — individual button borders
+    footerButtonBg: '#FFFFFF',   // NEW — Dashboard / Start Over button fill
   },
   font: {
     sans: "'Geist', 'Inter', system-ui, sans-serif",
