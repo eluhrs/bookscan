@@ -2,15 +2,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Camera } from 'lucide-react'
 import BookTable from '../components/BookTable'
-import BookForm from '../components/BookForm'
+import BookEditCard from '../components/BookEditCard'
 import ListingGenerator from '../components/ListingGenerator'
 import { listBooks, updateBook, deleteBook, exportListingsCSV } from '../api/books'
-import { listPhotos, deletePhoto, getPhotoUrl, downloadPhotosZip } from '../api/photos'
-import { Book, BookLookup, BookPhoto } from '../types'
+import { listPhotos, deletePhoto, getPhotoUrl, uploadPhotos } from '../api/photos'
+import { Book, BookPhoto } from '../types'
 import { useAuth } from '../hooks/useAuth'
 import { isMobileDevice } from '../utils/deviceDetect'
 import { theme } from '../styles/theme'
-import PhotoFilmstrip from '../components/PhotoFilmstrip'
 
 export default function DashboardPage() {
   const { logout } = useAuth()
@@ -124,6 +123,7 @@ export default function DashboardPage() {
   }, [editingBook?.id])
 
   async function handleDeletePhoto(photoId: string) {
+    if (!window.confirm('Delete this photo?')) return
     try {
       await deletePhoto(photoId)
       if (photoUrls[photoId]) URL.revokeObjectURL(photoUrls[photoId])
@@ -134,27 +134,44 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleEdit(updated: BookLookup, retainFlag?: boolean) {
+  async function handleAddPhoto(file: File) {
     if (!editingBook) return
     try {
-      await updateBook(editingBook.id, {
-        title: updated.title,
-        author: updated.author,
-        publisher: updated.publisher,
-        edition: updated.edition,
-        year: updated.year,
-        pages: updated.pages,
-        subject: updated.subject,
-        description: updated.description,
-        cover_image_url: updated.cover_image_url,
-        condition: updated.condition,
-        ...(retainFlag === true ? { data_complete: false } : {}),
+      await uploadPhotos(editingBook.id, [file])
+      const allPhotos = await listPhotos(editingBook.id)
+      setBookPhotos(allPhotos)
+      setPhotoUrls((prev) => {
+        Object.values(prev).forEach((u) => URL.revokeObjectURL(u))
+        return {}
       })
-      setEditingBook(null)
-      load()
+      const urls: Record<string, string> = {}
+      await Promise.all(
+        allPhotos.map(async (p) => {
+          try {
+            urls[p.id] = await getPhotoUrl(p.id)
+          } catch {
+            // photo not found — skip
+          }
+        })
+      )
+      setPhotoUrls(urls)
+      setEditingBook((prev) => prev ? { ...prev, has_photos: true } : null)
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Save failed')
+      alert(e instanceof Error ? e.message : 'Upload failed')
     }
+  }
+
+  async function handleSave(updates: Partial<Book>) {
+    if (!editingBook) return
+    const updated = await updateBook(editingBook.id, updates)
+    setEditingBook(updated)
+    load()
+  }
+
+  async function handleImmediateSave(updates: Partial<Book>) {
+    if (!editingBook) return
+    const updated = await updateBook(editingBook.id, updates)
+    setEditingBook(updated)
   }
 
   async function handleDelete(id: string) {
@@ -169,23 +186,6 @@ export default function DashboardPage() {
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
   if (editingBook) {
-    const asLookup: BookLookup = {
-      isbn: editingBook.isbn,
-      title: editingBook.title,
-      author: editingBook.author,
-      publisher: editingBook.publisher,
-      edition: editingBook.edition,
-      year: editingBook.year,
-      pages: editingBook.pages,
-      dimensions: editingBook.dimensions,
-      weight: editingBook.weight,
-      subject: editingBook.subject,
-      description: editingBook.description,
-      condition: editingBook.condition,
-      cover_image_url: editingBook.cover_image_url,
-      data_sources: editingBook.data_sources,
-      data_complete: editingBook.data_complete,
-    }
     return (
       <div
         style={{
@@ -220,40 +220,17 @@ export default function DashboardPage() {
           </button>
           <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Edit Book</h2>
         </div>
-        {/* Filmstrip — cover (accent border, not deletable) + user photos (with ✕) */}
-        <div style={{ marginBottom: '0.75rem' }}>
-          <PhotoFilmstrip
-            coverUrl={editingBook.cover_image_url}
-            photos={bookPhotos.map((p) => ({ key: p.id, url: photoUrls[p.id] ?? '' }))}
-            onDelete={handleDeletePhoto}
-          />
-        </div>
 
-        {/* Download Photos button — below filmstrip, disabled when no user photos */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <button
-            onClick={() =>
-              downloadPhotosZip(editingBook.id).catch((e) =>
-                alert(e instanceof Error ? e.message : 'Download failed')
-              )
-            }
-            disabled={bookPhotos.length === 0}
-            title={bookPhotos.length === 0 ? 'No photos to download' : 'Download all photos as ZIP'}
-            style={{
-              padding: '0.4rem 0.85rem',
-              fontSize: '0.85rem',
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.radius.sm,
-              background: theme.colors.bg,
-              cursor: bookPhotos.length === 0 ? 'default' : 'pointer',
-              opacity: bookPhotos.length === 0 ? 0.45 : 1,
-              fontFamily: theme.font.sans,
-            }}
-          >
-            Download Photos
-          </button>
-        </div>
-        <BookForm initial={asLookup} onSave={handleEdit} onCancel={() => setEditingBook(null)} hideCover />
+        <BookEditCard
+          book={editingBook}
+          photos={bookPhotos}
+          photoUrls={photoUrls}
+          onDeletePhoto={handleDeletePhoto}
+          onAddPhoto={handleAddPhoto}
+          onSave={handleSave}
+          onImmediateSave={handleImmediateSave}
+          onGenerateListing={() => setListingBook(editingBook)}
+        />
       </div>
     )
   }
