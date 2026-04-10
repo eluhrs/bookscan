@@ -1,6 +1,6 @@
 // frontend/src/components/workflow/LookupStep.tsx
 
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState } from 'react'
 import { Camera, Keyboard, Flashlight } from 'lucide-react'
 import { BrowserMultiFormatReader } from '@zxing/browser'
 import WorkflowWrapper from './WorkflowWrapper'

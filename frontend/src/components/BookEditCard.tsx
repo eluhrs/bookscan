@@ -347,10 +347,10 @@ export default function BookEditCard({
           }}
         >
           {([
-            { key: 'isbn', label: 'ISBN', mono: true },
-            { key: 'pages', label: 'Pages' },
-            { key: 'publisher', label: 'Publisher' },
-          ] as const).map(({ key, label, mono }) => (
+            { key: 'isbn' as const, label: 'ISBN', mono: true },
+            { key: 'pages' as const, label: 'Pages', mono: false },
+            { key: 'publisher' as const, label: 'Publisher', mono: false },
+          ] as Array<{ key: 'isbn' | 'pages' | 'publisher'; label: string; mono: boolean }>).map(({ key, label, mono }) => (
             <div key={key}>
               <span style={SMALL_CAPS_LABEL}>{label}</span>
               <InlineField
