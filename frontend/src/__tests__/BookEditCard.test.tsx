@@ -131,7 +131,8 @@ describe('BookEditCard', () => {
         onGenerateListing={vi.fn()}
       />
     )
-    expect(screen.getByText('—')).toBeInTheDocument()
+    const dashes = screen.getAllByText('—')
+    expect(dashes.length).toBeGreaterThan(0)
   })
 
   it('renders Save Changes and Generate Listing buttons', () => {

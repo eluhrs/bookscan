@@ -396,6 +396,7 @@ export default function BookEditCard({
               <InlineField
                 value={draft[key]}
                 onChange={(v) => setField(key, v)}
+                placeholder="—"
               />
             </div>
           ))}
