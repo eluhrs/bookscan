@@ -123,7 +123,6 @@ export default function DashboardPage() {
   }, [editingBook?.id])
 
   async function handleDeletePhoto(photoId: string) {
-    if (!window.confirm('Delete this photo?')) return
     try {
       await deletePhoto(photoId)
       if (photoUrls[photoId]) URL.revokeObjectURL(photoUrls[photoId])

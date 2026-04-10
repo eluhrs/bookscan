@@ -96,7 +96,7 @@ export default function PhotoFilmstrip({ coverUrl, photos, onDelete, onAddPhoto 
               height: 20,
               borderRadius: '50%',
               background: theme.colors.danger,
-              color: '#fff',
+              color: theme.colors.bg,
               border: 'none',
               cursor: 'pointer',
               display: 'flex',

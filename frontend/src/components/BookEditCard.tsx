@@ -19,7 +19,6 @@ interface BookEditCardProps {
 interface DraftFields {
   title: string | null
   author: string | null
-  isbn: string
   pages: number | null
   publisher: string | null
   edition: string | null
@@ -158,7 +157,6 @@ export default function BookEditCard({
   const [draft, setDraft] = useState<DraftFields>({
     title: book.title,
     author: book.author,
-    isbn: book.isbn,
     pages: book.pages,
     publisher: book.publisher,
     edition: book.edition,
@@ -174,7 +172,6 @@ export default function BookEditCard({
     setDraft({
       title: book.title,
       author: book.author,
-      isbn: book.isbn,
       pages: book.pages,
       publisher: book.publisher,
       edition: book.edition,
@@ -346,17 +343,31 @@ export default function BookEditCard({
             borderBottom: `1px solid ${theme.colors.border}`,
           }}
         >
+          {/* ISBN — read-only (unique key, not patchable via API) */}
+          <div>
+            <span style={SMALL_CAPS_LABEL}>ISBN</span>
+            <span
+              style={{
+                fontSize: 13,
+                fontFamily: theme.font.mono,
+                color: theme.colors.subtleText,
+                display: 'block',
+                padding: '1px 3px',
+                lineHeight: 1.4,
+              }}
+            >
+              {book.isbn}
+            </span>
+          </div>
           {([
-            { key: 'isbn' as const, label: 'ISBN', mono: true },
-            { key: 'pages' as const, label: 'Pages', mono: false },
-            { key: 'publisher' as const, label: 'Publisher', mono: false },
-          ] as Array<{ key: 'isbn' | 'pages' | 'publisher'; label: string; mono: boolean }>).map(({ key, label, mono }) => (
+            { key: 'pages' as const, label: 'Pages' },
+            { key: 'publisher' as const, label: 'Publisher' },
+          ] as Array<{ key: 'pages' | 'publisher'; label: string }>).map(({ key, label }) => (
             <div key={key}>
               <span style={SMALL_CAPS_LABEL}>{label}</span>
               <InlineField
                 value={draft[key]}
                 onChange={(v) => setField(key, v)}
-                mono={mono}
               />
             </div>
           ))}
