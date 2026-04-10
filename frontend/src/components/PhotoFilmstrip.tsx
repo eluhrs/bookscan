@@ -1,5 +1,6 @@
 // frontend/src/components/PhotoFilmstrip.tsx
 
+import { useRef } from 'react'
 import { theme } from '../styles/theme'
 
 const FILMSTRIP_HEIGHT = 120
@@ -13,9 +14,13 @@ interface PhotoFilmstripProps {
   photos: Array<{ key: string; url: string }>
   /** Called with the photo's key when the user taps the ✕ delete button. */
   onDelete: (key: string) => void
+  /** When provided, renders a + placeholder at the end that opens a file picker. */
+  onAddPhoto?: (file: File) => void
 }
 
-export default function PhotoFilmstrip({ coverUrl, photos, onDelete }: PhotoFilmstripProps) {
+export default function PhotoFilmstrip({ coverUrl, photos, onDelete, onAddPhoto }: PhotoFilmstripProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   return (
     <div
       style={{
@@ -24,6 +29,7 @@ export default function PhotoFilmstrip({ coverUrl, photos, onDelete }: PhotoFilm
         overflowX: 'auto',
         padding: '0.75rem 1rem',
         flexShrink: 0,
+        background: theme.colors.subtle,
         borderBottom: `1px solid ${theme.colors.border}`,
       }}
     >
@@ -89,7 +95,7 @@ export default function PhotoFilmstrip({ coverUrl, photos, onDelete }: PhotoFilm
               width: 20,
               height: 20,
               borderRadius: '50%',
-              background: 'rgba(0,0,0,0.55)',
+              background: theme.colors.danger,
               color: '#fff',
               border: 'none',
               cursor: 'pointer',
@@ -106,6 +112,47 @@ export default function PhotoFilmstrip({ coverUrl, photos, onDelete }: PhotoFilm
           </button>
         </div>
       ))}
+
+      {/* + placeholder — shown when onAddPhoto is provided */}
+      {onAddPhoto && (
+        <>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) {
+                onAddPhoto(file)
+                e.target.value = ''
+              }
+            }}
+          />
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            role="button"
+            aria-label="Add photo"
+            style={{
+              width: PHOTO_WIDTH,
+              height: FILMSTRIP_HEIGHT,
+              flexShrink: 0,
+              border: `2px dashed ${theme.colors.border}`,
+              borderRadius: 6,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: theme.colors.muted,
+              fontSize: '1.75rem',
+              fontWeight: 300,
+              userSelect: 'none',
+            }}
+          >
+            +
+          </div>
+        </>
+      )}
     </div>
   )
 }
