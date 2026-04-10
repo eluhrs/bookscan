@@ -443,7 +443,7 @@ export default function BookEditCard({
                 border: 'none',
                 borderRadius: theme.radius.sm,
                 background: saving ? theme.colors.muted : theme.colors.accent,
-                color: '#fff',
+                color: theme.colors.bg,
                 cursor: saving ? 'default' : 'pointer',
                 fontFamily: theme.font.sans,
               }}
