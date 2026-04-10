@@ -9,7 +9,6 @@ export interface Book {
   pages: number | null
   dimensions: string | null
   weight: string | null
-  subject: string | null
   description: string | null
   condition: string | null
   cover_image_url: string | null
@@ -39,7 +38,6 @@ export interface BookLookup {
   pages: number | null
   dimensions: string | null
   weight: string | null
-  subject: string | null
   description: string | null
   condition: string | null
   cover_image_url: string | null

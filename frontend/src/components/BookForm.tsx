@@ -17,7 +17,6 @@ const TEXT_FIELDS: Array<{ key: keyof BookLookup; label: string; type?: string }
   { key: 'edition', label: 'Edition' },
   { key: 'year', label: 'Year', type: 'number' },
   { key: 'pages', label: 'Pages', type: 'number' },
-  { key: 'subject', label: 'Subject' },
 ]
 
 const CONDITIONS = ['', 'New', 'Very Good', 'Good', 'Acceptable', 'Poor'] as const

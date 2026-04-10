@@ -94,7 +94,7 @@ describe('LookupStep', () => {
       title: 'Test',
       data_complete: true,
       author: null, publisher: null, edition: null, year: null,
-      pages: null, dimensions: null, weight: null, subject: null,
+      pages: null, dimensions: null, weight: null,
       description: null, condition: null, cover_image_url: null, data_sources: null,
     })
 

@@ -14,7 +14,6 @@ const baseLookup: BookLookup = {
   pages: null,
   dimensions: null,
   weight: null,
-  subject: null,
   description: null,
   condition: null,
   cover_image_url: null,

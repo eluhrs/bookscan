@@ -28,7 +28,6 @@ const mockBook = {
   pages: 200,
   dimensions: null,
   weight: null,
-  subject: null,
   description: null,
   condition: null,
   cover_image_url: null,
