@@ -5,6 +5,9 @@ metadata from public APIs, storing in PostgreSQL, and generating eBay listing te
 
 ---
 
+## Development Conventions
+- Never join shell commands with && — run each command as a separate tool call so they can be approved individually and failures are clearly isolated
+
 ## Architecture
 
 ```
@@ -182,7 +185,7 @@ to WASM, stronger for 1D/EAN barcodes) as a drop-in replacement.
 first button press (satisfies mobile user-gesture requirement). Success: ascending 880/1108Hz chime.
 Review: descending 440/330Hz tone.
 
-**Phone vs desktop UI.** The old `PhoneReview` / `ScanPage` / `Scanner` components were deleted in CHANGES-04 and replaced by the photo workflow. `BookForm` is the desktop edit form rendered by `DashboardPage` for editing.
+**Phone vs desktop UI.** The old `PhoneReview` / `ScanPage` / `Scanner` components were deleted in CHANGES-04 and replaced by the photo workflow. `BookEditCard` is the dashboard edit form rendered by `DashboardPage` for editing — `BookForm` was replaced in CHANGES-12.
 
 **Photo workflow (CHANGES-04).** Multi-step flow: Photograph → Lookup → Review. Photos held in browser memory as `File` objects until Save; uploaded via `POST /api/books/{id}/photos` after book creation. Photo files stored at `/app/photos/{book_id}/{photo_id}.jpg` in a named Docker volume (`photos:/app/photos` in both `docker-compose.yml` and `docker-compose.dev.yml`).
 
@@ -208,8 +211,8 @@ Do not add new hardcoded hex values to components — reference `theme.colors.*`
 and Geist Mono loaded from Google Fonts CDN in `index.html`.
 
 **CSV export columns.** `GET /api/listings?format=csv` now outputs discrete book+listing columns
-(title, author, publisher, edition, year, pages, dimensions, weight, subject, description, condition,
-isbn, listing_text, created_at, ebay_status) — not the old listing_text blob.
+(title, author, publisher, edition, year, pages, dimensions, weight, description, condition,
+isbn, listing_text, created_at, ebay_status) — not the old listing_text blob. `subject` was removed in CHANGES-12.
 
 **ISBN barcodes only.** The scanner picks up any barcode. Only barcodes starting with `978` or `979`
 are book ISBNs — other barcodes will return empty metadata from the lookup APIs.
@@ -222,6 +225,8 @@ source for physical specs and would be the right call once eBay listing accuracy
 justify the cost. Until then, dimensions and weight will be blank in all listings.
 
 **Haptic feedback (Web Vibration API).** All key events call `navigator.vibrate?.(25)` (medium intensity, 25ms). Safari/iOS does not support `navigator.vibrate` — the optional chain (`?.`) makes it a silent no-op on unsupported platforms; no error is thrown. Haptic feedback via Web Vibration API is not supported on iOS/Safari or any iOS browser — this is an Apple platform restriction at the WebKit level with no available workaround. Chrome, Firefox, and all other browsers on iOS are also affected (Apple forces all iOS browsers to use WebKit). Android Chrome supports haptics fully. The haptic code is intentionally retained to benefit Android users. Do not treat iOS lack of haptics as a bug.
+
+**BookEditCard inline editing.** `BookEditCard` replaces `BookForm` as the dashboard edit form. All text fields (title, author, pages, publisher, edition, dimensions, weight, description) use an `InlineField` component: hover shows a 0.5px border, click switches to input/textarea, blur returns to display mode. Pending edits accumulate in `DraftFields` state and are committed together on "Save Changes". ISBN is rendered read-only (`<span>`) — it is a unique key and not patchable via the API. Checkboxes (Review Metadata?, Review Photography?) save immediately via `onImmediateSave` — independent of the Save Changes button. Empty fields display as `—` (em dash) in italic tertiary color via `placeholder="—"`.
 
 **Save confirmation overlay.** After successful save, `PhotoWorkflowPage` transitions to a `'confirmation'` step (added to the `WorkflowStep` union) that renders a full-screen Check icon for 800ms, then resets all state and transitions to `'photograph'`. `playSuccess()` fires in the `useEffect` that handles the `'confirmation'` step, not in `ReviewStep.handleSave`. `ReviewStep` no longer imports `useScanAudio`.
 
@@ -244,7 +249,9 @@ bookscan/
 │   │   └── versions/
 │   │       ├── 001_initial_schema.py
 │   │       ├── 002_add_condition.py   # adds condition VARCHAR(20) to books
-│   │       └── 003_add_book_photos.py # adds book_photos table with book_id FK cascade
+│   │       ├── 003_add_book_photos.py     # adds book_photos table with book_id FK cascade
+│   │       ├── 004_add_needs_photo_review.py  # adds needs_photo_review BOOLEAN to books
+│   │       └── 005_drop_subject.py        # drops subject column from books
 │   ├── app/
 │   │   ├── main.py             # FastAPI app, slowapi, router registration
 │   │   ├── config.py           # pydantic-settings v2
@@ -288,7 +295,8 @@ bookscan/
         │   │   ├── PhotographStep.tsx   # step 1: live camera capture, portrait mask, □/■ progress
         │   │   ├── LookupStep.tsx       # step 2: barcode camera + keyboard fallback
         │   │   └── ReviewStep.tsx       # step 3: condition/flag/save with photo upload
-        │   ├── BookForm.tsx    # desktop book edit form (condition, retain flag)
+        │   ├── BookEditCard.tsx  # structured card layout with inline editing (replaces BookForm)
+        │   ├── PhotoFilmstrip.tsx  # reusable filmstrip: cover + user photos, add/delete
         │   ├── BookTable.tsx   # sortable, filterable, aria-sort, has_photos indicator
         │   └── ListingGenerator.tsx # generate + copy-to-clipboard + history
         ├── pages/
@@ -337,7 +345,7 @@ GET    /api/photos/{photo_id}/file   # FileResponse (authenticated)
 | publisher, edition, year | LoC → Open Library → Google Books |
 | description | Google Books → Open Library → LoC |
 | cover_image_url | Open Library → Google Books |
-| pages, subject | first non-null wins |
+| pages | first non-null wins |
 
 `data_complete = true` when title, author, publisher, year, and isbn are all present.
 
@@ -480,6 +488,17 @@ Apache VirtualHost (apply manually):
 - FIX-11: `PhotoFilmstrip` component extracted from `ReviewStep` into `frontend/src/components/PhotoFilmstrip.tsx`; reused in `DashboardPage` edit view (replaces old photo grid); API: `coverUrl`, `photos: Array<{key, url}>`, `onDelete: (key) => void`; stable UUID keys in `ReviewStep` via `crypto.randomUUID()` at state entry
 - QA fix: `BookForm` gained `hideCover?: boolean` prop; `DashboardPage` passes `hideCover` so `BookForm` doesn't render a second cover when the filmstrip already shows it
 - Note: description field rarely populated — sourced from Google Books only (OL fetcher never extracts description; OL Works endpoint not called); many books have no description in Google Books
+
+**CHANGES-12** — all items implemented:
+- FEAT-01: Dashboard book edit page redesigned as structured `BookEditCard` component — replaces `BookForm`
+- Six zones: Filmstrip (reuses `PhotoFilmstrip`), Title/Author/Status (inline editable + condition dropdown + immediate checkboxes), Core fields (ISBN read-only, Pages/Publisher inline editable), Description (inline textarea, em dash when empty), Additional fields (Edition/Dimensions/Weight, all editable, em dash when empty), Footer (added date + Generate Listing + Save Changes)
+- Inline editing pattern: hover shows 0.5px border, click activates input/textarea, blur returns to display; all pending changes committed together on Save Changes
+- Checkboxes (Review Metadata? / Review Photography?) save immediately via `onImmediateSave`, independent of Save Changes
+- ISBN rendered read-only — not patchable via `PATCH /api/books/{id}`; silently discarded if included
+- `PhotoFilmstrip` extended with `onAddPhoto` prop and `+` placeholder for adding photos from dashboard edit view
+- `subject` field removed from DB (migration 005), backend models/schemas/routers/services, frontend types, and all test fixtures
+- `BookForm.tsx` deleted; `BookForm.test.tsx` deleted; `DashboardPage` updated to render `BookEditCard`
+- `LookupStep.tsx` unused `useEffect` import removed (pre-existing TS error surfaced by `tsc --noEmit`)
 
 ---
 
