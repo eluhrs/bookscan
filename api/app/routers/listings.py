@@ -29,7 +29,6 @@ def generate_listing_text(book: Book) -> str:
         ("Pages", book.pages),
         ("Dimensions", book.dimensions),
         ("Weight", book.weight),
-        ("Subject", book.subject),
     ]
     lines = [f"{label}: {value}" for label, value in field_map if value]
     if book.description:
@@ -90,14 +89,14 @@ async def get_all_listings(
         writer = csv.writer(output)
         writer.writerow([
             "title", "author", "publisher", "edition", "year", "pages",
-            "dimensions", "weight", "subject", "description", "condition",
+            "dimensions", "weight", "description", "condition",
             "isbn", "listing_text", "created_at", "ebay_status",
         ])
         for b in books:
             latest = max(b.listings, key=lambda l: l.created_at, default=None)
             writer.writerow([
                 b.title, b.author, b.publisher, b.edition, b.year, b.pages,
-                b.dimensions, b.weight, b.subject, b.description, b.condition,
+                b.dimensions, b.weight, b.description, b.condition,
                 b.isbn,
                 latest.listing_text if latest else "",
                 latest.created_at if latest else "",

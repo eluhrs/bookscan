@@ -21,7 +21,6 @@ class Book(Base):
     pages: Mapped[int | None] = mapped_column(Integer)
     dimensions: Mapped[str | None] = mapped_column(String(100))
     weight: Mapped[str | None] = mapped_column(String(100))
-    subject: Mapped[str | None] = mapped_column(Text)
     description: Mapped[str | None] = mapped_column(Text)
     cover_image_url: Mapped[str | None] = mapped_column(Text)
     cover_image_local: Mapped[str | None] = mapped_column(Text)

@@ -17,7 +17,6 @@ def make_book(**kwargs) -> Book:
         pages=448,
         dimensions=None,
         weight=None,
-        subject="Software Engineering",
         description="Improving the design of existing code.",
         cover_image_url=None,
         cover_image_local=None,

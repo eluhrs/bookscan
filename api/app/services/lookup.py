@@ -18,7 +18,6 @@ class BookData:
     pages: Optional[int] = None
     dimensions: Optional[str] = None
     weight: Optional[str] = None
-    subject: Optional[str] = None
     description: Optional[str] = None
     cover_image_url: Optional[str] = None
     data_sources: dict = field(default_factory=dict)
@@ -57,10 +56,6 @@ async def fetch_open_library(isbn: str, client: httpx.AsyncClient) -> BookData:
         if book.get("number_of_pages"):
             result.pages = book["number_of_pages"]
             result.data_sources["pages"] = "open_library"
-        subjects = book.get("subjects", [])
-        if subjects:
-            result.subject = subjects[0].get("name") if isinstance(subjects[0], dict) else subjects[0]
-            result.data_sources["subject"] = "open_library"
         covers = book.get("cover", {})
         if covers.get("medium"):
             result.cover_image_url = covers["medium"]
@@ -99,10 +94,6 @@ async def fetch_google_books(isbn: str, client: httpx.AsyncClient) -> BookData:
         if info.get("pageCount"):
             result.pages = info["pageCount"]
             result.data_sources["pages"] = "google_books"
-        categories = info.get("categories", [])
-        if categories:
-            result.subject = categories[0]
-            result.data_sources["subject"] = "google_books"
         if info.get("description"):
             result.description = info["description"]
             result.data_sources["description"] = "google_books"
@@ -184,7 +175,7 @@ def merge_results(ol: BookData, gb: BookData, loc: BookData) -> BookData:
       publisher, edition, year: LoC → OL → GB
       description:            GB → OL → LoC
       cover_image_url:        OL → GB
-      pages, subject:         first non-null wins
+      pages:                  first non-null wins
     """
     merged = BookData()
     merged.data_sources = {}
@@ -206,7 +197,6 @@ def merge_results(ol: BookData, gb: BookData, loc: BookData) -> BookData:
     pick("description", gb, ol, loc)
     pick("cover_image_url", ol, gb)
     pick("pages", ol, gb, loc)
-    pick("subject", ol, gb, loc)
 
     return merged
 

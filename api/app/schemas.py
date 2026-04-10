@@ -21,7 +21,6 @@ class BookLookupResponse(BaseModel):
     pages: Optional[int] = None
     dimensions: Optional[str] = None
     weight: Optional[str] = None
-    subject: Optional[str] = None
     description: Optional[str] = None
     cover_image_url: Optional[str] = None
     data_sources: Optional[dict] = None
@@ -38,7 +37,6 @@ class BookCreate(BaseModel):
     pages: Optional[int] = None
     dimensions: Optional[str] = None
     weight: Optional[str] = None
-    subject: Optional[str] = None
     description: Optional[str] = None
     cover_image_url: Optional[str] = None
     data_sources: Optional[dict] = None
@@ -56,7 +54,6 @@ class BookUpdate(BaseModel):
     pages: Optional[int] = None
     dimensions: Optional[str] = None
     weight: Optional[str] = None
-    subject: Optional[str] = None
     description: Optional[str] = None
     cover_image_url: Optional[str] = None
     data_complete: Optional[bool] = None
@@ -84,7 +81,6 @@ class BookResponse(BaseModel):
     pages: Optional[int] = None
     dimensions: Optional[str] = None
     weight: Optional[str] = None
-    subject: Optional[str] = None
     description: Optional[str] = None
     cover_image_url: Optional[str] = None
     cover_image_local: Optional[str] = None
