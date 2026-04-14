@@ -18,7 +18,6 @@ export const theme = {
     zoneBg:         '#E0E0E0',   // was #F0F0F0 — header + footer zones
     controlsBorder: '#CCCCCC',   // was #E5E5E5 — individual button borders
     footerButtonBg: '#FFFFFF',   // NEW — Dashboard / Start Over button fill
-    pageBg:         '#F5F5F5',   // gray page background behind cards (edit/dashboard)
     navBg:          '#E0E0E0',   // navbar/footer zones
     tableHeaderBg:  '#F5F5F5',   // table header + filmstrip backgrounds
     rowBorder:      '#F0F0F0',   // row separators inside the table

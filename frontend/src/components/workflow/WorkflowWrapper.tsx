@@ -15,7 +15,6 @@ const STEP_LABELS: Record<WorkflowStep, string> = {
 
 const ZONE_1_HEIGHT = '3rem'    // step indicator bar
 const ZONE_2_HEIGHT = '2.75rem' // controls bar (absent on ReviewStep)
-const ZONE_6_HEIGHT = '3rem'    // secondary buttons footer bar
 
 export interface WorkflowWrapperProps {
   step: WorkflowStep
@@ -136,8 +135,8 @@ export default function WorkflowWrapper({
         </div>
       )}
 
-      {/* Middle: Zones 3–5 in a flex column with consistent gap.
-          flex:1 fills the space between the header zones and Zone 6. */}
+      {/* Middle: Zones 3–4 in a flex column with consistent gap.
+          flex:1 fills the space between the header zones and the footer. */}
       <div
         style={{
           flex: 1,
@@ -162,80 +161,76 @@ export default function WorkflowWrapper({
             </p>
           </div>
         )}
-
-        {/* Zone 5: Primary button — 64px min height */}
-        <div style={{ flexShrink: 0 }}>
-          <button
-            onClick={onPrimary}
-            disabled={primaryDisabled}
-            style={{
-              display: 'block',
-              width: '100%',
-              minHeight: 64,
-              padding: '0.75rem 1rem',
-              fontSize: '1.1rem',
-              fontWeight: 700,
-              letterSpacing: '0.06em',
-              background: primaryDisabled ? theme.colors.disabled : theme.colors.accent,
-              color: primaryDisabled ? theme.colors.disabledText : '#fff',
-              border: 'none',
-              borderRadius: 12,
-              cursor: primaryDisabled ? 'default' : 'pointer',
-              fontFamily: theme.font.sans,
-            }}
-          >
-            {primaryLabel}
-          </button>
-        </div>
       </div>
 
-      {/* Zone 6: Secondary buttons — normal flex child, always at bottom of container.
-          Background matches Zone 1 header for visual symmetry. */}
+      {/* Footer: primary button + secondary buttons — all in #E0E0E0 zone */}
       <div
         style={{
           flexShrink: 0,
+          background: theme.colors.navBg,
+          padding: '0.75rem 1rem',
           display: 'flex',
+          flexDirection: 'column',
           gap: '0.5rem',
-          padding: '0 1rem',
-          minHeight: ZONE_6_HEIGHT,
-          alignItems: 'center',
-          background: theme.colors.zoneBg,
         }}
       >
-        <Link
-          to="/dashboard"
-          style={{
-            flex: 1,
-            display: 'block',
-            textAlign: 'center',
-            padding: '0.5rem',
-            background: theme.colors.footerButtonBg,
-            color: theme.colors.subtleText,
-            borderRadius: 8,
-            textDecoration: 'none',
-            fontSize: '0.875rem',
-            fontFamily: theme.font.sans,
-            border: `1px solid ${theme.colors.controlsBorder}`,
-          }}
-        >
-          Dashboard
-        </Link>
         <button
-          onClick={onCancel}
+          onClick={onPrimary}
+          disabled={primaryDisabled}
           style={{
-            flex: 1,
-            padding: '0.5rem',
-            background: theme.colors.footerButtonBg,
-            color: theme.colors.subtleText,
-            border: `1px solid ${theme.colors.controlsBorder}`,
-            borderRadius: 8,
-            cursor: 'pointer',
-            fontSize: '0.875rem',
+            display: 'block',
+            width: '100%',
+            minHeight: 64,
+            padding: '0.75rem 1rem',
+            fontSize: '1.1rem',
+            fontWeight: 700,
+            letterSpacing: '0.06em',
+            background: primaryDisabled ? theme.colors.disabled : theme.colors.primaryBlue,
+            color: primaryDisabled ? theme.colors.disabledText : '#fff',
+            border: 'none',
+            borderRadius: 12,
+            cursor: primaryDisabled ? 'default' : 'pointer',
             fontFamily: theme.font.sans,
           }}
         >
-          Start Over
+          {primaryLabel}
         </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Link
+            to="/dashboard"
+            style={{
+              flex: 1,
+              display: 'block',
+              textAlign: 'center',
+              padding: '0.5rem',
+              background: theme.colors.footerButtonBg,
+              color: theme.colors.secondaryText,
+              borderRadius: 8,
+              textDecoration: 'none',
+              fontSize: '0.875rem',
+              fontFamily: theme.font.sans,
+              border: `1px solid ${theme.colors.zoneBorder}`,
+            }}
+          >
+            Dashboard
+          </Link>
+          <button
+            onClick={onCancel}
+            style={{
+              flex: 1,
+              padding: '0.5rem',
+              background: theme.colors.footerButtonBg,
+              color: theme.colors.secondaryText,
+              border: `1px solid ${theme.colors.zoneBorder}`,
+              borderRadius: 8,
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              fontFamily: theme.font.sans,
+            }}
+          >
+            Start Over
+          </button>
+        </div>
       </div>
     </div>
   )
