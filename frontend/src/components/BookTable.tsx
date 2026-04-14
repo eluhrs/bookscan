@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileWarning, Camera as CameraIcon } from 'lucide-react'
+import { FileWarning, Camera as CameraIcon, Pencil, Trash2 } from 'lucide-react'
 import { Book } from '../types'
 import { theme } from '../styles/theme'
 
@@ -40,11 +40,12 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
     return sortDir === 'asc' ? cmp : -cmp
   })
 
-  function colHeader(label: string, key: SortKey) {
+  function colHeader(label: string, key: SortKey, className?: string) {
     const arrow = sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''
     const ariaSort = sortKey === key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'
     return (
       <th
+        className={className}
         onClick={() => handleSort(key)}
         style={{
           cursor: 'pointer',
@@ -67,6 +68,20 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
 
   return (
     <div style={{ overflowX: 'auto', border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.md }}>
+      <style>{`
+  @media (max-width: 767px) {
+    .bt-col-author,
+    .bt-col-publisher,
+    .bt-col-year,
+    .bt-col-condition { display: none !important; }
+    .bt-col-actions-text { display: none !important; }
+    .bt-col-actions-icon { display: table-cell !important; }
+  }
+  @media (min-width: 768px) {
+    .bt-col-actions-text { display: table-cell !important; }
+    .bt-col-actions-icon { display: none !important; }
+  }
+`}</style>
       <table
         style={{
           width: '100%',
@@ -79,10 +94,11 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
           <tr style={{ borderBottom: `1px solid ${theme.colors.border}`, background: theme.colors.surface }}>
             <th style={{ padding: '0.6rem 0.5rem', width: 48 }} />
             {colHeader('Title', 'title')}
-            {colHeader('Author', 'author')}
-            {colHeader('Publisher', 'publisher')}
-            {colHeader('Year', 'year')}
+            {colHeader('Author', 'author', 'bt-col-author')}
+            {colHeader('Publisher', 'publisher', 'bt-col-publisher')}
+            {colHeader('Year', 'year', 'bt-col-year')}
             <th
+              className="bt-col-condition"
               style={{
                 padding: '0.6rem 0.75rem',
                 fontWeight: 500,
@@ -95,6 +111,7 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
               Condition
             </th>
             <th
+              className="bt-col-actions-text"
               style={{
                 padding: '0.6rem 0.75rem',
                 fontWeight: 500,
@@ -106,13 +123,15 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
             >
               Actions
             </th>
+            <th className="bt-col-actions-icon" style={{ display: 'none', padding: '0.6rem 0.5rem', width: 72 }} />
           </tr>
         </thead>
         <tbody>
           {sorted.map((book) => (
             <tr
               key={book.id}
-              style={{ borderBottom: `1px solid ${theme.colors.border}` }}
+              onClick={() => onEdit(book)}
+              style={{ borderBottom: `1px solid ${theme.colors.border}`, cursor: 'pointer' }}
             >
               <td style={{ padding: '0.6rem 0.5rem', width: 48 }}>
                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
@@ -149,6 +168,7 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
                 {book.title ?? '—'}
               </td>
               <td
+                className="bt-col-author"
                 style={{
                   padding: '0.6rem 0.75rem',
                   color: theme.colors.muted,
@@ -160,10 +180,11 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
               >
                 {book.author ?? '—'}
               </td>
-              <td style={{ padding: '0.6rem 0.75rem', color: theme.colors.muted }}>
+              <td className="bt-col-publisher" style={{ padding: '0.6rem 0.75rem', color: theme.colors.muted }}>
                 {book.publisher ?? '—'}
               </td>
               <td
+                className="bt-col-year"
                 style={{
                   padding: '0.6rem 0.75rem',
                   color: theme.colors.muted,
@@ -173,7 +194,7 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
               >
                 {book.year ?? '—'}
               </td>
-              <td style={{ padding: '0.6rem 0.75rem' }}>
+              <td className="bt-col-condition" style={{ padding: '0.6rem 0.75rem' }}>
                 {book.condition ? (
                   <span
                     style={{
@@ -192,9 +213,9 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
                   <span style={{ color: theme.colors.border }}>—</span>
                 )}
               </td>
-              <td style={{ padding: '0.6rem 0.75rem', whiteSpace: 'nowrap' }}>
+              <td className="bt-col-actions-text" style={{ padding: '0.6rem 0.75rem', whiteSpace: 'nowrap' }}>
                 <button
-                  onClick={() => onGenerateListing(book)}
+                  onClick={(e) => { e.stopPropagation(); onGenerateListing(book) }}
                   style={{
                     marginRight: '0.4rem',
                     padding: '0.3rem 0.6rem',
@@ -208,7 +229,7 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
                   List
                 </button>
                 <button
-                  onClick={() => onEdit(book)}
+                  onClick={(e) => { e.stopPropagation(); onEdit(book) }}
                   style={{
                     marginRight: '0.4rem',
                     padding: '0.3rem 0.6rem',
@@ -222,7 +243,7 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
                   Edit
                 </button>
                 <button
-                  onClick={() => onDelete(book.id)}
+                  onClick={(e) => { e.stopPropagation(); onDelete(book.id) }}
                   style={{
                     padding: '0.3rem 0.6rem',
                     fontSize: '0.8rem',
@@ -237,12 +258,47 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
                   Delete
                 </button>
               </td>
+              <td className="bt-col-actions-icon" style={{ display: 'none', padding: '0.6rem 0.5rem', whiteSpace: 'nowrap' }}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onEdit(book) }}
+                  style={{
+                    marginRight: '0.5rem',
+                    padding: '0.35rem',
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: theme.radius.sm,
+                    background: theme.colors.bg,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  aria-label="Edit book"
+                >
+                  <Pencil size={16} color={theme.colors.muted} />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDelete(book.id) }}
+                  style={{
+                    padding: '0.35rem',
+                    border: `1px solid ${theme.colors.danger}`,
+                    borderRadius: theme.radius.sm,
+                    background: theme.colors.bg,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  aria-label="Delete book"
+                >
+                  <Trash2 size={16} color={theme.colors.danger} />
+                </button>
+              </td>
             </tr>
           ))}
           {sorted.length === 0 && (
             <tr>
               <td
-                colSpan={7}
+                colSpan={99}
                 style={{
                   textAlign: 'center',
                   padding: '3rem',
