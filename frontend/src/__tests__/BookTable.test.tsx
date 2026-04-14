@@ -55,7 +55,7 @@ describe('BookTable', () => {
     const onDelete = vi.fn()
     const book = makeBook({ title: 'Delete Me' })
     render(<BookTable books={[book]} onEdit={vi.fn()} onDelete={onDelete} onGenerateListing={vi.fn()} />)
-    fireEvent.click(screen.getByLabelText('Delete book'))
+    fireEvent.click(screen.getAllByLabelText('Delete book')[0])
     expect(onDelete).toHaveBeenCalledWith(book.id)
   })
 
