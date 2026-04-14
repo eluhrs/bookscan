@@ -204,12 +204,13 @@ def merge_results(ol: BookData, gb: BookData, loc: BookData) -> BookData:
 KEY_FIELDS = ("title", "author", "publisher", "year")
 
 
-def is_data_complete(book: BookData, isbn: str) -> bool:
+def is_metadata_complete(book: BookData, isbn: str) -> bool:
+    """Returns True when metadata is complete (title, author, publisher, year, and isbn are all present)."""
     return bool(isbn) and all(getattr(book, f) for f in KEY_FIELDS)
 
 
 async def lookup_isbn(isbn: str) -> tuple[BookData, bool]:
-    """Returns (merged BookData, data_complete bool)."""
+    """Returns (merged BookData, metadata_complete bool)."""
     async with httpx.AsyncClient(timeout=10.0) as client:
         results = await asyncio.gather(
             fetch_open_library(isbn, client),
@@ -221,5 +222,5 @@ async def lookup_isbn(isbn: str) -> tuple[BookData, bool]:
         gb = results[1] if isinstance(results[1], BookData) else BookData()
         loc = results[2] if isinstance(results[2], BookData) else BookData()
         merged = merge_results(ol, gb, loc)
-        complete = is_data_complete(merged, isbn)
+        complete = is_metadata_complete(merged, isbn)
         return merged, complete

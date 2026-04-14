@@ -1,5 +1,5 @@
 import pytest
-from app.services.lookup import BookData, merge_results, is_data_complete
+from app.services.lookup import BookData, merge_results, is_metadata_complete
 
 
 def make_ol() -> BookData:
@@ -101,16 +101,16 @@ def test_fallback_when_source_missing():
     assert merged.data_sources["title"] == "google_books"
 
 
-def test_data_complete_true():
+def test_metadata_complete_true():
     book = BookData(title="X", author="Y", publisher="Z", year=2020)
-    assert is_data_complete(book, "9781234567890") is True
+    assert is_metadata_complete(book, "9781234567890") is True
 
 
-def test_data_complete_false_missing_publisher():
+def test_metadata_complete_false_missing_publisher():
     book = BookData(title="X", author="Y", publisher=None, year=2020)
-    assert is_data_complete(book, "9781234567890") is False
+    assert is_metadata_complete(book, "9781234567890") is False
 
 
-def test_data_complete_false_no_isbn():
+def test_metadata_complete_false_no_isbn():
     book = BookData(title="X", author="Y", publisher="Z", year=2020)
-    assert is_data_complete(book, "") is False
+    assert is_metadata_complete(book, "") is False
