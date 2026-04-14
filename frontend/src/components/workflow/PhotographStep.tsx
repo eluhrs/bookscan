@@ -48,7 +48,7 @@ export default function PhotographStep({
   onSkip,
   onCancel,
 }: PhotographStepProps) {
-  const { videoRef, torchAvailable, torchOn, cameraError, handleTorchToggle } =
+  const { videoRef, torchAvailable, torchOn, cameraError, handleTorchToggle, retryCamera } =
     useCameraStream({ enabled: true })
   const { playSuccess } = useScanAudio()
   const capturingRef = useRef(false)
@@ -173,14 +173,30 @@ export default function PhotographStep({
       style={{
         height: '100%',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
+        gap: '1rem',
         padding: '2rem',
       }}
     >
       <p style={{ color: theme.colors.danger, textAlign: 'center', fontSize: '0.9rem', margin: 0 }}>
         {cameraError}
       </p>
+      <button
+        onClick={retryCamera}
+        style={{
+          padding: '0.5rem 1.25rem',
+          fontSize: '0.9rem',
+          border: `1px solid ${theme.colors.border}`,
+          borderRadius: theme.radius.sm,
+          background: theme.colors.bg,
+          cursor: 'pointer',
+          fontFamily: theme.font.sans,
+        }}
+      >
+        Retry
+      </button>
     </div>
   ) : (
     <div

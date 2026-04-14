@@ -18,6 +18,7 @@ interface UseCameraStreamReturn {
   torchOn: boolean
   cameraError: string | null
   handleTorchToggle: () => Promise<void>
+  retryCamera: () => void
 }
 
 /** Samples a 16×16 downscale of the video to detect a black frame. */
@@ -166,6 +167,10 @@ export function useCameraStream({ enabled }: UseCameraStreamOptions): UseCameraS
     }
   }, [enabled])
 
+  function retryCamera() {
+    restartRef.current?.()
+  }
+
   async function handleTorchToggle() {
     if (!trackRef.current) return
     const next = !torchOn
@@ -178,5 +183,5 @@ export function useCameraStream({ enabled }: UseCameraStreamOptions): UseCameraS
     }
   }
 
-  return { videoRef, canvasRef, torchAvailable, torchOn, cameraError, handleTorchToggle }
+  return { videoRef, canvasRef, torchAvailable, torchOn, cameraError, handleTorchToggle, retryCamera }
 }

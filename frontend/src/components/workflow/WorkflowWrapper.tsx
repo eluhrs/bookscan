@@ -83,6 +83,7 @@ export default function WorkflowWrapper({
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        overscrollBehavior: 'none',
         fontFamily: theme.font.sans,
       }}
     >

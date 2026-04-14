@@ -31,7 +31,7 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
   const [looking, setLooking] = useState(false)
   const [hintError, setHintError] = useState<string | null>(null)
 
-  const { videoRef, canvasRef, torchAvailable, torchOn, cameraError, handleTorchToggle } =
+  const { videoRef, canvasRef, torchAvailable, torchOn, cameraError, handleTorchToggle, retryCamera } =
     useCameraStream({ enabled: mode === 'camera' })
 
   const readerRef = useRef<BrowserMultiFormatReader | null>(null)
@@ -187,9 +187,33 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
   const mainContent = mode === 'camera' ? (
     <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {cameraError ? (
-        <p style={{ color: theme.colors.danger, textAlign: 'center', fontSize: '0.9rem', margin: 0 }}>
-          {cameraError}
-        </p>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '1rem',
+          }}
+        >
+          <p style={{ color: theme.colors.danger, textAlign: 'center', fontSize: '0.9rem', margin: 0 }}>
+            {cameraError}
+          </p>
+          <button
+            onClick={retryCamera}
+            style={{
+              padding: '0.5rem 1.25rem',
+              fontSize: '0.9rem',
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.radius.sm,
+              background: theme.colors.bg,
+              cursor: 'pointer',
+              fontFamily: theme.font.sans,
+            }}
+          >
+            Retry
+          </button>
+        </div>
       ) : (
         <div
           style={{
