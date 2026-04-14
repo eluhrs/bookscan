@@ -2,7 +2,7 @@ import asyncio
 import shutil
 import uuid
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated, Literal, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -121,7 +121,7 @@ async def list_books(
     _user: Annotated[str, Depends(get_current_user)],
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    status: str = Query("all"),
+    status: Literal["all", "needs_metadata_review", "needs_photo_review", "ready"] = Query("all"),
     search: Optional[str] = Query(None),
 ):
     q = select(Book)
