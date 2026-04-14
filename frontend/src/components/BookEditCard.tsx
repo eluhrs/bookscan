@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Book, BookPhoto } from '../types'
 import { theme } from '../styles/theme'
 import PhotoFilmstrip from './PhotoFilmstrip'
+import { useVisualViewport } from '../hooks/useVisualViewport'
 
 interface BookEditCardProps {
   book: Book
@@ -352,13 +353,22 @@ export default function BookEditCard({
     </div>
   )
 
+  const { height: vpHeight, offsetTop: vpOffset } = useVisualViewport()
+
   return (
     <div
       style={{
-        height: '100vh',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        maxWidth: '100vw',
+        height: vpHeight,
+        transform: `translateY(${vpOffset}px)`,
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        overscrollBehavior: 'none',
         background: theme.colors.bg,
         color: theme.colors.text,
         fontFamily: theme.font.sans,
@@ -427,6 +437,8 @@ export default function BookEditCard({
           flex: 1,
           minHeight: 0,
           overflowY: 'auto',
+          overscrollBehavior: 'none',
+          WebkitOverflowScrolling: 'touch',
           maxWidth: 1200,
           width: '100%',
           margin: '0 auto',

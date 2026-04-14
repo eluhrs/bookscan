@@ -9,12 +9,14 @@ import { listBooks, updateBook, deleteBook, exportListingsCSV } from '../api/boo
 import { listPhotos, deletePhoto, getPhotoUrl, uploadPhotos } from '../api/photos'
 import { Book, BookPhoto } from '../types'
 import { useAuth } from '../hooks/useAuth'
+import { useVisualViewport } from '../hooks/useVisualViewport'
 import { isMobileDevice } from '../utils/deviceDetect'
 import { theme } from '../styles/theme'
 
 export default function DashboardPage() {
   const { logout } = useAuth()
   const navigate = useNavigate()
+  const { height: vpHeight, offsetTop: vpOffset } = useVisualViewport()
   const [books, setBooks] = useState<Book[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -236,9 +238,25 @@ export default function DashboardPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: theme.colors.bg, fontFamily: theme.font.sans }}>
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        maxWidth: '100vw',
+        height: vpHeight,
+        transform: `translateY(${vpOffset}px)`,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        overscrollBehavior: 'none',
+        background: theme.colors.bg,
+        fontFamily: theme.font.sans,
+      }}
+    >
       {/* Navbar */}
-      <div style={{ background: theme.colors.navBg }}>
+      <div style={{ flexShrink: 0, background: theme.colors.navBg }}>
         <div
           style={{
             maxWidth: 1200,
@@ -296,8 +314,16 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Content zone */}
-      <div style={{ flex: 1 }}>
+      {/* Content zone — scrolls between pinned navbar and footer */}
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          overscrollBehavior: 'none',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
         <div
           style={{
             maxWidth: 1200,
@@ -307,6 +333,7 @@ export default function DashboardPage() {
             borderRight: `1px solid ${theme.colors.zoneBorder}`,
             padding: '1.25rem 1.5rem',
             minHeight: '100%',
+            boxSizing: 'border-box',
           }}
         >
           {/* Search / filter row */}
@@ -406,6 +433,7 @@ export default function DashboardPage() {
       {/* Footer bar */}
       <div
         style={{
+          flexShrink: 0,
           background: theme.colors.navBg,
           borderTop: `1px solid ${theme.colors.zoneBorder}`,
           padding: '0.75rem 1.5rem',

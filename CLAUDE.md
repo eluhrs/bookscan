@@ -197,7 +197,7 @@ docker-compose.prod.yml   # prod overrides (binds 127.0.0.1:3001)
 
 ## Key Gotchas
 
-**iOS keyboard + WorkflowWrapper.** `position: fixed` on child zones does not stay visible when the iOS Safari keyboard opens — iOS repositions fixed elements relative to the layout viewport. Working approach: the outer container is `position: fixed`; its `height` and `transform: translateY()` track `window.visualViewport.height` and `.offsetTop` via `visualViewport` `resize`/`scroll` listeners. All zones inside use normal flex flow. In jsdom, `visualViewport` is undefined; the `if (!vv) return` guard handles it.
+**iOS viewport pinning — shared `useVisualViewport` hook.** iOS Safari's URL bar and on-screen keyboard shrink the visual viewport without shrinking the layout viewport, so `100vh` and `minHeight: 100vh` both leak footers off-screen. The working pattern is `position: fixed` outer container sized via `useVisualViewport()` (`frontend/src/hooks/useVisualViewport.ts`) — the hook returns `{ height, offsetTop }` tracked via `visualViewport` `resize`/`scroll` listeners, and the outer container applies `height: vpHeight` + `transform: translateY(${vpOffset}px)`. All zones inside use normal flex flow; nothing inside should be `position: fixed`. Scrollable middles must also set `overscroll-behavior: none` to kill the iOS rubber band. **Applied to: WorkflowWrapper, BookEditCard, DashboardPage.** In jsdom `window.visualViewport` is undefined; the hook falls back to `window.innerHeight` + 0 and skips listener attach.
 
 **Docker Compose dev override strips migrations.** `docker-compose.dev.yml` overrides the CMD to uvicorn `--reload`, skipping the `alembic upgrade head` baked into the prod Dockerfile CMD. Run migrations manually after first start or schema changes.
 

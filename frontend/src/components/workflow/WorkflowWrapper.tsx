@@ -1,8 +1,9 @@
 // frontend/src/components/workflow/WorkflowWrapper.tsx
 
-import { ReactNode, useState, useEffect } from 'react'
+import { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { theme } from '../../styles/theme'
+import { useVisualViewport } from '../../hooks/useVisualViewport'
 
 type WorkflowStep = 'photograph' | 'lookup' | 'review'
 
@@ -38,33 +39,7 @@ export default function WorkflowWrapper({
   children,
 }: WorkflowWrapperProps) {
   const hasControls = controls !== null
-
-  // Track the visual viewport so the container always matches what the user sees.
-  // On iOS Safari, opening the keyboard does not resize the layout viewport, so
-  // position:fixed children scroll off-screen with the keyboard. The fix is to
-  // size our container to window.visualViewport and use normal flex flow for all
-  // zones — no position:fixed on any child element.
-  const [vpHeight, setVpHeight] = useState(
-    () => window.visualViewport?.height ?? window.innerHeight
-  )
-  const [vpOffset, setVpOffset] = useState(
-    () => window.visualViewport?.offsetTop ?? 0
-  )
-
-  useEffect(() => {
-    const vv = window.visualViewport
-    if (!vv) return
-    const update = () => {
-      setVpHeight(vv.height)
-      setVpOffset(vv.offsetTop)
-    }
-    vv.addEventListener('resize', update)
-    vv.addEventListener('scroll', update)
-    return () => {
-      vv.removeEventListener('resize', update)
-      vv.removeEventListener('scroll', update)
-    }
-  }, [])
+  const { height: vpHeight, offsetTop: vpOffset } = useVisualViewport()
 
   return (
     <div
