@@ -89,29 +89,39 @@ Single-user: `APP_USERNAME` + `PASSWORD_HASH` from `.env`. Verified with `bcrypt
 
 - **Button labels (workflow screens):** primary buttons ALL CAPS (`CAPTURE`, `LOOKUP`, `SAVE`, `SKIP`); hint text Title Case (`tap Capture`).
 - **Colors are tokens.** All colors reference `theme.colors.*` from `frontend/src/styles/theme.ts`. No hardcoded hex in components.
-- **Color zones (workflow):** content `surface` (`#FFFFFF`); header/footer `zoneBg` (`#E0E0E0`); footer buttons `footerButtonBg` (`#FFFFFF`) + `1px solid controlsBorder` (`#CCCCCC`). Toolbar buttons use `subtle` (`#F4F4F4`) fill with same border — no container border around the toolbar row.
-- **Controls bar:** `1px solid controlsBorder`; interactive controls get `background: subtle`.
-- **Secondary button bar:** `zoneBg`. Second button is "Start Over" (not "Cancel").
-- **Icons: Lucide line art only — no emoji.** 18px in toolbars, 16px in table cells. In use: `Flashlight`, `Keyboard`, `Camera`, `FileWarning`, `Pencil`, `Trash2`, `Check`.
+- **Unified color system (CHANGES-16):** one palette across dashboard, edit page, and workflow screens.
+  - `navBg` `#E0E0E0` — navbar/footer zones (top/bottom bars on every page)
+  - `tableHeaderBg` `#F5F5F5` — table header row + filmstrip background
+  - `bg` `#FFFFFF` — content zones (table rows, card content)
+  - `rowBorder` `#F0F0F0` — table row separators
+  - `zoneBorder` `#CCCCCC` — content zone L/R borders + button borders
+  - `primaryBlue` `#0070F3` — primary buttons + active filter state
+  - `secondaryText` `#666666` — secondary button text
+  - `reviewGreen` `#3B6D11` — "ready to list" check in the review column
+  - Legacy `zoneBg`, `controlsBorder`, `footerButtonBg`, `subtle` tokens still exist for workflow screens; `pageBg` was removed in CHANGES-16 (no gray page background anywhere).
+- **Primary button** is always inside the `#E0E0E0` footer zone — on dashboard, edit page, and all three workflow screens.
+- **Secondary buttons:** white background, `1px solid zoneBorder`, `secondaryText` label.
+- **Review toggle buttons** (edit page, CHANGES-16 FEAT-08): `review metadata` + `review photography` are two independent buttons, NOT a segmented control. Off: white + `zoneBorder` + `secondaryText`. On: `primaryBlue` fill + no border + white text + `fontWeight 500` + `aria-pressed="true"`. Each saves immediately via `onImmediateSave`.
+- **Icons: Lucide line art only — no emoji.** 18px in toolbars, 16px in table cells. In use: `Flashlight`, `Keyboard`, `Camera`, `FileWarning`, `Pencil`, `Trash2`, `Check`, `Filter`, `ChevronDown`.
 - **Mobile device detection:** use `isMobileDevice()` from `frontend/src/utils/deviceDetect.ts` (user-agent + `maxTouchPoints > 0`). Do NOT use `useBreakpoint` (viewport width) for this.
 - **Spacing:** `WorkflowWrapper` middle flex container handles `gap: 0.75rem` and `padding: 0.75rem 1rem`. Camera views inside workflow steps must NOT add outer padding.
-- **Primary button height:** 64px across all workflow screens via `WorkflowWrapper` Zone 5.
+- **Primary button height:** 64px across all workflow screens via `WorkflowWrapper`'s unified footer.
 
 ---
 
 ## Data Model
 
-**Tables:** `books`, `listings`, `book_photos`. Migrations in `api/alembic/versions/001_initial_schema.py` through `005_drop_subject.py`.
+**Tables:** `books`, `listings`, `book_photos`. Migrations in `api/alembic/versions/001_initial_schema.py` through `006_replace_data_complete_with_needs_metadata_review.py`.
 
 **`condition`** (VARCHAR 20): `New`, `Very Good`, `Good`, `Acceptable`, `Poor`.
 
-**`data_complete`** = true when title, author, publisher, year, and isbn are all present. Also used as the "flag for review" target — setting it false on save preserves an explicit override.
+**`needs_metadata_review`** (BOOL, migration 006) — replaces `data_complete`. `true` = needs review (inverted semantics from the old field). Auto-computed on `POST /books` ONLY when the payload doesn't explicitly include it: set to `not (has_isbn and title and author and publisher and year)`. `PATCH /books/{id}` never auto-recomputes — treat it as user-managed and only write it when explicitly present.
 
 **`needs_photo_review`** (BOOL, migration 004): separate photography-review flag. Note: the CHANGES-08 spec called this `needs_photography` — same field, no new migration. Always use `needs_photo_review` in code.
 
 **`book_photos`** (migration 003): separate table (not a JSON column) so individual photos are deletable. FK has `ON DELETE CASCADE` + `passive_deletes=True` on the SQLAlchemy relationship — the DB handles cascade, not SQLAlchemy. `has_photos: bool` in responses is an EXISTS subquery in the router, not a column. Book DELETE also `shutil.rmtree`s `/app/photos/{book_id}/`.
 
-**`subject`** was dropped in migration 005.
+**`subject`** was dropped in migration 005. **`data_complete`** was dropped in migration 006.
 
 **Dimensions and weight — data unavailability.** Schema has `dimensions` and `weight` but they are never populated. Open Library, Google Books, and LoC MODS do not carry physical specs. ISBNdb (paid) is the practical future source — see `FUTURE.md`. Until then, blank in all listings.
 
@@ -125,7 +135,7 @@ All routes except `/api/login` require `Authorization: Bearer <token>`.
 POST   /api/login                       GET /api/me
 GET    /api/books/lookup/{isbn}         # fetch + merge, no DB write (rate limited)
 POST   /api/books                       # save (409 on duplicate ISBN)
-GET    /api/books                       # ?page, ?page_size, ?incomplete_only, ?search
+GET    /api/books                       # ?page, ?page_size, ?status, ?search
 GET/PATCH/DELETE /api/books/{id}        # DELETE → 204
 POST/GET  /api/books/{id}/listings
 GET    /api/listings                    # ?format=csv for bulk export
@@ -136,6 +146,8 @@ GET    /api/photos/{photo_id}/file      # authenticated FileResponse
 ```
 
 **HTTP 204 on DELETE.** `apiFetch` guards `resp.status === 204` and returns `undefined` rather than calling `resp.json()`.
+
+**`status` query filter (CHANGES-16).** `GET /api/books?status=` accepts a `Literal["all", "needs_metadata_review", "needs_photo_review", "ready"]` — FastAPI returns 422 on unknown values. `ready` filters to `needs_metadata_review == False AND needs_photo_review == False`. Frontend dropdown (`StatusFilter`) also exposes `archived` but it's disabled/grayed and never reaches the server.
 
 ---
 
@@ -162,7 +174,7 @@ api/app/
   main.py  config.py  database.py  auth.py  models.py  schemas.py
   routers/     books.py  listings.py  photos.py
   services/    lookup.py  covers.py
-api/alembic/versions/    001_initial … 005_drop_subject
+api/alembic/versions/    001_initial … 006_replace_data_complete
 api/tests/               test_auth, test_books, test_lookup, test_listings
 
 frontend/src/
@@ -172,7 +184,7 @@ frontend/src/
   utils/          deviceDetect.ts (isMobileDevice)
   components/
     workflow/     WorkflowWrapper, PhotographStep, LookupStep, ReviewStep
-    BookEditCard, PhotoFilmstrip, BookTable, ListingGenerator
+    BookEditCard, PhotoFilmstrip, BookTable, ListingGenerator, StatusFilter
   pages/          LoginPage, PhotoWorkflowPage, DashboardPage
   styles/theme.ts  types.ts
 
@@ -215,17 +227,19 @@ docker-compose.prod.yml   # prod overrides (binds 127.0.0.1:3001)
 
 **Blob URLs for photos.** Dashboard fetches each via `GET /api/photos/{id}/file` (authenticated) and renders as blob URL. Revoked on edit-view close.
 
-**BookEditCard page layout (CHANGES-15).** The edit view is a full page, not a fixed-position overlay. Structure top-to-bottom: (1) **navbar** matching the dashboard (BookScan title + book count left, "Edit Book" centered, Log out right) on a `theme.colors.bg` bar with a 1px bottom border; (2) **page body** with `maxWidth: 1200` centered on `theme.colors.pageBg` (#F5F5F5); (3) **card** — white surface, `0.5px` border, `radius.lg` (12px), containing the filmstrip flush at top followed by the content zone; (4) **footer** — full-width blue (`#0070F3`) ALL-CAPS `SAVE` button at 44px, then Dashboard + Generate Listing as equal-width secondary buttons below. No "added date" is displayed. On **desktop** the footer sits inline below the card and scrolls with the page. On **mobile** (viewport < 768px via `useBreakpoint`) the footer is `position: fixed; bottom: 0` so SAVE stays reachable, and the body reserves bottom padding. The old visualViewport anchored-layout pattern and the pill-shaped "Back" header from CHANGES-14 are gone on both breakpoints; navigation back to the dashboard happens via the Dashboard footer button. **Field order within the card** (CHANGES-15 FEAT-02): filmstrip → Title/Author/Year·Publisher → Condition bar → Review checkboxes → ISBN/Pages/Publisher → Additional Fields (Edition/Dimensions/Weight) → Description (last so it naturally expands into available vertical space). All text fields use `InlineField`; pending edits accumulate in `DraftFields` and commit together on Save. ISBN is read-only. Condition saves immediately via `onImmediateSave`, as do both review checkboxes. The Listing generator is triggered via the `onGenerateListing` prop from the footer (and still from BookTable rows); while editing, `DashboardPage` renders the `ListingGenerator` modal above the edit view when `listingBook` is set.
+**BookEditCard page layout (CHANGES-16).** Full-viewport flex column, `height: 100vh; overflow: hidden`: (1) **navbar** on `navBg` — BookScan title + book count left, "Edit Book" centered, Log out right; (2) **scrollable content zone** with `flex: 1; minHeight: 0; overflowY: auto`, `maxWidth: 1200` centered, `borderLeft`/`borderRight: 1px solid zoneBorder`, white background — contains `PhotoFilmstrip` flush at top then the field area; (3) **footer** on `navBg`, `flexShrink: 0` — full-width `primaryBlue` `SAVE` button on top, then Dashboard + Generate Listing as equal-width secondary buttons below. The `minHeight: 0` on the scroll container is CRITICAL — without it nested flex scroll breaks on desktop (BUG-01). Footer is anchored on BOTH desktop and mobile via plain flex flow — no `useBreakpoint`, no `position: fixed`, no `visualViewport` math. The old CHANGES-15 card border/radius wrapper is gone; the content zone itself is the white surface. **Field order within the content zone**: filmstrip → Title/Author/Year·Publisher → Condition bar → Review toggle buttons (replaced checkboxes in CHANGES-16) → ISBN/Pages/Publisher → Additional Fields (Edition/Dimensions/Weight) → Description. All text fields use `InlineField`; pending edits accumulate in `DraftFields` and commit together on Save. ISBN is read-only. Condition saves immediately via `onImmediateSave`, as do both review toggles. The Listing generator is triggered via the `onGenerateListing` prop from the footer.
 
-**`data_complete` auto-compute rules.** As of CHANGES-15: `POST /books` auto-computes `data_complete` from the key fields **only when the caller does not include it** (checked via `payload.model_fields_set`). `PATCH /books/{id}` **never** auto-recomputes — it treats `data_complete` as a plain user-managed field and only writes it when explicitly present in the payload. This means user-set review flags are no longer silently overwritten when any other field is edited, and `BookEditCard` no longer needs to defensively forward `data_complete` on every save.
+**`needs_metadata_review` auto-compute rules (CHANGES-16).** `POST /books` auto-computes `needs_metadata_review = not (has_isbn and all(title, author, publisher, year))` ONLY when the payload doesn't include it (checked via `payload.model_fields_set`). `PATCH /books/{id}` never auto-recomputes — it writes the field only when explicitly present. This replaces the old `data_complete` field (migration 006 drops the old column). Semantics are inverted: `true` now means "needs review".
 
 **PhotoFilmstrip.** Shared component. Cover first (leftmost, 2px accent border, not deletable); user photos follow with gray ✕ delete (subtle fill, border, muted ✕ — not red). The + add tile is borderless: bare 22px + character, no dotted rectangle. API: `coverUrl`, `photos: Array<{key, url}>`, `onDelete`, optional `onAddPhoto`. Stable UUID keys via `crypto.randomUUID()`.
 
 **Dashboard polling.** `DashboardPage` polls `GET /api/books` every 3s, paused when tab hidden (`visibilitychange`). No WebSocket.
 
-**Mobile dashboard.** Media queries (`max-width: 767px`) hide author/publisher/year. Text action buttons become Lucide `Pencil`/`Trash2`. Row tap navigates to edit; action buttons `stopPropagation` to prevent double-fire. Toolbar fits on one line on mobile: search ("Search books..."), "Incomplete" checkbox, "CSV" button — search shrinks via `flex: 1; minWidth: 0`, the other two `flexShrink: 0`.
+**Dashboard layout (CHANGES-16).** Full-viewport flex column: `navBg` navbar → white content zone with `zoneBorder` L/R borders (`maxWidth: 1200`, search + `StatusFilter` + CSV toolbar, then `<BookTable>`, then pagination) → `navBg` footer with "N of M records" centered. No gray page background. Media queries (`max-width: 767px`) still hide author/publisher/year on mobile. Row tap navigates to edit; action buttons `stopPropagation` to prevent double-fire.
 
-**Dashboard table styling.** Header row uses `zoneBg` (#E0E0E0) background with all-lowercase labels (`review`, `title`, `author`, `publisher`, `year`, `actions`). The leftmost "review" column shows: a single small green Lucide `Check` when both `data_complete` is true AND `needs_photo_review` is false; otherwise the familiar two-slot grid with amber `FileWarning` (when `!data_complete`) and/or blue `Camera` (when `needs_photo_review`). Title and publisher columns truncate single-line with ellipsis (matching author).
+**StatusFilter dropdown (CHANGES-16 FEAT-05).** `frontend/src/components/StatusFilter.tsx`. Compact button showing `Filter` + `ChevronDown` icons (no text label), `zoneBorder` outline normally, `primaryBlue` outline when any filter other than `all` is selected. Dropdown options: All records / Needs metadata review / Needs photography / Ready to list / Archived (grayed, disabled). The active selection writes a `status` query param to `listBooks`; `archived` is defensively mapped to `'all'` at the call site and never reaches the server.
+
+**Dashboard table styling (CHANGES-16).** Outer wrapper is just `overflow-x: auto` — the content zone provides L/R borders. Header row: `tableHeaderBg` (`#F5F5F5`) with lowercase labels (`review`, `title`, `author`, `publisher`, `year`, `actions`). Body rows: white background, `rowBorder` (`#F0F0F0`) bottom separators, row height adjusts naturally. **Review column** is a single centered column: green `Check` in `reviewGreen` when `!needs_metadata_review && !needs_photo_review`; otherwise a vertical stack of amber `FileWarning` (when `needs_metadata_review`) and/or blue `Camera` (when `needs_photo_review`). **Actions column** is icon-only on both desktop and mobile: unbordered `Pencil` + `Trash2` at `#888`. The Listing button was removed from every row in CHANGES-16; Generate Listing now only exists in the edit-page footer.
 
 **Mobile scroll suppression.** `overflow-x: hidden` + `overscroll-behavior-y: none` on `html`/`body` in `index.html`. `WorkflowWrapper` outer container sets `maxWidth: '100vw'` and `overscrollBehavior: 'none'`.
 

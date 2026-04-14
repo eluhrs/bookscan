@@ -37,7 +37,7 @@ Reference mockup for exact visual treatment of all zones and button states.
 
 ## Dashboard Changes
 
-### FEAT-01: Unified design language on dashboard
+### ✓ FEAT-01: Unified design language on dashboard
 Apply the design system above to the dashboard:
 - Navbar: #E0E0E0 background, BookScan title left, Log out button right
 - Table header row: #F5F5F5 background, 1px #E0E0E0 border-bottom
@@ -46,7 +46,7 @@ Apply the design system above to the dashboard:
 - Footer bar: #E0E0E0 background, 1px #CCCCCC border-top, shows record count centered
 - No gray page background — dashboard goes edge to edge
 
-### FEAT-02: Review column — single centered column
+### ✓ FEAT-02: Review column — single centered column
 Replace the current two-slot fixed-width review column with a single centered column:
 - Green Lucide Check (#3B6D11) when neither flag is set — all good
 - Amber FileWarning when needs_metadata_review only
@@ -55,17 +55,17 @@ Replace the current two-slot fixed-width review column with a single centered co
 - Column centered, row height adjusts naturally to content — do not force uniform row height
 - Column header: "review" lowercase, centered
 
-### FEAT-03: Remove Listing button from table rows
+### ✓ FEAT-03: Remove Listing button from table rows
 Remove the List/Listing button from every table row. Generate Listing belongs on the edit page only.
 
-### FEAT-04: Replace Edit/Delete text with icons
+### ✓ FEAT-04: Replace Edit/Delete text with icons
 Replace text Edit and Delete buttons with Lucide icon equivalents — same icons used on mobile:
 - Edit: Lucide Pencil/Edit icon
 - Delete: Lucide Trash icon
 - Both icons in #888, centered in the actions column
 - Remove any extra padding or fixed width around the actions column that creates unused space
 
-### FEAT-05: Replace Incomplete checkbox with status filter dropdown
+### ✓ FEAT-05: Replace Incomplete checkbox with status filter dropdown
 Remove the "Incomplete" checkbox. Replace with a compact filter button:
 - Appearance: funnel/filter icon + chevron-down, no text label, white background, #CCCCCC border, same height as search bar
 - On click: dropdown opens with options:
@@ -77,7 +77,7 @@ Remove the "Incomplete" checkbox. Replace with a compact filter button:
 - Active filter (anything other than "All records") shows the filter button with #0070F3 border to indicate a filter is applied
 - Filters by querying needs_metadata_review and needs_photo_review fields directly
 
-### FEAT-06: Remove data_complete field
+### ✓ FEAT-06: Remove data_complete field
 Remove `data_complete` entirely:
 - Drop the column from the database via Alembic migration
 - Remove all server-side computation of data_complete
@@ -88,7 +88,7 @@ Remove `data_complete` entirely:
 
 ## Edit Page Changes
 
-### FEAT-07: Unified design language on edit page
+### ✓ FEAT-07: Unified design language on edit page
 Apply the design system above to the edit page:
 - Navbar: #E0E0E0, BookScan left, Edit Book centered, Log out right — identical to dashboard navbar
 - Filmstrip zone: #F5F5F5 background
@@ -96,7 +96,7 @@ Apply the design system above to the edit page:
 - Footer zone: #E0E0E0, contains SAVE + Dashboard + Generate Listing buttons
 - No gray page background — edit page goes edge to edge
 
-### FEAT-08: Review toggle buttons
+### ✓ FEAT-08: Review toggle buttons
 Replace the bordered checkbox group with two independent toggle buttons:
 - Labels: "review metadata" and "review photography"
 - Equal width, side by side, two-column grid layout
@@ -106,17 +106,17 @@ Replace the bordered checkbox group with two independent toggle buttons:
 - Save immediately on toggle — no Save button needed for these
 - Reference mockup for exact visual treatment
 
-### BUG-01: Vertical scroll broken on desktop edit page
+### ✓ BUG-01: Vertical scroll broken on desktop edit page
 The edit page content does not scroll vertically on desktop. Investigate and fix — likely a CSS height or overflow conflict introduced in CHANGES-15. Content zone must scroll between the anchored navbar and footer on both desktop and mobile.
 
-### FEAT-09: Anchor footer on desktop edit page
+### ✓ FEAT-09: Anchor footer on desktop edit page
 The footer (SAVE + Dashboard + Generate Listing) should be anchored to the bottom of the viewport on both desktop and mobile, so the primary action is always visible regardless of scroll position. Retain existing mobile anchoring behavior, extend same behavior to desktop.
 
 ---
 
 ## Workflow Screens
 
-### FEAT-10: Primary button in #E0E0E0 footer zone on workflow screens
+### ✓ FEAT-10: Primary button in #E0E0E0 footer zone on workflow screens
 Verify that the primary action button (CAPTURE, LOOKUP, SAVE) on the Photograph, Metadata, and Review workflow screens sits within the #E0E0E0 footer zone rather than on a white background. If any screen has the primary button on white, move it into the #E0E0E0 zone. Secondary buttons (Dashboard, Start Over) should also be in the #E0E0E0 zone — this should already be the case, confirm it is.
 
 ---
