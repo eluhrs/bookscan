@@ -20,6 +20,7 @@ services:
       - /app/node_modules
     ports:
       - "3001:5173"
+      - "3000:5180"
     command: npm run dev -- --host
 
 volumes:

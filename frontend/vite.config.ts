@@ -1,9 +1,25 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import fs from 'fs'
+import http from 'http'
+
+function httpRedirect(httpsPort: number): Plugin {
+  return {
+    name: 'http-redirect',
+    configureServer() {
+      http
+        .createServer((req, res) => {
+          const host = (req.headers.host ?? 'localhost').replace(/:\d+$/, '')
+          res.writeHead(301, { Location: `https://${host}:${httpsPort}${req.url}` })
+          res.end()
+        })
+        .listen(5180)
+    },
+  }
+}
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), httpRedirect(3001)],
   server: {
     proxy: {
       '/api': {
