@@ -194,7 +194,7 @@ async def test_download_photos_zip_no_photos(client: AsyncClient, auth_headers: 
     """Returns 404 when the book has no photos."""
     resp = await client.post(
         "/api/books",
-        json={"isbn": "9780000000001", "title": "Test Book", "data_complete": False},
+        json={"isbn": "9780000000001", "title": "Test Book", "needs_metadata_review": True},
         headers=auth_headers,
     )
     assert resp.status_code == 201

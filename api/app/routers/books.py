@@ -50,7 +50,7 @@ async def lookup_book(
         description=book_data.description,
         cover_image_url=book_data.cover_image_url,
         data_sources=book_data.data_sources,
-        data_complete=complete,
+        needs_metadata_review=not complete,
     )
 
 
@@ -64,10 +64,11 @@ async def create_book(
     if existing:
         raise HTTPException(status_code=409, detail="Book with this ISBN already exists")
     data = payload.model_dump()
-    # Auto-compute data_complete on create unless the caller set it explicitly.
-    if "data_complete" not in payload.model_fields_set:
+    # Auto-compute needs_metadata_review on create unless the caller set it explicitly.
+    if "needs_metadata_review" not in payload.model_fields_set:
         key_fields = ("title", "author", "publisher", "year")
-        data["data_complete"] = bool(data.get("isbn")) and all(data.get(f) for f in key_fields)
+        complete = bool(data.get("isbn")) and all(data.get(f) for f in key_fields)
+        data["needs_metadata_review"] = not complete
     book = Book(**data)
     db.add(book)
     await db.commit()
@@ -94,7 +95,7 @@ async def create_book(
         cover_image_url=book.cover_image_url,
         cover_image_local=book.cover_image_local,
         data_sources=book.data_sources,
-        data_complete=book.data_complete,
+        needs_metadata_review=book.needs_metadata_review,
         condition=book.condition,
         needs_photo_review=book.needs_photo_review,
         has_photos=False,
@@ -120,12 +121,17 @@ async def list_books(
     _user: Annotated[str, Depends(get_current_user)],
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    incomplete_only: bool = Query(False),
+    status: str = Query("all"),
     search: Optional[str] = Query(None),
 ):
     q = select(Book)
-    if incomplete_only:
-        q = q.where(Book.data_complete == False)  # noqa: E712
+    if status == "needs_metadata_review":
+        q = q.where(Book.needs_metadata_review == True)  # noqa: E712
+    elif status == "needs_photo_review":
+        q = q.where(Book.needs_photo_review == True)  # noqa: E712
+    elif status == "ready":
+        q = q.where(Book.needs_metadata_review == False)  # noqa: E712
+        q = q.where(Book.needs_photo_review == False)  # noqa: E712
     if search:
         term = f"%{search}%"
         q = q.where(
@@ -164,7 +170,7 @@ async def list_books(
             cover_image_url=b.cover_image_url,
             cover_image_local=b.cover_image_local,
             data_sources=b.data_sources,
-            data_complete=b.data_complete,
+            needs_metadata_review=b.needs_metadata_review,
             condition=b.condition,
             needs_photo_review=b.needs_photo_review,
             has_photos=b.id in photo_book_ids,
@@ -213,7 +219,7 @@ async def update_book(
     updated_fields = payload.model_dump(exclude_unset=True)
     for field, value in updated_fields.items():
         setattr(book, field, value)
-    # data_complete is treated as a user-managed field on PATCH — only
+    # needs_metadata_review is treated as a user-managed field on PATCH — only
     # updated when explicitly included in the payload. No auto-recompute.
     await db.commit()
 

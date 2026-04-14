@@ -9,13 +9,13 @@ async def test_create_book(client, auth_headers):
         "author": "Martin Fowler",
         "publisher": "Addison-Wesley",
         "year": 2018,
-        "data_complete": True,
+        "needs_metadata_review": False,
     }
     resp = await client.post("/api/books", json=payload, headers=auth_headers)
     assert resp.status_code == 201
     data = resp.json()
     assert data["isbn"] == "9780134757599"
-    assert data["data_complete"] is True
+    assert data["needs_metadata_review"] is False
 
 
 @pytest.mark.asyncio
@@ -38,12 +38,12 @@ async def test_list_books(client, auth_headers):
 @pytest.mark.asyncio
 async def test_list_books_incomplete_filter(client, auth_headers):
     await client.post(
-        "/api/books", json={"isbn": "333", "data_complete": False}, headers=auth_headers
+        "/api/books", json={"isbn": "333", "needs_metadata_review": True}, headers=auth_headers
     )
     await client.post(
-        "/api/books", json={"isbn": "444", "data_complete": True}, headers=auth_headers
+        "/api/books", json={"isbn": "444", "needs_metadata_review": False}, headers=auth_headers
     )
-    resp = await client.get("/api/books?incomplete_only=true", headers=auth_headers)
+    resp = await client.get("/api/books?status=needs_metadata_review", headers=auth_headers)
     assert resp.json()["total"] == 1
 
 

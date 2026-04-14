@@ -24,7 +24,7 @@ class BookLookupResponse(BaseModel):
     description: Optional[str] = None
     cover_image_url: Optional[str] = None
     data_sources: Optional[dict] = None
-    data_complete: bool = False
+    needs_metadata_review: bool = True
 
 
 class BookCreate(BaseModel):
@@ -40,7 +40,7 @@ class BookCreate(BaseModel):
     description: Optional[str] = None
     cover_image_url: Optional[str] = None
     data_sources: Optional[dict] = None
-    data_complete: bool = False
+    needs_metadata_review: bool = True
     condition: Optional[str] = None
     needs_photo_review: bool = False
 
@@ -56,7 +56,7 @@ class BookUpdate(BaseModel):
     weight: Optional[str] = None
     description: Optional[str] = None
     cover_image_url: Optional[str] = None
-    data_complete: Optional[bool] = None
+    needs_metadata_review: Optional[bool] = None
     condition: Optional[str] = None
     needs_photo_review: Optional[bool] = None
 
@@ -85,7 +85,7 @@ class BookResponse(BaseModel):
     cover_image_url: Optional[str] = None
     cover_image_local: Optional[str] = None
     data_sources: Optional[dict] = None
-    data_complete: bool
+    needs_metadata_review: bool
     condition: Optional[str] = None
     needs_photo_review: bool = False
     has_photos: bool = False

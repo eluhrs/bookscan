@@ -21,7 +21,7 @@ def make_book(**kwargs) -> Book:
         cover_image_url=None,
         cover_image_local=None,
         data_sources={},
-        data_complete=True,
+        needs_metadata_review=False,
         condition=None,
     )
     defaults.update(kwargs)

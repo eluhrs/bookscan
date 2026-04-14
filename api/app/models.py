@@ -25,7 +25,7 @@ class Book(Base):
     cover_image_url: Mapped[str | None] = mapped_column(Text)
     cover_image_local: Mapped[str | None] = mapped_column(Text)
     data_sources: Mapped[dict | None] = mapped_column(JSON)
-    data_complete: Mapped[bool] = mapped_column(Boolean, default=False)
+    needs_metadata_review: Mapped[bool] = mapped_column(Boolean, default=True)
     condition: Mapped[str | None] = mapped_column(String(20))
     needs_photo_review: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
