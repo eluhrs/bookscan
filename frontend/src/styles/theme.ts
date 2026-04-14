@@ -2,7 +2,7 @@ export const theme = {
   colors: {
     bg:        '#FFFFFF',
     surface:   '#FFFFFF',        // was #FAFAFA
-    border:    '#EAEAEA',
+    border:    '#E0E0E0',
     text:      '#000000',
     muted:     '#666666',
     accent:    '#0070F3',
