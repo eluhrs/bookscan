@@ -18,6 +18,7 @@ export const theme = {
     zoneBg:         '#E0E0E0',   // was #F0F0F0 — header + footer zones
     controlsBorder: '#CCCCCC',   // was #E5E5E5 — individual button borders
     footerButtonBg: '#FFFFFF',   // NEW — Dashboard / Start Over button fill
+    pageBg:         '#F5F5F5',   // gray page background behind cards (edit/dashboard)
   },
   font: {
     sans: "'Geist', 'Inter', system-ui, sans-serif",
@@ -26,6 +27,7 @@ export const theme = {
   radius: {
     sm: '4px',
     md: '8px',
+    lg: '12px',
   },
   shadow: {
     card: '0 1px 3px rgba(0,0,0,0.08)',

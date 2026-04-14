@@ -42,6 +42,9 @@ describe('BookEditCard', () => {
         onSave={noOp}
         onImmediateSave={noOp}
         onBack={vi.fn()}
+        totalCount={0}
+        onLogout={vi.fn()}
+        onGenerateListing={vi.fn()}
       />
     )
     expect(screen.getByText('Refactoring')).toBeInTheDocument()
@@ -59,6 +62,9 @@ describe('BookEditCard', () => {
         onSave={noOp}
         onImmediateSave={noOp}
         onBack={vi.fn()}
+        totalCount={0}
+        onLogout={vi.fn()}
+        onGenerateListing={vi.fn()}
       />
     )
     expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument()
@@ -80,6 +86,9 @@ describe('BookEditCard', () => {
         onSave={noOp}
         onImmediateSave={onImmediateSave}
         onBack={vi.fn()}
+        totalCount={0}
+        onLogout={vi.fn()}
+        onGenerateListing={vi.fn()}
       />
     )
     fireEvent.click(screen.getByRole('button', { name: 'New' }))
@@ -97,6 +106,9 @@ describe('BookEditCard', () => {
         onSave={noOp}
         onImmediateSave={noOp}
         onBack={vi.fn()}
+        totalCount={0}
+        onLogout={vi.fn()}
+        onGenerateListing={vi.fn()}
       />
     )
     const checkbox = screen.getByLabelText('Review Metadata?') as HTMLInputElement
@@ -114,6 +126,9 @@ describe('BookEditCard', () => {
         onSave={noOp}
         onImmediateSave={noOp}
         onBack={vi.fn()}
+        totalCount={0}
+        onLogout={vi.fn()}
+        onGenerateListing={vi.fn()}
       />
     )
     const checkbox = screen.getByLabelText('Review Photography?') as HTMLInputElement
@@ -132,6 +147,9 @@ describe('BookEditCard', () => {
         onSave={noOp}
         onImmediateSave={onImmediateSave}
         onBack={vi.fn()}
+        totalCount={0}
+        onLogout={vi.fn()}
+        onGenerateListing={vi.fn()}
       />
     )
     fireEvent.click(screen.getByLabelText('Review Metadata?'))
@@ -149,13 +167,16 @@ describe('BookEditCard', () => {
         onSave={noOp}
         onImmediateSave={noOp}
         onBack={vi.fn()}
+        totalCount={0}
+        onLogout={vi.fn()}
+        onGenerateListing={vi.fn()}
       />
     )
     const dashes = screen.getAllByText('—')
     expect(dashes.length).toBeGreaterThan(0)
   })
 
-  it('renders Back and Save buttons', () => {
+  it('renders Dashboard, Generate Listing and Save buttons', () => {
     render(
       <BookEditCard
         book={makeBook()}
@@ -166,13 +187,17 @@ describe('BookEditCard', () => {
         onSave={noOp}
         onImmediateSave={noOp}
         onBack={vi.fn()}
+        totalCount={0}
+        onLogout={vi.fn()}
+        onGenerateListing={vi.fn()}
       />
     )
-    expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /dashboard/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /generate listing/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^save$/i })).toBeInTheDocument()
   })
 
-  it('Back button calls onBack', () => {
+  it('Dashboard button calls onBack', () => {
     const onBack = vi.fn()
     render(
       <BookEditCard
@@ -184,9 +209,33 @@ describe('BookEditCard', () => {
         onSave={noOp}
         onImmediateSave={noOp}
         onBack={onBack}
+        totalCount={0}
+        onLogout={vi.fn()}
+        onGenerateListing={vi.fn()}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /back/i }))
+    fireEvent.click(screen.getByRole('button', { name: /dashboard/i }))
     expect(onBack).toHaveBeenCalled()
+  })
+
+  it('Generate Listing button calls onGenerateListing', () => {
+    const onGenerateListing = vi.fn()
+    render(
+      <BookEditCard
+        book={makeBook()}
+        photos={[]}
+        photoUrls={{}}
+        onDeletePhoto={noOp}
+        onAddPhoto={noOp}
+        onSave={noOp}
+        onImmediateSave={noOp}
+        onBack={vi.fn()}
+        totalCount={0}
+        onLogout={vi.fn()}
+        onGenerateListing={onGenerateListing}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /generate listing/i }))
+    expect(onGenerateListing).toHaveBeenCalled()
   })
 })

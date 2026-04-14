@@ -186,17 +186,51 @@ export default function DashboardPage() {
 
   if (editingBook) {
     return (
-      <BookEditCard
-        book={editingBook}
-        photos={bookPhotos}
-        photoUrls={photoUrls}
-        onDeletePhoto={handleDeletePhoto}
-        onAddPhoto={handleAddPhoto}
-        onSave={handleSave}
-        onImmediateSave={handleImmediateSave}
-        onBack={() => setEditingBook(null)}
-        onSaved={() => setEditingBook(null)}
-      />
+      <>
+        <BookEditCard
+          book={editingBook}
+          photos={bookPhotos}
+          photoUrls={photoUrls}
+          totalCount={total}
+          onDeletePhoto={handleDeletePhoto}
+          onAddPhoto={handleAddPhoto}
+          onSave={handleSave}
+          onImmediateSave={handleImmediateSave}
+          onBack={() => setEditingBook(null)}
+          onSaved={() => setEditingBook(null)}
+          onLogout={logout}
+          onGenerateListing={() => setListingBook(editingBook)}
+        />
+        {listingBook && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.4)',
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'center',
+              overflowY: 'auto',
+              padding: '2rem',
+              zIndex: 100,
+            }}
+          >
+            <div
+              style={{
+                background: theme.colors.bg,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: theme.radius.md,
+                boxShadow: theme.shadow.card,
+                width: '100%',
+                maxWidth: 640,
+                padding: '1.5rem',
+              }}
+            >
+              <ListingGenerator book={listingBook} onClose={() => setListingBook(null)} />
+            </div>
+          </div>
+        )}
+      </>
     )
   }
 

@@ -63,7 +63,12 @@ async def create_book(
     existing = await db.scalar(select(Book).where(Book.isbn == payload.isbn))
     if existing:
         raise HTTPException(status_code=409, detail="Book with this ISBN already exists")
-    book = Book(**payload.model_dump())
+    data = payload.model_dump()
+    # Auto-compute data_complete on create unless the caller set it explicitly.
+    if "data_complete" not in payload.model_fields_set:
+        key_fields = ("title", "author", "publisher", "year")
+        data["data_complete"] = bool(data.get("isbn")) and all(data.get(f) for f in key_fields)
+    book = Book(**data)
     db.add(book)
     await db.commit()
     await db.refresh(book)
@@ -208,10 +213,8 @@ async def update_book(
     updated_fields = payload.model_dump(exclude_unset=True)
     for field, value in updated_fields.items():
         setattr(book, field, value)
-    # Auto-recalculate data_complete if caller didn't explicitly set it
-    if "data_complete" not in updated_fields:
-        key_fields = ("title", "author", "publisher", "year")
-        book.data_complete = bool(book.isbn) and all(getattr(book, f) for f in key_fields)
+    # data_complete is treated as a user-managed field on PATCH — only
+    # updated when explicitly included in the payload. No auto-recompute.
     await db.commit()
 
     # Reload with photos for accurate has_photos
