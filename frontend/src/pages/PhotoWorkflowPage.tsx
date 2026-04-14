@@ -69,7 +69,7 @@ export default function PhotoWorkflowPage() {
       if (stepRef.current !== 'lookup') return
       setLookupResult(result)
       setSavedBookId(null)
-      if (result.data_complete) playSuccess()
+      if (!result.needs_metadata_review) playSuccess()
       else playReview()
       navigator.vibrate?.(25)
       stepRef.current = 'review'

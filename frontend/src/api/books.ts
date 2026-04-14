@@ -14,13 +14,13 @@ export async function saveBook(
 export async function listBooks(params?: {
   page?: number
   page_size?: number
-  incomplete_only?: boolean
+  status?: 'all' | 'needs_metadata_review' | 'needs_photo_review' | 'ready'
   search?: string
 }): Promise<BookListResponse> {
   const q = new URLSearchParams()
   if (params?.page) q.set('page', String(params.page))
   if (params?.page_size) q.set('page_size', String(params.page_size))
-  if (params?.incomplete_only) q.set('incomplete_only', 'true')
+  if (params?.status && params.status !== 'all') q.set('status', params.status)
   if (params?.search) q.set('search', params.search)
   return apiFetch(`/api/books?${q}`)
 }

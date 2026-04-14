@@ -19,7 +19,7 @@ const makeBook = (overrides: Partial<Book> = {}): Book => ({
   cover_image_url: null,
   cover_image_local: null,
   data_sources: null,
-  data_complete: true,
+  needs_metadata_review: false,
   has_photos: false,
   needs_photo_review: false,
   created_at: new Date().toISOString(),
@@ -45,7 +45,7 @@ describe('BookTable', () => {
   })
 
   it('shows incomplete badge for books missing data', () => {
-    const books = [makeBook({ data_complete: false, title: 'Incomplete Book' })]
+    const books = [makeBook({ needs_metadata_review: true, title: 'Incomplete Book' })]
     render(<BookTable books={books} onEdit={vi.fn()} onDelete={vi.fn()} onGenerateListing={vi.fn()} />)
     expect(screen.getByText('Incomplete Book')).toBeInTheDocument()
     expect(screen.getByTitle('Metadata needs review')).toBeInTheDocument()

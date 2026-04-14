@@ -18,7 +18,7 @@ const baseLookup: BookLookup = {
   condition: null,
   cover_image_url: null,
   data_sources: null,
-  data_complete: true,
+  needs_metadata_review: false,
 }
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -54,18 +54,18 @@ describe('ReviewStep', () => {
     })
   })
 
-  it('flag for review is unchecked when data_complete is true', () => {
-    render(<ReviewStep {...defaultProps} lookupResult={{ ...baseLookup, data_complete: true }} />, { wrapper })
+  it('flag for review is unchecked when needs_metadata_review is false', () => {
+    render(<ReviewStep {...defaultProps} lookupResult={{ ...baseLookup, needs_metadata_review: false }} />, { wrapper })
     expect(screen.getByRole('checkbox', { name: /Review Metadata/ })).not.toBeChecked()
   })
 
-  it('flag for review is pre-checked when data_complete is false', () => {
-    render(<ReviewStep {...defaultProps} lookupResult={{ ...baseLookup, data_complete: false }} />, { wrapper })
+  it('flag for review is pre-checked when needs_metadata_review is true', () => {
+    render(<ReviewStep {...defaultProps} lookupResult={{ ...baseLookup, needs_metadata_review: true }} />, { wrapper })
     expect(screen.getByRole('checkbox', { name: /Review Metadata/ })).toBeChecked()
   })
 
   it('user can override the flag for review checkbox', () => {
-    render(<ReviewStep {...defaultProps} lookupResult={{ ...baseLookup, data_complete: false }} />, { wrapper })
+    render(<ReviewStep {...defaultProps} lookupResult={{ ...baseLookup, needs_metadata_review: true }} />, { wrapper })
     const checkbox = screen.getByRole('checkbox', { name: /Review Metadata/ })
     expect(checkbox).toBeChecked()
     fireEvent.click(checkbox)

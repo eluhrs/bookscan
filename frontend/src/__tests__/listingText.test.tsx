@@ -33,7 +33,7 @@ const mockBook = {
   cover_image_url: null,
   cover_image_local: null,
   data_sources: null,
-  data_complete: true,
+  needs_metadata_review: false,
   has_photos: false,
   needs_photo_review: false,
   created_at: new Date().toISOString(),

@@ -32,7 +32,7 @@ export default function DashboardPage() {
       const result = await listBooks({
         page,
         page_size: PAGE_SIZE,
-        incomplete_only: incompleteOnly,
+        status: incompleteOnly ? 'needs_metadata_review' : 'all',
         search: search || undefined,
       })
       setBooks(result.items)
@@ -47,7 +47,7 @@ export default function DashboardPage() {
       const result = await listBooks({
         page,
         page_size: PAGE_SIZE,
-        incomplete_only: incompleteOnly,
+        status: incompleteOnly ? 'needs_metadata_review' : 'all',
         search: search || undefined,
       })
       setBooks(result.items)

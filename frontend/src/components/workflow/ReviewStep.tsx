@@ -54,7 +54,7 @@ export default function ReviewStep({
   skippedPhotography,
 }: ReviewStepProps) {
   const [condition, setCondition] = useState<Condition | null>(null)
-  const [reviewMetadata, setReviewMetadata] = useState(!lookupResult.data_complete)
+  const [reviewMetadata, setReviewMetadata] = useState(lookupResult.needs_metadata_review)
   const [reviewPhotography, setReviewPhotography] = useState(skippedPhotography)
   const [localPhotos, setLocalPhotos] = useState<Array<{ id: string; file: File }>>(
     () => photos.map((file) => ({ id: crypto.randomUUID(), file }))
@@ -93,7 +93,7 @@ export default function ReviewStep({
         const book = await saveBook({
           ...lookupResult,
           condition,
-          data_complete: reviewMetadata ? false : lookupResult.data_complete,
+          needs_metadata_review: reviewMetadata ? true : lookupResult.needs_metadata_review,
           needs_photo_review: reviewPhotography,
         })
         bookId = book.id

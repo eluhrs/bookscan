@@ -14,7 +14,7 @@ export interface Book {
   cover_image_url: string | null
   cover_image_local: string | null
   data_sources: Record<string, string> | null
-  data_complete: boolean
+  needs_metadata_review: boolean
   has_photos: boolean
   needs_photo_review: boolean
   created_at: string
@@ -42,7 +42,7 @@ export interface BookLookup {
   condition: string | null
   cover_image_url: string | null
   data_sources: Record<string, string> | null
-  data_complete: boolean
+  needs_metadata_review: boolean
 }
 
 export interface Listing {

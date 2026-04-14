@@ -124,7 +124,7 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
               style={{ borderBottom: `1px solid ${theme.colors.border}`, cursor: 'pointer' }}
             >
               <td style={{ padding: '0.6rem 0.5rem', width: 48 }}>
-                {book.data_complete && !book.needs_photo_review ? (
+                {!book.needs_metadata_review && !book.needs_photo_review ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40 }}>
                     <span title="Reviewed" style={{ display: 'flex' }}>
                       <Check size={16} color={theme.colors.scanGreen} />
@@ -133,7 +133,7 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
                 ) : (
                   <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                     <div style={{ width: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {!book.data_complete && (
+                      {book.needs_metadata_review && (
                         <span title="Metadata needs review" style={{ display: 'flex' }}>
                           <FileWarning size={16} color={theme.colors.warning} />
                         </span>

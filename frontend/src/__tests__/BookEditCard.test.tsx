@@ -19,7 +19,7 @@ function makeBook(overrides: Partial<Book> = {}): Book {
     cover_image_url: null,
     cover_image_local: null,
     data_sources: null,
-    data_complete: true,
+    needs_metadata_review: false,
     has_photos: false,
     needs_photo_review: false,
     created_at: '2026-01-01T00:00:00',
@@ -95,10 +95,10 @@ describe('BookEditCard', () => {
     expect(onImmediateSave).toHaveBeenCalledWith({ condition: 'New' })
   })
 
-  it('Review Metadata checkbox reflects !data_complete', () => {
+  it('Review Metadata checkbox reflects needs_metadata_review', () => {
     render(
       <BookEditCard
-        book={makeBook({ data_complete: false })}
+        book={makeBook({ needs_metadata_review: true })}
         photos={[]}
         photoUrls={{}}
         onDeletePhoto={noOp}
@@ -135,11 +135,11 @@ describe('BookEditCard', () => {
     expect(checkbox.checked).toBe(true)
   })
 
-  it('calls onImmediateSave with data_complete false when Review Metadata is checked', () => {
+  it('calls onImmediateSave with needs_metadata_review true when Review Metadata is checked', () => {
     const onImmediateSave = vi.fn().mockResolvedValue(undefined)
     render(
       <BookEditCard
-        book={makeBook({ data_complete: true })}
+        book={makeBook({ needs_metadata_review: false })}
         photos={[]}
         photoUrls={{}}
         onDeletePhoto={noOp}
@@ -153,7 +153,7 @@ describe('BookEditCard', () => {
       />
     )
     fireEvent.click(screen.getByLabelText('Review Metadata?'))
-    expect(onImmediateSave).toHaveBeenCalledWith({ data_complete: false })
+    expect(onImmediateSave).toHaveBeenCalledWith({ needs_metadata_review: true })
   })
 
   it('shows em dash for empty description', () => {

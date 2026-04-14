@@ -271,7 +271,7 @@ export default function BookEditCard({
   }
 
   async function handleMetadataCheck(checked: boolean) {
-    await onImmediateSave({ data_complete: !checked })
+    await onImmediateSave({ needs_metadata_review: checked })
   }
 
   async function handlePhotographyCheck(checked: boolean) {
@@ -494,7 +494,7 @@ export default function BookEditCard({
                 <input
                   type="checkbox"
                   aria-label="Review Metadata?"
-                  checked={!book.data_complete}
+                  checked={book.needs_metadata_review}
                   onChange={(e) => handleMetadataCheck(e.target.checked)}
                 />
                 review metadata
