@@ -195,6 +195,7 @@ export default function DashboardPage() {
         onSave={handleSave}
         onImmediateSave={handleImmediateSave}
         onBack={() => setEditingBook(null)}
+        onSaved={() => setEditingBook(null)}
       />
     )
   }

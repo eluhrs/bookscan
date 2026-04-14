@@ -15,6 +15,7 @@ interface BookEditCardProps {
   onSave: (updates: Partial<Book>) => Promise<void>
   onImmediateSave: (updates: Partial<Book>) => Promise<void>
   onBack: () => void
+  onSaved?: () => void
 }
 
 interface DraftFields {
@@ -200,6 +201,7 @@ export default function BookEditCard({
   onSave,
   onImmediateSave,
   onBack,
+  onSaved,
 }: BookEditCardProps) {
   const [draft, setDraft] = useState<DraftFields>({
     title: book.title,
@@ -265,7 +267,14 @@ export default function BookEditCard({
     setSaving(true)
     setError('')
     try {
-      await onSave(draft as Partial<Book>)
+      // Forward data_complete and needs_photo_review explicitly so the API does
+      // not auto-recalculate data_complete and clobber the user's review override.
+      await onSave({
+        ...(draft as Partial<Book>),
+        data_complete: book.data_complete,
+        needs_photo_review: book.needs_photo_review,
+      })
+      onSaved?.()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed')
     } finally {
@@ -303,7 +312,8 @@ export default function BookEditCard({
         top: 0,
         left: 0,
         right: 0,
-        maxWidth: '100vw',
+        maxWidth: 1200,
+        margin: '0 auto',
         height: vpHeight,
         transform: `translateY(${vpOffset}px)`,
         background: theme.colors.surface,
@@ -313,6 +323,8 @@ export default function BookEditCard({
         overflow: 'hidden',
         overscrollBehavior: 'none',
         fontFamily: theme.font.sans,
+        border: `1px solid ${theme.colors.border}`,
+        borderRadius: theme.radius.md,
       }}
     >
       {/* Anchored header */}
@@ -368,7 +380,7 @@ export default function BookEditCard({
           background: theme.colors.surface,
         }}
       >
-        <div style={{ maxWidth: 560, margin: '0 auto' }}>
+        <div>
           {/* Title / Author / Year · Publisher */}
           <div style={{ marginBottom: '1rem' }}>
             <div style={{ marginBottom: 4 }}>
