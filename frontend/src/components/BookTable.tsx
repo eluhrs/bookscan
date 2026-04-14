@@ -13,12 +13,6 @@ interface BookTableProps {
   onGenerateListing: (book: Book) => void
 }
 
-const CONDITION_COLOR: Record<string, string> = {
-  'New':       theme.colors.accent,
-  'Very Good': '#16A34A',
-  'Good':      '#D97706',
-  'Acceptable': theme.colors.muted,
-}
 
 export default function BookTable({ books, onEdit, onDelete, onGenerateListing }: BookTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('created_at')
@@ -72,8 +66,7 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
   @media (max-width: 767px) {
     .bt-col-author,
     .bt-col-publisher,
-    .bt-col-year,
-    .bt-col-condition { display: none !important; }
+    .bt-col-year { display: none !important; }
     .bt-col-actions-text { display: none !important; }
     .bt-col-actions-icon { display: table-cell !important; }
   }
@@ -97,19 +90,6 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
             {colHeader('Author', 'author', 'bt-col-author')}
             {colHeader('Publisher', 'publisher', 'bt-col-publisher')}
             {colHeader('Year', 'year', 'bt-col-year')}
-            <th
-              className="bt-col-condition"
-              style={{
-                padding: '0.6rem 0.75rem',
-                fontWeight: 500,
-                fontSize: '0.8rem',
-                color: theme.colors.muted,
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-              }}
-            >
-              Condition
-            </th>
             <th
               className="bt-col-actions-text"
               style={{
@@ -193,25 +173,6 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
                 }}
               >
                 {book.year ?? '—'}
-              </td>
-              <td className="bt-col-condition" style={{ padding: '0.6rem 0.75rem' }}>
-                {book.condition ? (
-                  <span
-                    style={{
-                      fontSize: '0.75rem',
-                      fontWeight: 500,
-                      color: CONDITION_COLOR[book.condition] ?? theme.colors.muted,
-                      border: `1px solid ${CONDITION_COLOR[book.condition] ?? theme.colors.border}`,
-                      borderRadius: '999px',
-                      padding: '0.15rem 0.55rem',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {book.condition}
-                  </span>
-                ) : (
-                  <span style={{ color: theme.colors.border }}>—</span>
-                )}
               </td>
               <td className="bt-col-actions-text" style={{ padding: '0.6rem 0.75rem', whiteSpace: 'nowrap' }}>
                 <button
