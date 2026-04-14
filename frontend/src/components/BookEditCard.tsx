@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { Book, BookPhoto } from '../types'
 import { theme } from '../styles/theme'
-import { useBreakpoint } from '../hooks/useBreakpoint'
 import PhotoFilmstrip from './PhotoFilmstrip'
 
 interface BookEditCardProps {
@@ -86,7 +85,7 @@ function InlineField({
     minHeight: '1.4em',
     padding: '1px 3px',
     borderRadius: 3,
-    border: hovered ? `0.5px solid ${theme.colors.border}` : '0.5px solid transparent',
+    border: hovered ? `0.5px solid ${theme.colors.zoneBorder}` : '0.5px solid transparent',
     lineHeight: 1.4,
     whiteSpace: multiline ? 'pre-wrap' : undefined,
   }
@@ -161,7 +160,7 @@ function ConditionBar({ value, onChange }: ConditionBarProps) {
       style={{
         display: 'flex',
         width: '100%',
-        border: `1px solid ${theme.colors.border}`,
+        border: `1px solid ${theme.colors.zoneBorder}`,
         borderRadius: theme.radius.md,
         overflow: 'hidden',
       }}
@@ -181,7 +180,7 @@ function ConditionBar({ value, onChange }: ConditionBarProps) {
               background: selected ? theme.colors.accent : theme.colors.bg,
               color: selected ? '#fff' : theme.colors.muted,
               border: 'none',
-              borderLeft: i === 0 ? 'none' : `1px solid ${theme.colors.border}`,
+              borderLeft: i === 0 ? 'none' : `1px solid ${theme.colors.zoneBorder}`,
               cursor: 'pointer',
               fontFamily: theme.font.sans,
               lineHeight: 1.2,
@@ -192,6 +191,35 @@ function ConditionBar({ value, onChange }: ConditionBarProps) {
         )
       })}
     </div>
+  )
+}
+
+// ---- ReviewToggle ----
+function ReviewToggle({ label, on, onToggle }: {
+  label: string
+  on: boolean
+  onToggle: (v: boolean) => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(!on)}
+      aria-pressed={on}
+      style={{
+        padding: '0.6rem 0.5rem',
+        height: 40,
+        border: on ? 'none' : `1px solid ${theme.colors.zoneBorder}`,
+        borderRadius: theme.radius.md,
+        background: on ? theme.colors.primaryBlue : theme.colors.bg,
+        color: on ? '#fff' : theme.colors.secondaryText,
+        fontWeight: on ? 500 : 400,
+        fontSize: 13,
+        cursor: 'pointer',
+        fontFamily: theme.font.sans,
+      }}
+    >
+      {label}
+    </button>
   )
 }
 
@@ -210,7 +238,6 @@ export default function BookEditCard({
   onLogout,
   onGenerateListing,
 }: BookEditCardProps) {
-  const { isMobile } = useBreakpoint()
   const [draft, setDraft] = useState<DraftFields>({
     title: book.title,
     author: book.author,
@@ -270,30 +297,17 @@ export default function BookEditCard({
     }
   }
 
-  async function handleMetadataCheck(checked: boolean) {
-    await onImmediateSave({ needs_metadata_review: checked })
-  }
-
-  async function handlePhotographyCheck(checked: boolean) {
-    await onImmediateSave({ needs_photo_review: checked })
-  }
-
-  // ---- Layout ----
-  // Desktop: natural page flow — navbar, padded container with card, footer scrolls with content.
-  // Mobile: footer anchored to bottom so SAVE is always accessible.
-
   const SAVE_BUTTON_HEIGHT = 44
-  const FOOTER_TOTAL_HEIGHT = SAVE_BUTTON_HEIGHT + 44 + 12 /* vertical gap + secondary buttons */
 
   const secondaryButtonStyle: React.CSSProperties = {
     flex: 1,
     height: 44,
     fontSize: 13,
     fontWeight: 500,
-    border: `1px solid ${theme.colors.border}`,
+    border: `1px solid ${theme.colors.zoneBorder}`,
     borderRadius: theme.radius.md,
     background: theme.colors.bg,
-    color: theme.colors.muted,
+    color: theme.colors.secondaryText,
     cursor: 'pointer',
     fontFamily: theme.font.sans,
   }
@@ -319,7 +333,7 @@ export default function BookEditCard({
           textTransform: 'uppercase',
           border: 'none',
           borderRadius: theme.radius.md,
-          background: saving ? theme.colors.disabled : '#0070F3',
+          background: saving ? theme.colors.disabled : theme.colors.primaryBlue,
           color: '#fff',
           cursor: saving ? 'default' : 'pointer',
           fontFamily: theme.font.sans,
@@ -341,19 +355,21 @@ export default function BookEditCard({
   return (
     <div
       style={{
-        minHeight: '100vh',
-        background: theme.colors.pageBg,
-        color: theme.colors.text,
-        fontFamily: theme.font.sans,
+        height: '100vh',
         display: 'flex',
         flexDirection: 'column',
+        overflow: 'hidden',
+        background: theme.colors.bg,
+        color: theme.colors.text,
+        fontFamily: theme.font.sans,
       }}
     >
       {/* Navbar — matches dashboard */}
       <div
         style={{
-          background: theme.colors.bg,
-          borderBottom: `1px solid ${theme.colors.border}`,
+          flexShrink: 0,
+          background: theme.colors.navBg,
+          borderBottom: `1px solid ${theme.colors.zoneBorder}`,
         }}
       >
         <div
@@ -392,7 +408,7 @@ export default function BookEditCard({
               style={{
                 padding: '0.4rem 0.75rem',
                 fontSize: '0.85rem',
-                border: `1px solid ${theme.colors.border}`,
+                border: `1px solid ${theme.colors.zoneBorder}`,
                 borderRadius: theme.radius.sm,
                 background: theme.colors.bg,
                 cursor: 'pointer',
@@ -405,240 +421,195 @@ export default function BookEditCard({
         </div>
       </div>
 
-      {/* Page body */}
+      {/* Scrollable content zone */}
       <div
         style={{
           flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
           maxWidth: 1200,
           width: '100%',
           margin: '0 auto',
-          padding: isMobile ? '16px 16px 0' : '24px',
-          paddingBottom: isMobile ? FOOTER_TOTAL_HEIGHT + 32 : 24,
+          background: theme.colors.bg,
+          borderLeft: `1px solid ${theme.colors.zoneBorder}`,
+          borderRight: `1px solid ${theme.colors.zoneBorder}`,
           boxSizing: 'border-box',
         }}
       >
-        {/* Card */}
-        <div
-          style={{
-            background: theme.colors.bg,
-            border: `0.5px solid ${theme.colors.border}`,
-            borderRadius: theme.radius.lg,
-            overflow: 'hidden',
-          }}
-        >
-          {/* Filmstrip */}
-          <PhotoFilmstrip
-            coverUrl={book.cover_image_url}
-            photos={photos.map((p) => ({ key: p.id, url: photoUrls[p.id] ?? '' }))}
-            onDelete={onDeletePhoto}
-            onAddPhoto={onAddPhoto}
-          />
+        {/* Filmstrip */}
+        <PhotoFilmstrip
+          coverUrl={book.cover_image_url}
+          photos={photos.map((p) => ({ key: p.id, url: photoUrls[p.id] ?? '' }))}
+          onDelete={onDeletePhoto}
+          onAddPhoto={onAddPhoto}
+        />
 
-          {/* Content zone */}
-          <div style={{ padding: '1.25rem', background: theme.colors.surface }}>
-            {/* 2. Title / Author / Year · Publisher */}
-            <div style={{ marginBottom: '1rem' }}>
-              <div style={{ marginBottom: 4 }}>
-                <InlineField
-                  value={draft.title}
-                  onChange={(v) => setField('title', v)}
-                  fontSize={20}
-                  fontWeight={600}
-                  color={theme.colors.text}
-                />
-              </div>
-              <div style={{ marginBottom: 4 }}>
-                <InlineField
-                  value={draft.author}
-                  onChange={(v) => setField('author', v)}
-                  fontSize={14}
-                  color={theme.colors.muted}
-                />
-              </div>
-              <div style={{ fontSize: 13, color: theme.colors.muted, paddingLeft: 3 }}>
-                {[book.year, book.publisher].filter(Boolean).join(' · ') || <em>—</em>}
-              </div>
-            </div>
-
-            {/* 3. Condition segmented bar */}
-            <div style={{ marginBottom: '0.75rem' }}>
-              <ConditionBar
-                value={draft.condition}
-                onChange={handleConditionImmediate}
+        {/* Content zone */}
+        <div style={{ padding: '1.25rem' }}>
+          {/* Title / Author / Year · Publisher */}
+          <div style={{ marginBottom: '1rem' }}>
+            <div style={{ marginBottom: 4 }}>
+              <InlineField
+                value={draft.title}
+                onChange={(v) => setField('title', v)}
+                fontSize={20}
+                fontWeight={600}
+                color={theme.colors.text}
               />
             </div>
-
-            {/* 4. Review checkboxes */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1rem',
-                padding: '6px 12px',
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: theme.radius.md,
-                marginBottom: '1.25rem',
-              }}
-            >
-              <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  fontSize: 13,
-                  color: theme.colors.text,
-                  cursor: 'pointer',
-                  flex: 1,
-                }}
-              >
-                <input
-                  type="checkbox"
-                  aria-label="Review Metadata?"
-                  checked={book.needs_metadata_review}
-                  onChange={(e) => handleMetadataCheck(e.target.checked)}
-                />
-                review metadata
-              </label>
-              <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  fontSize: 13,
-                  color: theme.colors.text,
-                  cursor: 'pointer',
-                  flex: 1,
-                }}
-              >
-                <input
-                  type="checkbox"
-                  aria-label="Review Photography?"
-                  checked={book.needs_photo_review}
-                  onChange={(e) => handlePhotographyCheck(e.target.checked)}
-                />
-                review photography
-              </label>
+            <div style={{ marginBottom: 4 }}>
+              <InlineField
+                value={draft.author}
+                onChange={(v) => setField('author', v)}
+                fontSize={14}
+                color={theme.colors.muted}
+              />
             </div>
+            <div style={{ fontSize: 13, color: theme.colors.muted, paddingLeft: 3 }}>
+              {[book.year, book.publisher].filter(Boolean).join(' · ') || <em>—</em>}
+            </div>
+          </div>
 
-            {/* 5. ISBN / Pages / Publisher */}
+          {/* Condition segmented bar */}
+          <div style={{ marginBottom: '0.75rem' }}>
+            <ConditionBar
+              value={draft.condition}
+              onChange={handleConditionImmediate}
+            />
+          </div>
+
+          {/* Review toggle buttons */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 8,
+              marginBottom: '1.25rem',
+            }}
+          >
+            <ReviewToggle
+              label="review metadata"
+              on={book.needs_metadata_review}
+              onToggle={(v) => onImmediateSave({ needs_metadata_review: v })}
+            />
+            <ReviewToggle
+              label="review photography"
+              on={book.needs_photo_review}
+              onToggle={(v) => onImmediateSave({ needs_photo_review: v })}
+            />
+          </div>
+
+          {/* ISBN / Pages / Publisher */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '0.75rem',
+              marginBottom: '1.25rem',
+              paddingBottom: '1.25rem',
+              borderBottom: `1px solid ${theme.colors.zoneBorder}`,
+            }}
+          >
+            <div>
+              <span style={SMALL_CAPS_LABEL}>ISBN</span>
+              <span
+                style={{
+                  fontSize: 13,
+                  fontFamily: theme.font.mono,
+                  color: theme.colors.subtleText,
+                  display: 'block',
+                  padding: '1px 3px',
+                  lineHeight: 1.4,
+                }}
+              >
+                {book.isbn}
+              </span>
+            </div>
+            <div>
+              <span style={SMALL_CAPS_LABEL}>Pages</span>
+              <InlineField
+                value={draft.pages}
+                onChange={(v) => setField('pages', v)}
+                placeholder="—"
+              />
+            </div>
+            <div>
+              <span style={SMALL_CAPS_LABEL}>Publisher</span>
+              <InlineField
+                value={draft.publisher}
+                onChange={(v) => setField('publisher', v)}
+                placeholder="—"
+              />
+            </div>
+          </div>
+
+          {/* Additional Fields */}
+          <div
+            style={{
+              marginBottom: '1.25rem',
+              paddingBottom: '1.25rem',
+              borderBottom: `1px solid ${theme.colors.zoneBorder}`,
+            }}
+          >
+            <span style={{ ...SMALL_CAPS_LABEL, marginBottom: 8 }}>Additional Fields</span>
             <div
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, 1fr)',
                 gap: '0.75rem',
-                marginBottom: '1.25rem',
-                paddingBottom: '1.25rem',
-                borderBottom: `1px solid ${theme.colors.border}`,
               }}
             >
-              <div>
-                <span style={SMALL_CAPS_LABEL}>ISBN</span>
-                <span
-                  style={{
-                    fontSize: 13,
-                    fontFamily: theme.font.mono,
-                    color: theme.colors.subtleText,
-                    display: 'block',
-                    padding: '1px 3px',
-                    lineHeight: 1.4,
-                  }}
-                >
-                  {book.isbn}
-                </span>
-              </div>
-              <div>
-                <span style={SMALL_CAPS_LABEL}>Pages</span>
-                <InlineField
-                  value={draft.pages}
-                  onChange={(v) => setField('pages', v)}
-                  placeholder="—"
-                />
-              </div>
-              <div>
-                <span style={SMALL_CAPS_LABEL}>Publisher</span>
-                <InlineField
-                  value={draft.publisher}
-                  onChange={(v) => setField('publisher', v)}
-                  placeholder="—"
-                />
-              </div>
+              {([
+                { key: 'edition', label: 'Edition' },
+                { key: 'dimensions', label: 'Dimensions' },
+                { key: 'weight', label: 'Weight' },
+              ] as const).map(({ key, label }) => (
+                <div key={key}>
+                  <span style={SMALL_CAPS_LABEL}>{label}</span>
+                  <InlineField
+                    value={draft[key]}
+                    onChange={(v) => setField(key, v)}
+                    placeholder="—"
+                  />
+                </div>
+              ))}
             </div>
-
-            {/* 6. Additional Fields */}
-            <div
-              style={{
-                marginBottom: '1.25rem',
-                paddingBottom: '1.25rem',
-                borderBottom: `1px solid ${theme.colors.border}`,
-              }}
-            >
-              <span style={{ ...SMALL_CAPS_LABEL, marginBottom: 8 }}>Additional Fields</span>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: '0.75rem',
-                }}
-              >
-                {([
-                  { key: 'edition', label: 'Edition' },
-                  { key: 'dimensions', label: 'Dimensions' },
-                  { key: 'weight', label: 'Weight' },
-                ] as const).map(({ key, label }) => (
-                  <div key={key}>
-                    <span style={SMALL_CAPS_LABEL}>{label}</span>
-                    <InlineField
-                      value={draft[key]}
-                      onChange={(v) => setField(key, v)}
-                      placeholder="—"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 7. Description */}
-            <div style={{ marginBottom: '0.5rem' }}>
-              <span style={SMALL_CAPS_LABEL}>Description</span>
-              <InlineField
-                value={draft.description}
-                onChange={(v) => setField('description', v)}
-                multiline
-                fontSize={13}
-                color={theme.colors.muted}
-                placeholder="—"
-              />
-            </div>
-
-            {error && (
-              <p style={{ color: theme.colors.danger, fontSize: 13, marginTop: '0.75rem' }}>
-                {error}
-              </p>
-            )}
           </div>
-        </div>
 
-        {/* Desktop footer — inline below the card, not anchored */}
-        {!isMobile && <div style={{ marginTop: 16 }}>{footerContent}</div>}
+          {/* Description */}
+          <div style={{ marginBottom: '0.5rem' }}>
+            <span style={SMALL_CAPS_LABEL}>Description</span>
+            <InlineField
+              value={draft.description}
+              onChange={(v) => setField('description', v)}
+              multiline
+              fontSize={13}
+              color={theme.colors.muted}
+              placeholder="—"
+            />
+          </div>
+
+          {error && (
+            <p style={{ color: theme.colors.danger, fontSize: 13, marginTop: '0.75rem' }}>
+              {error}
+            </p>
+          )}
+        </div>
       </div>
 
-      {/* Mobile footer — anchored to bottom of viewport */}
-      {isMobile && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: '12px 16px calc(12px + env(safe-area-inset-bottom))',
-            background: theme.colors.bg,
-            borderTop: `1px solid ${theme.colors.border}`,
-            zIndex: 10,
-          }}
-        >
+      {/* Footer — anchored below scroll region on all breakpoints */}
+      <div
+        style={{
+          flexShrink: 0,
+          background: theme.colors.navBg,
+          borderTop: `1px solid ${theme.colors.zoneBorder}`,
+          padding: '12px 16px calc(12px + env(safe-area-inset-bottom))',
+        }}
+      >
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           {footerContent}
         </div>
-      )}
+      </div>
     </div>
   )
 }

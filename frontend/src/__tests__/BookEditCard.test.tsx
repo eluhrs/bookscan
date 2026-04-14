@@ -95,7 +95,7 @@ describe('BookEditCard', () => {
     expect(onImmediateSave).toHaveBeenCalledWith({ condition: 'New' })
   })
 
-  it('Review Metadata checkbox reflects needs_metadata_review', () => {
+  it('Review Metadata toggle reflects needs_metadata_review=true via aria-pressed', () => {
     render(
       <BookEditCard
         book={makeBook({ needs_metadata_review: true })}
@@ -111,11 +111,11 @@ describe('BookEditCard', () => {
         onGenerateListing={vi.fn()}
       />
     )
-    const checkbox = screen.getByLabelText('Review Metadata?') as HTMLInputElement
-    expect(checkbox.checked).toBe(true)
+    const btn = screen.getByRole('button', { name: /review metadata/i })
+    expect(btn).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('Review Photography checkbox reflects needs_photo_review', () => {
+  it('Review Photography toggle reflects needs_photo_review=true via aria-pressed', () => {
     render(
       <BookEditCard
         book={makeBook({ needs_photo_review: true })}
@@ -131,11 +131,11 @@ describe('BookEditCard', () => {
         onGenerateListing={vi.fn()}
       />
     )
-    const checkbox = screen.getByLabelText('Review Photography?') as HTMLInputElement
-    expect(checkbox.checked).toBe(true)
+    const btn = screen.getByRole('button', { name: /review photography/i })
+    expect(btn).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('calls onImmediateSave with needs_metadata_review true when Review Metadata is checked', () => {
+  it('calls onImmediateSave with needs_metadata_review true when Review Metadata toggle is clicked', () => {
     const onImmediateSave = vi.fn().mockResolvedValue(undefined)
     render(
       <BookEditCard
@@ -152,7 +152,7 @@ describe('BookEditCard', () => {
         onGenerateListing={vi.fn()}
       />
     )
-    fireEvent.click(screen.getByLabelText('Review Metadata?'))
+    fireEvent.click(screen.getByRole('button', { name: /review metadata/i }))
     expect(onImmediateSave).toHaveBeenCalledWith({ needs_metadata_review: true })
   })
 

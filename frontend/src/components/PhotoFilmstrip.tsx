@@ -29,8 +29,8 @@ export default function PhotoFilmstrip({ coverUrl, photos, onDelete, onAddPhoto 
         overflowX: 'auto',
         padding: '0.75rem 1rem',
         flexShrink: 0,
-        background: theme.colors.subtle,
-        borderBottom: `1px solid ${theme.colors.border}`,
+        background: theme.colors.tableHeaderBg,
+        borderBottom: `1px solid ${theme.colors.zoneBorder}`,
       }}
     >
       {/* Cover image — accent border signals lookup result, not deletable */}
