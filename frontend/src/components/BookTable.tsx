@@ -10,11 +10,19 @@ interface BookTableProps {
   books: Book[]
   onEdit: (book: Book) => void
   onDelete: (id: Book['id']) => void
-  onGenerateListing: (book: Book) => void
 }
 
+const iconButtonStyle: React.CSSProperties = {
+  background: 'none',
+  border: 'none',
+  padding: '0.25rem 0.35rem',
+  cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+}
 
-export default function BookTable({ books, onEdit, onDelete, onGenerateListing }: BookTableProps) {
+export default function BookTable({ books, onEdit, onDelete }: BookTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('created_at')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
 
@@ -51,6 +59,7 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
           color: theme.colors.muted,
           letterSpacing: '0.04em',
           whiteSpace: 'nowrap',
+          background: theme.colors.tableHeaderBg,
         }}
         aria-sort={ariaSort}
       >
@@ -60,18 +69,12 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
   }
 
   return (
-    <div style={{ overflowX: 'auto', border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.md }}>
+    <div style={{ overflowX: 'auto' }}>
       <style>{`
   @media (max-width: 767px) {
     .bt-col-author,
     .bt-col-publisher,
     .bt-col-year { display: none !important; }
-    .bt-col-actions-text { display: none !important; }
-    .bt-col-actions-icon { display: table-cell !important; }
-  }
-  @media (min-width: 768px) {
-    .bt-col-actions-text { display: table-cell !important; }
-    .bt-col-actions-icon { display: none !important; }
   }
 `}</style>
       <table
@@ -83,16 +86,17 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
         }}
       >
         <thead>
-          <tr style={{ borderBottom: `1px solid ${theme.colors.border}`, background: theme.colors.zoneBg }}>
+          <tr style={{ borderBottom: `1px solid ${theme.colors.navBg}`, background: theme.colors.tableHeaderBg }}>
             <th
               style={{
                 padding: '0.6rem 0.5rem',
-                width: 48,
+                width: 56,
                 fontWeight: 500,
                 fontSize: '0.8rem',
                 color: theme.colors.muted,
                 letterSpacing: '0.04em',
-                textAlign: 'left',
+                textAlign: 'center',
+                background: theme.colors.tableHeaderBg,
               }}
             >
               review
@@ -102,18 +106,18 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
             {colHeader('publisher', 'publisher', 'bt-col-publisher')}
             {colHeader('year', 'year', 'bt-col-year')}
             <th
-              className="bt-col-actions-text"
               style={{
                 padding: '0.6rem 0.75rem',
                 fontWeight: 500,
                 fontSize: '0.8rem',
                 color: theme.colors.muted,
                 letterSpacing: '0.04em',
+                textAlign: 'right',
+                background: theme.colors.tableHeaderBg,
               }}
             >
               actions
             </th>
-            <th className="bt-col-actions-icon" style={{ display: 'none', padding: '0.6rem 0.5rem', width: 72 }} />
           </tr>
         </thead>
         <tbody>
@@ -121,32 +125,26 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
             <tr
               key={book.id}
               onClick={() => onEdit(book)}
-              style={{ borderBottom: `1px solid ${theme.colors.border}`, cursor: 'pointer' }}
+              style={{ background: theme.colors.bg, borderBottom: `1px solid ${theme.colors.rowBorder}`, cursor: 'pointer' }}
             >
-              <td style={{ padding: '0.6rem 0.5rem', width: 48 }}>
+              <td style={{ padding: '0.6rem 0.5rem', width: 56, textAlign: 'center' }}>
                 {!book.needs_metadata_review && !book.needs_photo_review ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40 }}>
-                    <span title="Reviewed" style={{ display: 'flex' }}>
-                      <Check size={16} color={theme.colors.scanGreen} />
-                    </span>
-                  </div>
+                  <span title="Reviewed" style={{ display: 'inline-flex' }}>
+                    <Check size={16} color={theme.colors.reviewGreen} />
+                  </span>
                 ) : (
-                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                    <div style={{ width: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {book.needs_metadata_review && (
-                        <span title="Metadata needs review" style={{ display: 'flex' }}>
-                          <FileWarning size={16} color={theme.colors.warning} />
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ width: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {book.needs_photo_review && (
-                        <span title="Photography needs review" style={{ display: 'flex' }}>
-                          <CameraIcon size={16} color={theme.colors.accent} />
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                    {book.needs_metadata_review && (
+                      <span title="Metadata needs review" style={{ display: 'inline-flex' }}>
+                        <FileWarning size={16} color={theme.colors.warning} />
+                      </span>
+                    )}
+                    {book.needs_photo_review && (
+                      <span title="Photography needs review" style={{ display: 'inline-flex' }}>
+                        <CameraIcon size={16} color={theme.colors.accent} />
+                      </span>
+                    )}
+                  </span>
                 )}
               </td>
               <td
@@ -199,84 +197,20 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
               >
                 {book.year ?? '—'}
               </td>
-              <td className="bt-col-actions-text" style={{ padding: '0.6rem 0.75rem', whiteSpace: 'nowrap' }}>
-                <button
-                  onClick={(e) => { e.stopPropagation(); onGenerateListing(book) }}
-                  style={{
-                    marginRight: '0.4rem',
-                    padding: '0.3rem 0.6rem',
-                    fontSize: '0.8rem',
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: theme.radius.sm,
-                    background: theme.colors.bg,
-                    cursor: 'pointer',
-                  }}
-                >
-                  List
-                </button>
+              <td style={{ padding: '0.6rem 0.5rem', whiteSpace: 'nowrap', width: 1, textAlign: 'right' }}>
                 <button
                   onClick={(e) => { e.stopPropagation(); onEdit(book) }}
-                  style={{
-                    marginRight: '0.4rem',
-                    padding: '0.3rem 0.6rem',
-                    fontSize: '0.8rem',
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: theme.radius.sm,
-                    background: theme.colors.bg,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); onDelete(book.id) }}
-                  style={{
-                    padding: '0.3rem 0.6rem',
-                    fontSize: '0.8rem',
-                    border: `1px solid ${theme.colors.danger}`,
-                    borderRadius: theme.radius.sm,
-                    background: theme.colors.bg,
-                    color: theme.colors.danger,
-                    cursor: 'pointer',
-                  }}
-                  aria-label="Delete book"
-                >
-                  Delete
-                </button>
-              </td>
-              <td className="bt-col-actions-icon" style={{ display: 'none', padding: '0.6rem 0.5rem', whiteSpace: 'nowrap' }}>
-                <button
-                  onClick={(e) => { e.stopPropagation(); onEdit(book) }}
-                  style={{
-                    marginRight: '0.5rem',
-                    padding: '0.35rem',
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: theme.radius.sm,
-                    background: theme.colors.bg,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
                   aria-label="Edit book"
+                  style={iconButtonStyle}
                 >
-                  <Pencil size={16} color={theme.colors.muted} />
+                  <Pencil size={16} color="#888" />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); onDelete(book.id) }}
-                  style={{
-                    padding: '0.35rem',
-                    border: `1px solid ${theme.colors.danger}`,
-                    borderRadius: theme.radius.sm,
-                    background: theme.colors.bg,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
                   aria-label="Delete book"
+                  style={iconButtonStyle}
                 >
-                  <Trash2 size={16} color={theme.colors.danger} />
+                  <Trash2 size={16} color="#888" />
                 </button>
               </td>
             </tr>

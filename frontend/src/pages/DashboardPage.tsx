@@ -4,6 +4,7 @@ import { Camera } from 'lucide-react'
 import BookTable from '../components/BookTable'
 import BookEditCard from '../components/BookEditCard'
 import ListingGenerator from '../components/ListingGenerator'
+import StatusFilter, { StatusFilterValue } from '../components/StatusFilter'
 import { listBooks, updateBook, deleteBook, exportListingsCSV } from '../api/books'
 import { listPhotos, deletePhoto, getPhotoUrl, uploadPhotos } from '../api/photos'
 import { Book, BookPhoto } from '../types'
@@ -17,7 +18,7 @@ export default function DashboardPage() {
   const [books, setBooks] = useState<Book[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [incompleteOnly, setIncompleteOnly] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<StatusFilterValue>('all')
   const [search, setSearch] = useState('')
   const [editingBook, setEditingBook] = useState<Book | null>(null)
   const [listingBook, setListingBook] = useState<Book | null>(null)
@@ -32,7 +33,7 @@ export default function DashboardPage() {
       const result = await listBooks({
         page,
         page_size: PAGE_SIZE,
-        status: incompleteOnly ? 'needs_metadata_review' : 'all',
+        status: statusFilter === 'archived' ? 'all' : statusFilter,
         search: search || undefined,
       })
       setBooks(result.items)
@@ -40,14 +41,14 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, incompleteOnly, search])
+  }, [page, statusFilter, search])
 
   const poll = useCallback(async () => {
     try {
       const result = await listBooks({
         page,
         page_size: PAGE_SIZE,
-        status: incompleteOnly ? 'needs_metadata_review' : 'all',
+        status: statusFilter === 'archived' ? 'all' : statusFilter,
         search: search || undefined,
       })
       setBooks(result.items)
@@ -55,7 +56,7 @@ export default function DashboardPage() {
     } catch {
       // Ignore silent poll errors
     }
-  }, [page, incompleteOnly, search])
+  }, [page, statusFilter, search])
 
   useEffect(() => { load() }, [load])
 
@@ -235,167 +236,186 @@ export default function DashboardPage() {
   }
 
   return (
-    <div style={{ padding: '1.5rem', fontFamily: theme.font.sans, maxWidth: 1200, margin: '0 auto' }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '1.5rem',
-          paddingBottom: '1rem',
-          borderBottom: `1px solid ${theme.colors.border}`,
-        }}
-      >
-        <div>
-          <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, letterSpacing: '-0.02em' }}>
-            BookScan
-          </h1>
-          <p style={{ margin: '0.2rem 0 0', fontSize: '0.85rem', color: theme.colors.muted }}>
-            {total} book{total !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          {isMobileDevice() && (
-            <button
-              aria-label="Scan books"
-              onClick={() => navigate('/scan')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '0.4rem 0.5rem',
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: theme.radius.sm,
-                background: theme.colors.bg,
-                cursor: 'pointer',
-                color: theme.colors.text,
-              }}
-            >
-              <Camera size={18} />
-            </button>
-          )}
-          <button
-            onClick={logout}
-            style={{
-              padding: '0.4rem 0.75rem',
-              fontSize: '0.85rem',
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.radius.sm,
-              background: theme.colors.bg,
-              cursor: 'pointer',
-              fontFamily: theme.font.sans,
-            }}
-          >
-            Log out
-          </button>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', alignItems: 'center' }}>
-        <input
-          placeholder="Search books..."
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-          style={{
-            flex: 1,
-            minWidth: 0,
-            padding: '0.5rem 0.6rem',
-            fontSize: '0.85rem',
-            border: `1px solid ${theme.colors.border}`,
-            borderRadius: theme.radius.sm,
-            fontFamily: theme.font.sans,
-            outline: 'none',
-          }}
-        />
-        <label
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.3rem',
-            whiteSpace: 'nowrap',
-            fontSize: '0.85rem',
-            color: theme.colors.muted,
-            cursor: 'pointer',
-            flexShrink: 0,
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={incompleteOnly}
-            onChange={(e) => { setIncompleteOnly(e.target.checked); setPage(1) }}
-          />
-          Incomplete
-        </label>
-        <button
-          onClick={() => exportListingsCSV().catch(() => alert('Export failed'))}
-          style={{
-            padding: '0.5rem 0.75rem',
-            fontSize: '0.85rem',
-            border: `1px solid ${theme.colors.border}`,
-            borderRadius: theme.radius.sm,
-            background: theme.colors.bg,
-            cursor: 'pointer',
-            fontFamily: theme.font.sans,
-            flexShrink: 0,
-          }}
-        >
-          CSV
-        </button>
-      </div>
-
-      {loading ? (
-        <p style={{ color: theme.colors.muted, fontSize: '0.9rem' }}>Loading…</p>
-      ) : (
-        <BookTable
-          books={books}
-          onEdit={(b) => setEditingBook(b)}
-          onDelete={handleDelete}
-          onGenerateListing={(b) => setListingBook(b)}
-        />
-      )}
-
-      {totalPages > 1 && (
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: theme.colors.bg, fontFamily: theme.font.sans }}>
+      {/* Navbar */}
+      <div style={{ background: theme.colors.navBg }}>
         <div
           style={{
-            marginTop: '1.25rem',
+            maxWidth: 1200,
+            margin: '0 auto',
+            padding: '0.75rem 1.5rem',
             display: 'flex',
-            gap: '0.5rem',
-            justifyContent: 'center',
+            justifyContent: 'space-between',
             alignItems: 'center',
-            fontSize: '0.85rem',
           }}
         >
-          <button
-            disabled={page === 1}
-            onClick={() => setPage((p) => p - 1)}
-            style={{
-              padding: '0.35rem 0.65rem',
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.radius.sm,
-              background: theme.colors.bg,
-              cursor: page === 1 ? 'default' : 'pointer',
-              opacity: page === 1 ? 0.4 : 1,
-            }}
-          >
-            ← Prev
-          </button>
-          <span style={{ color: theme.colors.muted }}>Page {page} of {totalPages}</span>
-          <button
-            disabled={page === totalPages}
-            onClick={() => setPage((p) => p + 1)}
-            style={{
-              padding: '0.35rem 0.65rem',
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.radius.sm,
-              background: theme.colors.bg,
-              cursor: page === totalPages ? 'default' : 'pointer',
-              opacity: page === totalPages ? 0.4 : 1,
-            }}
-          >
-            Next →
-          </button>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, letterSpacing: '-0.02em' }}>
+              BookScan
+            </h1>
+            <p style={{ margin: '0.1rem 0 0', fontSize: '0.8rem', color: theme.colors.secondaryText }}>
+              {total} book{total !== 1 ? 's' : ''}
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            {isMobileDevice() && (
+              <button
+                aria-label="Scan books"
+                onClick={() => navigate('/scan')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0.4rem 0.5rem',
+                  border: `1px solid ${theme.colors.zoneBorder}`,
+                  borderRadius: theme.radius.sm,
+                  background: theme.colors.bg,
+                  cursor: 'pointer',
+                  color: theme.colors.text,
+                }}
+              >
+                <Camera size={18} />
+              </button>
+            )}
+            <button
+              onClick={logout}
+              style={{
+                padding: '0.4rem 0.75rem',
+                fontSize: '0.85rem',
+                border: `1px solid ${theme.colors.zoneBorder}`,
+                borderRadius: theme.radius.sm,
+                background: theme.colors.bg,
+                color: theme.colors.secondaryText,
+                cursor: 'pointer',
+                fontFamily: theme.font.sans,
+              }}
+            >
+              Log out
+            </button>
+          </div>
         </div>
-      )}
+      </div>
+
+      {/* Content zone */}
+      <div style={{ flex: 1 }}>
+        <div
+          style={{
+            maxWidth: 1200,
+            margin: '0 auto',
+            background: theme.colors.bg,
+            borderLeft: `1px solid ${theme.colors.zoneBorder}`,
+            borderRight: `1px solid ${theme.colors.zoneBorder}`,
+            padding: '1.25rem 1.5rem',
+            minHeight: '100%',
+          }}
+        >
+          {/* Search / filter row */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', alignItems: 'center' }}>
+            <input
+              placeholder="Search books..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                padding: '0.5rem 0.6rem',
+                fontSize: '0.85rem',
+                border: `1px solid ${theme.colors.zoneBorder}`,
+                borderRadius: theme.radius.sm,
+                fontFamily: theme.font.sans,
+                outline: 'none',
+              }}
+            />
+            <StatusFilter
+              value={statusFilter}
+              onChange={(v) => { setStatusFilter(v); setPage(1) }}
+            />
+            <button
+              onClick={() => exportListingsCSV().catch(() => alert('Export failed'))}
+              style={{
+                padding: '0.5rem 0.75rem',
+                fontSize: '0.85rem',
+                border: `1px solid ${theme.colors.zoneBorder}`,
+                borderRadius: theme.radius.sm,
+                background: theme.colors.bg,
+                color: theme.colors.secondaryText,
+                cursor: 'pointer',
+                fontFamily: theme.font.sans,
+                flexShrink: 0,
+              }}
+            >
+              CSV
+            </button>
+          </div>
+
+          {loading ? (
+            <p style={{ color: theme.colors.muted, fontSize: '0.9rem' }}>Loading…</p>
+          ) : (
+            <BookTable
+              books={books}
+              onEdit={(b) => setEditingBook(b)}
+              onDelete={handleDelete}
+            />
+          )}
+
+          {totalPages > 1 && (
+            <div
+              style={{
+                marginTop: '1.25rem',
+                display: 'flex',
+                gap: '0.5rem',
+                justifyContent: 'center',
+                alignItems: 'center',
+                fontSize: '0.85rem',
+              }}
+            >
+              <button
+                disabled={page === 1}
+                onClick={() => setPage((p) => p - 1)}
+                style={{
+                  padding: '0.35rem 0.65rem',
+                  border: `1px solid ${theme.colors.zoneBorder}`,
+                  borderRadius: theme.radius.sm,
+                  background: theme.colors.bg,
+                  cursor: page === 1 ? 'default' : 'pointer',
+                  opacity: page === 1 ? 0.4 : 1,
+                }}
+              >
+                ← Prev
+              </button>
+              <span style={{ color: theme.colors.muted }}>Page {page} of {totalPages}</span>
+              <button
+                disabled={page === totalPages}
+                onClick={() => setPage((p) => p + 1)}
+                style={{
+                  padding: '0.35rem 0.65rem',
+                  border: `1px solid ${theme.colors.zoneBorder}`,
+                  borderRadius: theme.radius.sm,
+                  background: theme.colors.bg,
+                  cursor: page === totalPages ? 'default' : 'pointer',
+                  opacity: page === totalPages ? 0.4 : 1,
+                }}
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Footer bar */}
+      <div
+        style={{
+          background: theme.colors.navBg,
+          borderTop: `1px solid ${theme.colors.zoneBorder}`,
+          padding: '0.75rem 1.5rem',
+          textAlign: 'center',
+          fontSize: '0.8rem',
+          color: theme.colors.secondaryText,
+        }}
+      >
+        {books.length} of {total} records
+      </div>
 
       {listingBook && (
         <div
