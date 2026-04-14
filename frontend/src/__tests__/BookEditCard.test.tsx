@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import BookEditCard from '../components/BookEditCard'
-import { Book, BookPhoto } from '../types'
+import { Book } from '../types'
 
 function makeBook(overrides: Partial<Book> = {}): Book {
   return {
@@ -41,14 +41,14 @@ describe('BookEditCard', () => {
         onAddPhoto={noOp}
         onSave={noOp}
         onImmediateSave={noOp}
-        onGenerateListing={vi.fn()}
+        onBack={vi.fn()}
       />
     )
     expect(screen.getByText('Refactoring')).toBeInTheDocument()
     expect(screen.getByText('Martin Fowler')).toBeInTheDocument()
   })
 
-  it('renders condition dropdown with all options', () => {
+  it('renders condition segmented bar with all five options', () => {
     render(
       <BookEditCard
         book={makeBook()}
@@ -58,12 +58,32 @@ describe('BookEditCard', () => {
         onAddPhoto={noOp}
         onSave={noOp}
         onImmediateSave={noOp}
-        onGenerateListing={vi.fn()}
+        onBack={vi.fn()}
       />
     )
-    const select = screen.getByRole('combobox')
-    const options = Array.from(select.querySelectorAll('option')).map((o) => o.value)
-    expect(options).toEqual(['', 'New', 'Very Good', 'Good', 'Acceptable', 'Poor'])
+    expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Very Good' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Good' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Acceptable' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Poor' })).toBeInTheDocument()
+  })
+
+  it('clicking a condition button calls onImmediateSave with that value', () => {
+    const onImmediateSave = vi.fn().mockResolvedValue(undefined)
+    render(
+      <BookEditCard
+        book={makeBook()}
+        photos={[]}
+        photoUrls={{}}
+        onDeletePhoto={noOp}
+        onAddPhoto={noOp}
+        onSave={noOp}
+        onImmediateSave={onImmediateSave}
+        onBack={vi.fn()}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'New' }))
+    expect(onImmediateSave).toHaveBeenCalledWith({ condition: 'New' })
   })
 
   it('Review Metadata checkbox reflects !data_complete', () => {
@@ -76,7 +96,7 @@ describe('BookEditCard', () => {
         onAddPhoto={noOp}
         onSave={noOp}
         onImmediateSave={noOp}
-        onGenerateListing={vi.fn()}
+        onBack={vi.fn()}
       />
     )
     const checkbox = screen.getByLabelText('Review Metadata?') as HTMLInputElement
@@ -93,14 +113,14 @@ describe('BookEditCard', () => {
         onAddPhoto={noOp}
         onSave={noOp}
         onImmediateSave={noOp}
-        onGenerateListing={vi.fn()}
+        onBack={vi.fn()}
       />
     )
     const checkbox = screen.getByLabelText('Review Photography?') as HTMLInputElement
     expect(checkbox.checked).toBe(true)
   })
 
-  it('calls onImmediateSave with data_complete false when Review Metadata is checked', async () => {
+  it('calls onImmediateSave with data_complete false when Review Metadata is checked', () => {
     const onImmediateSave = vi.fn().mockResolvedValue(undefined)
     render(
       <BookEditCard
@@ -111,7 +131,7 @@ describe('BookEditCard', () => {
         onAddPhoto={noOp}
         onSave={noOp}
         onImmediateSave={onImmediateSave}
-        onGenerateListing={vi.fn()}
+        onBack={vi.fn()}
       />
     )
     fireEvent.click(screen.getByLabelText('Review Metadata?'))
@@ -128,14 +148,14 @@ describe('BookEditCard', () => {
         onAddPhoto={noOp}
         onSave={noOp}
         onImmediateSave={noOp}
-        onGenerateListing={vi.fn()}
+        onBack={vi.fn()}
       />
     )
     const dashes = screen.getAllByText('—')
     expect(dashes.length).toBeGreaterThan(0)
   })
 
-  it('renders Save Changes and Generate Listing buttons', () => {
+  it('renders Back and Save buttons', () => {
     render(
       <BookEditCard
         book={makeBook()}
@@ -145,10 +165,28 @@ describe('BookEditCard', () => {
         onAddPhoto={noOp}
         onSave={noOp}
         onImmediateSave={noOp}
-        onGenerateListing={vi.fn()}
+        onBack={vi.fn()}
       />
     )
-    expect(screen.getByRole('button', { name: /save changes/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /generate listing/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^save$/i })).toBeInTheDocument()
+  })
+
+  it('Back button calls onBack', () => {
+    const onBack = vi.fn()
+    render(
+      <BookEditCard
+        book={makeBook()}
+        photos={[]}
+        photoUrls={{}}
+        onDeletePhoto={noOp}
+        onAddPhoto={noOp}
+        onSave={noOp}
+        onImmediateSave={noOp}
+        onBack={onBack}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /back/i }))
+    expect(onBack).toHaveBeenCalled()
   })
 })

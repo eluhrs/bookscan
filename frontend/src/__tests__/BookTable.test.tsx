@@ -38,7 +38,7 @@ describe('BookTable', () => {
   it('sorts by title ascending', () => {
     const books = [makeBook({ title: 'Zebra' }), makeBook({ title: 'Apple' })]
     render(<BookTable books={books} onEdit={vi.fn()} onDelete={vi.fn()} onGenerateListing={vi.fn()} />)
-    fireEvent.click(screen.getByText('Title'))
+    fireEvent.click(screen.getByText('title'))
     const rows = screen.getAllByRole('row')
     expect(rows[1]).toHaveTextContent('Apple')
     expect(rows[2]).toHaveTextContent('Zebra')

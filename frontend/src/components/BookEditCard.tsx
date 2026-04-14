@@ -1,6 +1,7 @@
 // frontend/src/components/BookEditCard.tsx
 
 import { useState, useEffect } from 'react'
+import { ChevronLeft } from 'lucide-react'
 import { Book, BookPhoto } from '../types'
 import { theme } from '../styles/theme'
 import PhotoFilmstrip from './PhotoFilmstrip'
@@ -13,7 +14,7 @@ interface BookEditCardProps {
   onAddPhoto: (file: File) => Promise<void>
   onSave: (updates: Partial<Book>) => Promise<void>
   onImmediateSave: (updates: Partial<Book>) => Promise<void>
-  onGenerateListing: () => void
+  onBack: () => void
 }
 
 interface DraftFields {
@@ -28,7 +29,7 @@ interface DraftFields {
   condition: string | null
 }
 
-const CONDITIONS = ['', 'New', 'Very Good', 'Good', 'Acceptable', 'Poor'] as const
+const CONDITIONS = ['New', 'Very Good', 'Good', 'Acceptable', 'Poor'] as const
 
 const SMALL_CAPS_LABEL: React.CSSProperties = {
   display: 'block',
@@ -143,6 +144,52 @@ function InlineField({
   )
 }
 
+// ---- ConditionBar ----
+interface ConditionBarProps {
+  value: string | null
+  onChange: (v: string) => void
+}
+
+function ConditionBar({ value, onChange }: ConditionBarProps) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        width: '100%',
+        border: `1px solid ${theme.colors.border}`,
+        borderRadius: theme.radius.md,
+        overflow: 'hidden',
+      }}
+    >
+      {CONDITIONS.map((c, i) => {
+        const selected = value === c
+        return (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onChange(c)}
+            style={{
+              flex: 1,
+              padding: '0.5rem 0.4rem',
+              fontSize: 12,
+              fontWeight: selected ? 500 : 400,
+              background: selected ? theme.colors.accent : theme.colors.bg,
+              color: selected ? '#fff' : theme.colors.muted,
+              border: 'none',
+              borderLeft: i === 0 ? 'none' : `1px solid ${theme.colors.border}`,
+              cursor: 'pointer',
+              fontFamily: theme.font.sans,
+              lineHeight: 1.2,
+            }}
+          >
+            {c}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 // ---- BookEditCard ----
 export default function BookEditCard({
   book,
@@ -152,7 +199,7 @@ export default function BookEditCard({
   onAddPhoto,
   onSave,
   onImmediateSave,
-  onGenerateListing,
+  onBack,
 }: BookEditCardProps) {
   const [draft, setDraft] = useState<DraftFields>({
     title: book.title,
@@ -167,6 +214,29 @@ export default function BookEditCard({
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  // Visual viewport tracking for anchored layout (mirrors WorkflowWrapper).
+  const [vpHeight, setVpHeight] = useState(
+    () => window.visualViewport?.height ?? window.innerHeight
+  )
+  const [vpOffset, setVpOffset] = useState(
+    () => window.visualViewport?.offsetTop ?? 0
+  )
+
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const update = () => {
+      setVpHeight(vv.height)
+      setVpOffset(vv.offsetTop)
+    }
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+    }
+  }, [])
 
   useEffect(() => {
     setDraft({
@@ -203,6 +273,15 @@ export default function BookEditCard({
     }
   }
 
+  async function handleConditionImmediate(v: string) {
+    setDraft((d) => ({ ...d, condition: v }))
+    try {
+      await onImmediateSave({ condition: v })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Save failed')
+    }
+  }
+
   async function handleMetadataCheck(checked: boolean) {
     await onImmediateSave({ data_complete: !checked })
   }
@@ -220,14 +299,59 @@ export default function BookEditCard({
   return (
     <div
       style={{
-        border: `1px solid ${theme.colors.border}`,
-        borderRadius: theme.radius.md,
-        overflow: 'hidden',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        maxWidth: '100vw',
+        height: vpHeight,
+        transform: `translateY(${vpOffset}px)`,
         background: theme.colors.surface,
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        overscrollBehavior: 'none',
         fontFamily: theme.font.sans,
       }}
     >
-      {/* Zone 1: Filmstrip */}
+      {/* Anchored header */}
+      <div
+        style={{
+          flexShrink: 0,
+          background: theme.colors.zoneBg,
+          padding: '0.6rem 1rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          borderBottom: `1px solid ${theme.colors.border}`,
+        }}
+      >
+        <button
+          onClick={onBack}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+            padding: '0.3rem 0.75rem 0.3rem 0.5rem',
+            fontSize: 12,
+            background: theme.colors.bg,
+            color: theme.colors.subtleText,
+            border: `1.5px solid ${theme.colors.border}`,
+            borderRadius: 999,
+            cursor: 'pointer',
+            fontFamily: theme.font.sans,
+          }}
+        >
+          <ChevronLeft size={14} />
+          Back
+        </button>
+        <span style={{ fontSize: 14, fontWeight: 500, color: theme.colors.text }}>
+          Edit Book
+        </span>
+      </div>
+
+      {/* Filmstrip — flush against header, not scrollable vertically */}
       <PhotoFilmstrip
         coverUrl={book.cover_image_url}
         photos={photos.map((p) => ({ key: p.id, url: photoUrls[p.id] ?? '' }))}
@@ -235,24 +359,24 @@ export default function BookEditCard({
         onAddPhoto={onAddPhoto}
       />
 
-      <div style={{ padding: '1rem' }}>
-        {/* Zone 2: Title / Author / Status — two-column grid */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 160px',
-            gap: '1rem',
-            marginBottom: '1.25rem',
-          }}
-        >
-          {/* Left: Title, Author, Year · Publisher */}
-          <div>
+      {/* Scrollable content zone */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '1rem',
+          background: theme.colors.surface,
+        }}
+      >
+        <div style={{ maxWidth: 560, margin: '0 auto' }}>
+          {/* Title / Author / Year · Publisher */}
+          <div style={{ marginBottom: '1rem' }}>
             <div style={{ marginBottom: 4 }}>
               <InlineField
                 value={draft.title}
                 onChange={(v) => setField('title', v)}
                 fontSize={20}
-                fontWeight={500}
+                fontWeight={600}
                 color={theme.colors.text}
               />
             </div>
@@ -260,7 +384,7 @@ export default function BookEditCard({
               <InlineField
                 value={draft.author}
                 onChange={(v) => setField('author', v)}
-                fontSize={15}
+                fontSize={14}
                 color={theme.colors.muted}
               />
             </div>
@@ -269,27 +393,26 @@ export default function BookEditCard({
             </div>
           </div>
 
-          {/* Right: Condition, Review Metadata?, Review Photography? */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <select
-              value={draft.condition ?? ''}
-              onChange={(e) => setDraft((d) => ({ ...d, condition: e.target.value || null }))}
-              style={{
-                width: '100%',
-                padding: '0.3rem 0.4rem',
-                fontSize: 13,
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: theme.radius.sm,
-                fontFamily: theme.font.sans,
-                background: theme.colors.bg,
-                color: theme.colors.text,
-              }}
-            >
-              {CONDITIONS.map((c) => (
-                <option key={c} value={c}>{c || '— condition —'}</option>
-              ))}
-            </select>
+          {/* Condition segmented bar */}
+          <div style={{ marginBottom: '0.75rem' }}>
+            <ConditionBar
+              value={draft.condition}
+              onChange={handleConditionImmediate}
+            />
+          </div>
 
+          {/* Bordered checkbox group */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              padding: '6px 12px',
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.radius.md,
+              marginBottom: '1.25rem',
+            }}
+          >
             <label
               style={{
                 display: 'flex',
@@ -298,7 +421,7 @@ export default function BookEditCard({
                 fontSize: 13,
                 color: theme.colors.text,
                 cursor: 'pointer',
-                width: '100%',
+                flex: 1,
               }}
             >
               <input
@@ -307,9 +430,8 @@ export default function BookEditCard({
                 checked={!book.data_complete}
                 onChange={(e) => handleMetadataCheck(e.target.checked)}
               />
-              Review Metadata?
+              review metadata
             </label>
-
             <label
               style={{
                 display: 'flex',
@@ -318,7 +440,7 @@ export default function BookEditCard({
                 fontSize: 13,
                 color: theme.colors.text,
                 cursor: 'pointer',
-                width: '100%',
+                flex: 1,
               }}
             >
               <input
@@ -327,142 +449,141 @@ export default function BookEditCard({
                 checked={book.needs_photo_review}
                 onChange={(e) => handlePhotographyCheck(e.target.checked)}
               />
-              Review Photography?
+              review photography
             </label>
           </div>
-        </div>
 
-        {/* Zone 3: Core fields — ISBN, Pages, Publisher */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '0.75rem',
-            marginBottom: '1.25rem',
-            paddingBottom: '1.25rem',
-            borderBottom: `1px solid ${theme.colors.border}`,
-          }}
-        >
-          {/* ISBN — read-only (unique key, not patchable via API) */}
-          <div>
-            <span style={SMALL_CAPS_LABEL}>ISBN</span>
-            <span
-              style={{
-                fontSize: 13,
-                fontFamily: theme.font.mono,
-                color: theme.colors.subtleText,
-                display: 'block',
-                padding: '1px 3px',
-                lineHeight: 1.4,
-              }}
-            >
-              {book.isbn}
-            </span>
-          </div>
-          {([
-            { key: 'pages' as const, label: 'Pages' },
-            { key: 'publisher' as const, label: 'Publisher' },
-          ] as Array<{ key: 'pages' | 'publisher'; label: string }>).map(({ key, label }) => (
-            <div key={key}>
-              <span style={SMALL_CAPS_LABEL}>{label}</span>
-              <InlineField
-                value={draft[key]}
-                onChange={(v) => setField(key, v)}
-              />
+          {/* ISBN / Pages / Publisher */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '0.75rem',
+              marginBottom: '1.25rem',
+              paddingBottom: '1.25rem',
+              borderBottom: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <div>
+              <span style={SMALL_CAPS_LABEL}>ISBN</span>
+              <span
+                style={{
+                  fontSize: 13,
+                  fontFamily: theme.font.mono,
+                  color: theme.colors.subtleText,
+                  display: 'block',
+                  padding: '1px 3px',
+                  lineHeight: 1.4,
+                }}
+              >
+                {book.isbn}
+              </span>
             </div>
-          ))}
-        </div>
-
-        {/* Zone 4: Description */}
-        <div style={{ marginBottom: '1.25rem', paddingBottom: '1.25rem', borderBottom: `1px solid ${theme.colors.border}` }}>
-          <span style={SMALL_CAPS_LABEL}>Description</span>
-          <InlineField
-            value={draft.description}
-            onChange={(v) => setField('description', v)}
-            multiline
-            fontSize={13}
-            color={theme.colors.muted}
-            placeholder="—"
-          />
-        </div>
-
-        {/* Zone 5: Additional fields — Edition, Dimensions, Weight */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '0.75rem',
-            marginBottom: '1.25rem',
-            paddingBottom: '1.25rem',
-            borderBottom: `1px solid ${theme.colors.border}`,
-          }}
-        >
-          {([
-            { key: 'edition', label: 'Edition' },
-            { key: 'dimensions', label: 'Dimensions' },
-            { key: 'weight', label: 'Weight' },
-          ] as const).map(({ key, label }) => (
-            <div key={key}>
-              <span style={SMALL_CAPS_LABEL}>{label}</span>
+            <div>
+              <span style={SMALL_CAPS_LABEL}>Pages</span>
               <InlineField
-                value={draft[key]}
-                onChange={(v) => setField(key, v)}
+                value={draft.pages}
+                onChange={(v) => setField('pages', v)}
                 placeholder="—"
               />
             </div>
-          ))}
-        </div>
+            <div>
+              <span style={SMALL_CAPS_LABEL}>Publisher</span>
+              <InlineField
+                value={draft.publisher}
+                onChange={(v) => setField('publisher', v)}
+                placeholder="—"
+              />
+            </div>
+          </div>
 
-        {/* Zone 6: Footer */}
-        {error && (
-          <p style={{ color: theme.colors.danger, fontSize: 13, marginBottom: '0.5rem' }}>
-            {error}
-          </p>
-        )}
-        <div
+          {/* Description */}
+          <div
+            style={{
+              marginBottom: '1.25rem',
+              paddingBottom: '1.25rem',
+              borderBottom: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <span style={SMALL_CAPS_LABEL}>Description</span>
+            <InlineField
+              value={draft.description}
+              onChange={(v) => setField('description', v)}
+              multiline
+              fontSize={13}
+              color={theme.colors.muted}
+              placeholder="—"
+            />
+          </div>
+
+          {/* Additional fields */}
+          <div style={{ marginBottom: '1rem' }}>
+            <span style={{ ...SMALL_CAPS_LABEL, marginBottom: 8 }}>Additional Fields</span>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '0.75rem',
+              }}
+            >
+              {([
+                { key: 'edition', label: 'Edition' },
+                { key: 'dimensions', label: 'Dimensions' },
+                { key: 'weight', label: 'Weight' },
+              ] as const).map(({ key, label }) => (
+                <div key={key}>
+                  <span style={SMALL_CAPS_LABEL}>{label}</span>
+                  <InlineField
+                    value={draft[key]}
+                    onChange={(v) => setField(key, v)}
+                    placeholder="—"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {error && (
+            <p style={{ color: theme.colors.danger, fontSize: 13, marginBottom: '0.5rem' }}>
+              {error}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Anchored footer */}
+      <div
+        style={{
+          flexShrink: 0,
+          background: theme.colors.zoneBg,
+          padding: '0.6rem 1rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          borderTop: `1px solid ${theme.colors.border}`,
+        }}
+      >
+        <span style={{ fontSize: 12, color: theme.colors.muted }}>
+          added {addedDate}
+        </span>
+        <button
+          onClick={handleSaveChanges}
+          disabled={saving}
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+            padding: '0.5rem 1.25rem',
+            fontSize: 13,
+            fontWeight: 500,
+            border: 'none',
+            borderRadius: theme.radius.md,
+            background: saving ? theme.colors.muted : theme.colors.accent,
+            color: '#fff',
+            cursor: saving ? 'default' : 'pointer',
+            fontFamily: theme.font.sans,
           }}
         >
-          <span style={{ fontSize: 11, color: theme.colors.muted }}>
-            added {addedDate}
-          </span>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button
-              onClick={onGenerateListing}
-              style={{
-                padding: '0.4rem 0.75rem',
-                fontSize: 13,
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: theme.radius.sm,
-                background: theme.colors.bg,
-                cursor: 'pointer',
-                fontFamily: theme.font.sans,
-              }}
-            >
-              generate listing
-            </button>
-            <button
-              onClick={handleSaveChanges}
-              disabled={saving}
-              style={{
-                padding: '0.4rem 0.75rem',
-                fontSize: 13,
-                fontWeight: 500,
-                border: 'none',
-                borderRadius: theme.radius.sm,
-                background: saving ? theme.colors.muted : theme.colors.accent,
-                color: theme.colors.bg,
-                cursor: saving ? 'default' : 'pointer',
-                fontFamily: theme.font.sans,
-              }}
-            >
-              {saving ? 'Saving…' : 'save changes'}
-            </button>
-          </div>
-        </div>
+          {saving ? 'Saving…' : 'Save'}
+        </button>
       </div>
     </div>
   )

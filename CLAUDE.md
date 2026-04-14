@@ -215,13 +215,15 @@ docker-compose.prod.yml   # prod overrides (binds 127.0.0.1:3001)
 
 **Blob URLs for photos.** Dashboard fetches each via `GET /api/photos/{id}/file` (authenticated) and renders as blob URL. Revoked on edit-view close.
 
-**BookEditCard inline editing.** Dashboard edit form (replaced `BookForm`). All text fields use `InlineField`: hover shows 0.5px border, click → input/textarea, blur → display. Pending edits accumulate in `DraftFields` and commit together on Save Changes. ISBN is read-only (unique key, not patchable). Checkboxes (Review Metadata?, Review Photography?) save immediately via `onImmediateSave`. Empty fields display as `—`.
+**BookEditCard inline editing.** Anchored fullscreen layout (visualViewport pattern, mirrors `WorkflowWrapper`). Header zone (`zoneBg`): pill-shaped Back button (chevron + "Back") + "Edit Book" title, calls `onBack` prop. Filmstrip flush below header. Scrollable content zone in the middle (max-width 560px centered). Footer zone (`zoneBg`): "added {date}" left, Save button right. Same layout desktop and mobile. All text fields use `InlineField`: hover shows 0.5px border, click → input/textarea, blur → display. Pending edits accumulate in `DraftFields` and commit together on Save. ISBN is read-only (unique key, not patchable). Condition is a 5-button segmented bar (`ConditionBar`) — saves immediately via `onImmediateSave`, no dropdown. Checkboxes (Review Metadata?, Review Photography?) live in a single bordered container, save immediately via `onImmediateSave`. Empty fields display as `—`. The Listing generator is no longer triggered from inside the card — only from BookTable rows.
 
-**PhotoFilmstrip.** Shared component. Cover first (leftmost, 2px accent border, not deletable); user photos follow with ✕ delete. API: `coverUrl`, `photos: Array<{key, url}>`, `onDelete`, optional `onAddPhoto`. Stable UUID keys via `crypto.randomUUID()`.
+**PhotoFilmstrip.** Shared component. Cover first (leftmost, 2px accent border, not deletable); user photos follow with gray ✕ delete (subtle fill, border, muted ✕ — not red). The + add tile is borderless: bare 22px + character, no dotted rectangle. API: `coverUrl`, `photos: Array<{key, url}>`, `onDelete`, optional `onAddPhoto`. Stable UUID keys via `crypto.randomUUID()`.
 
 **Dashboard polling.** `DashboardPage` polls `GET /api/books` every 3s, paused when tab hidden (`visibilitychange`). No WebSocket.
 
-**Mobile dashboard.** Media queries (`max-width: 767px`) hide author/publisher/year. Text action buttons become Lucide `Pencil`/`Trash2`. Row tap navigates to edit; action buttons `stopPropagation` to prevent double-fire.
+**Mobile dashboard.** Media queries (`max-width: 767px`) hide author/publisher/year. Text action buttons become Lucide `Pencil`/`Trash2`. Row tap navigates to edit; action buttons `stopPropagation` to prevent double-fire. Toolbar fits on one line on mobile: search ("Search books..."), "Incomplete" checkbox, "CSV" button — search shrinks via `flex: 1; minWidth: 0`, the other two `flexShrink: 0`.
+
+**Dashboard table styling.** Header row uses `zoneBg` (#E0E0E0) background with all-lowercase labels (`review`, `title`, `author`, `publisher`, `year`, `actions`). The leftmost "review" column shows: a single small green Lucide `Check` when both `data_complete` is true AND `needs_photo_review` is false; otherwise the familiar two-slot grid with amber `FileWarning` (when `!data_complete`) and/or blue `Camera` (when `needs_photo_review`). Title and publisher columns truncate single-line with ellipsis (matching author).
 
 **Mobile scroll suppression.** `overflow-x: hidden` + `overscroll-behavior-y: none` on `html`/`body` in `index.html`. `WorkflowWrapper` outer container sets `maxWidth: '100vw'` and `overscrollBehavior: 'none'`.
 

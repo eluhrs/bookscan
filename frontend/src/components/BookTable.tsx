@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileWarning, Camera as CameraIcon, Pencil, Trash2 } from 'lucide-react'
+import { FileWarning, Camera as CameraIcon, Pencil, Trash2, Check } from 'lucide-react'
 import { Book } from '../types'
 import { theme } from '../styles/theme'
 
@@ -49,7 +49,6 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
           fontWeight: 500,
           fontSize: '0.8rem',
           color: theme.colors.muted,
-          textTransform: 'uppercase',
           letterSpacing: '0.04em',
           whiteSpace: 'nowrap',
         }}
@@ -84,12 +83,24 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
         }}
       >
         <thead>
-          <tr style={{ borderBottom: `1px solid ${theme.colors.border}`, background: theme.colors.surface }}>
-            <th style={{ padding: '0.6rem 0.5rem', width: 48 }} />
-            {colHeader('Title', 'title')}
-            {colHeader('Author', 'author', 'bt-col-author')}
-            {colHeader('Publisher', 'publisher', 'bt-col-publisher')}
-            {colHeader('Year', 'year', 'bt-col-year')}
+          <tr style={{ borderBottom: `1px solid ${theme.colors.border}`, background: theme.colors.zoneBg }}>
+            <th
+              style={{
+                padding: '0.6rem 0.5rem',
+                width: 48,
+                fontWeight: 500,
+                fontSize: '0.8rem',
+                color: theme.colors.muted,
+                letterSpacing: '0.04em',
+                textAlign: 'left',
+              }}
+            >
+              review
+            </th>
+            {colHeader('title', 'title')}
+            {colHeader('author', 'author', 'bt-col-author')}
+            {colHeader('publisher', 'publisher', 'bt-col-publisher')}
+            {colHeader('year', 'year', 'bt-col-year')}
             <th
               className="bt-col-actions-text"
               style={{
@@ -97,11 +108,10 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
                 fontWeight: 500,
                 fontSize: '0.8rem',
                 color: theme.colors.muted,
-                textTransform: 'uppercase',
                 letterSpacing: '0.04em',
               }}
             >
-              Actions
+              actions
             </th>
             <th className="bt-col-actions-icon" style={{ display: 'none', padding: '0.6rem 0.5rem', width: 72 }} />
           </tr>
@@ -114,24 +124,30 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
               style={{ borderBottom: `1px solid ${theme.colors.border}`, cursor: 'pointer' }}
             >
               <td style={{ padding: '0.6rem 0.5rem', width: 48 }}>
-                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                  {/* Slot 1: metadata warning — FileWarning when data_complete is false */}
-                  <div style={{ width: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {!book.data_complete && (
-                      <span title="Metadata needs review" style={{ display: 'flex' }}>
-                        <FileWarning size={16} color={theme.colors.warning} />
-                      </span>
-                    )}
+                {book.data_complete && !book.needs_photo_review ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40 }}>
+                    <span title="Reviewed" style={{ display: 'flex' }}>
+                      <Check size={16} color={theme.colors.scanGreen} />
+                    </span>
                   </div>
-                  {/* Slot 2: photography review — Camera when needs_photo_review is true */}
-                  <div style={{ width: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {book.needs_photo_review && (
-                      <span title="Photography needs review" style={{ display: 'flex' }}>
-                        <CameraIcon size={16} color={theme.colors.accent} />
-                      </span>
-                    )}
+                ) : (
+                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                    <div style={{ width: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {!book.data_complete && (
+                        <span title="Metadata needs review" style={{ display: 'flex' }}>
+                          <FileWarning size={16} color={theme.colors.warning} />
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ width: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {book.needs_photo_review && (
+                        <span title="Photography needs review" style={{ display: 'flex' }}>
+                          <CameraIcon size={16} color={theme.colors.accent} />
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </td>
               <td
                 style={{
@@ -139,9 +155,8 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
                   fontWeight: 500,
                   maxWidth: 220,
                   overflow: 'hidden',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
+                  whiteSpace: 'nowrap',
+                  textOverflow: 'ellipsis',
                   lineHeight: 1.4,
                 }}
               >
@@ -160,7 +175,17 @@ export default function BookTable({ books, onEdit, onDelete, onGenerateListing }
               >
                 {book.author ?? '—'}
               </td>
-              <td className="bt-col-publisher" style={{ padding: '0.6rem 0.75rem', color: theme.colors.muted }}>
+              <td
+                className="bt-col-publisher"
+                style={{
+                  padding: '0.6rem 0.75rem',
+                  color: theme.colors.muted,
+                  maxWidth: 180,
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap',
+                  textOverflow: 'ellipsis',
+                }}
+              >
                 {book.publisher ?? '—'}
               </td>
               <td

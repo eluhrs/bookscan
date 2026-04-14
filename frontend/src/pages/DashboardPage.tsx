@@ -186,51 +186,16 @@ export default function DashboardPage() {
 
   if (editingBook) {
     return (
-      <div
-        style={{
-          maxWidth: 560,
-          margin: '2rem auto',
-          padding: '0 1rem',
-          fontFamily: theme.font.sans,
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            marginBottom: '1.5rem',
-            paddingBottom: '1rem',
-            borderBottom: `1px solid ${theme.colors.border}`,
-          }}
-        >
-          <button
-            onClick={() => setEditingBook(null)}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: theme.colors.muted,
-              fontSize: '1rem',
-              padding: 0,
-            }}
-          >
-            ←
-          </button>
-          <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Edit Book</h2>
-        </div>
-
-        <BookEditCard
-          book={editingBook}
-          photos={bookPhotos}
-          photoUrls={photoUrls}
-          onDeletePhoto={handleDeletePhoto}
-          onAddPhoto={handleAddPhoto}
-          onSave={handleSave}
-          onImmediateSave={handleImmediateSave}
-          onGenerateListing={() => setListingBook(editingBook)}
-        />
-      </div>
+      <BookEditCard
+        book={editingBook}
+        photos={bookPhotos}
+        photoUrls={photoUrls}
+        onDeletePhoto={handleDeletePhoto}
+        onAddPhoto={handleAddPhoto}
+        onSave={handleSave}
+        onImmediateSave={handleImmediateSave}
+        onBack={() => setEditingBook(null)}
+      />
     )
   }
 
@@ -291,16 +256,16 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', alignItems: 'center' }}>
         <input
-          placeholder="Search title, author, ISBN…"
+          placeholder="Search books..."
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1) }}
           style={{
             flex: 1,
-            minWidth: 200,
-            padding: '0.5rem 0.75rem',
-            fontSize: '0.9rem',
+            minWidth: 0,
+            padding: '0.5rem 0.6rem',
+            fontSize: '0.85rem',
             border: `1px solid ${theme.colors.border}`,
             borderRadius: theme.radius.sm,
             fontFamily: theme.font.sans,
@@ -311,11 +276,12 @@ export default function DashboardPage() {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '0.4rem',
+            gap: '0.3rem',
             whiteSpace: 'nowrap',
             fontSize: '0.85rem',
             color: theme.colors.muted,
             cursor: 'pointer',
+            flexShrink: 0,
           }}
         >
           <input
@@ -323,7 +289,7 @@ export default function DashboardPage() {
             checked={incompleteOnly}
             onChange={(e) => { setIncompleteOnly(e.target.checked); setPage(1) }}
           />
-          Incomplete only
+          Incomplete
         </label>
         <button
           onClick={() => exportListingsCSV().catch(() => alert('Export failed'))}
@@ -335,9 +301,10 @@ export default function DashboardPage() {
             background: theme.colors.bg,
             cursor: 'pointer',
             fontFamily: theme.font.sans,
+            flexShrink: 0,
           }}
         >
-          Export CSV
+          CSV
         </button>
       </div>
 
