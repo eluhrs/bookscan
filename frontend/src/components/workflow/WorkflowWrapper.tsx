@@ -75,6 +75,7 @@ export default function WorkflowWrapper({
         top: 0,
         left: 0,
         right: 0,
+        maxWidth: '100vw',
         height: vpHeight,
         transform: `translateY(${vpOffset}px)`,
         background: theme.colors.surface,
