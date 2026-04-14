@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BookScan — Color System Mockup</title>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #888;
+    display: flex;
+    gap: 24px;
+    padding: 24px;
+    font-family: 'Inter', system-ui, sans-serif;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .phone {
+    width: 375px;
+    height: 720px;
+    border-radius: 40px;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+  }
+  .label {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 8px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+  .column { display: flex; flex-direction: column; align-items: center; }
+
+  /* ---- step indicator (shared) ---- */
+  .step-pill { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #888; }
+  .step-pill.active { color: #000; font-weight: 500; }
+  .sep { color: #bbb; margin: 0 2px; }
+
+  /* ===================== CURRENT ===================== */
+  .cur-zone-header {
+    background: #F0F0F0;
+    padding: 12px 16px 4px;
+    display: flex; justify-content: center; align-items: center; gap: 8px;
+    flex-shrink: 0;
+  }
+  /* Middle stack: controls + camera + primary */
+  .cur-middle {
+    flex: 1; background: #FAFAFA;
+    display: flex; flex-direction: column;
+    padding: 6px 16px 6px;
+    overflow: hidden;
+  }
+  .cur-zone-controls {
+    flex-shrink: 0;
+  }
+  .cur-toolbar-container {
+    border: 1px solid #E5E5E5;
+    border-radius: 8px;
+    padding: 3px 8px;
+    display: flex; gap: 6px; align-items: center;
+    width: 100%;
+    justify-content: space-between;
+  }
+  .cur-toolbar-btn {
+    background: #F5F5F5; border: 1px solid #EAEAEA; border-radius: 8px;
+    padding: 5px 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    color: #333;
+  }
+  .cur-zone-camera {
+    flex: 1; margin: 8px 0;
+    background: #1a1a1a; border-radius: 12px;
+    border: 1px solid #EAEAEA;
+    display: flex; align-items: center; justify-content: center;
+    color: #555; font-size: 12px; overflow: hidden;
+    min-height: 0;
+  }
+  .cur-zone-primary {
+    flex-shrink: 0; padding-bottom: 2px;
+  }
+  .cur-btn-primary {
+    display: block; width: 100%; min-height: 56px;
+    background: #0070F3; color: #fff; border: none; border-radius: 12px;
+    font-size: 17px; font-weight: 700; letter-spacing: 0.06em; cursor: pointer;
+  }
+  .cur-zone-footer {
+    background: #F0F0F0;
+    padding: 6px 16px 14px;
+    display: flex; gap: 8px; flex-shrink: 0;
+  }
+  .cur-btn-footer {
+    flex: 1; padding: 10px; background: #F5F5F5; color: #333;
+    border: none; border-radius: 8px; cursor: pointer; font-size: 14px;
+  }
+
+  /* ===================== PROPOSED ===================== */
+  .pro-zone-header {
+    background: #E0E0E0;
+    padding: 0 16px;
+    min-height: 48px;
+    display: flex; justify-content: center; align-items: center; gap: 8px;
+    flex-shrink: 0;
+  }
+  /* Middle stack with consistent gap between all inner zones */
+  .pro-middle {
+    flex: 1; background: #FFFFFF;
+    display: flex; flex-direction: column;
+    padding: 12px 16px;
+    gap: 12px;               /* ← equal spacing between controls / camera / primary */
+    overflow: hidden;
+  }
+  .pro-zone-controls {
+    flex-shrink: 0;
+    display: flex; align-items: center;
+    /* NO container border */
+  }
+  .pro-toolbar-row {
+    display: flex; gap: 8px; align-items: center;
+    width: 100%; justify-content: space-between;
+  }
+  .pro-toolbar-btn {
+    background: #F4F4F4; border: 1px solid #CCCCCC; border-radius: 8px;
+    padding: 6px 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    color: #333;
+  }
+  .pro-toolbar-btn.torch-on {
+    background: #FEF08A; border-color: #B8A800; color: #5a4500;
+  }
+  .pro-zone-camera {
+    flex: 1;
+    background: #1a1a1a; border-radius: 12px;
+    border: 1px solid #E0E0E0;
+    display: flex; align-items: center; justify-content: center;
+    color: #555; font-size: 12px; overflow: hidden;
+    min-height: 0;
+  }
+  .pro-zone-primary {
+    flex-shrink: 0;
+  }
+  .pro-btn-primary {
+    display: block; width: 100%; min-height: 64px;
+    background: #0070F3; color: #fff; border: none; border-radius: 12px;
+    font-size: 17px; font-weight: 700; letter-spacing: 0.06em; cursor: pointer;
+  }
+  .pro-btn-primary.disabled {
+    background: #D0D0D0; color: #909090;
+  }
+  .pro-zone-footer {
+    background: #E0E0E0;
+    padding: 0 16px;
+    min-height: 56px;
+    display: flex; gap: 8px; align-items: center; flex-shrink: 0;
+  }
+  .pro-btn-footer {
+    flex: 1; padding: 10px; background: #FFFFFF; color: #333;
+    border: 1px solid #C0C0C0; border-radius: 8px; cursor: pointer; font-size: 14px;
+  }
+
+  /* ---- swatch comparison ---- */
+  .compare { background: #fff; border-radius: 16px; padding: 20px; width: 240px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+  .compare h3 { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; font-weight: 600; }
+  .compare-row { margin-bottom: 14px; }
+  .compare-row label { display: block; font-size: 10px; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; font-weight: 600; }
+  .swatch-row { display: flex; gap: 6px; align-items: center; }
+  .swatch { height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; flex: 1; }
+  .arrow { color: #bbb; font-size: 14px; flex-shrink: 0; }
+
+  /* Lucide icon size */
+  i[data-lucide] { display: flex; }
+</style>
+</head>
+<body>
+
+<!-- CURRENT -->
+<div class="column">
+  <div class="label">CURRENT</div>
+  <div class="phone">
+    <div class="cur-zone-header">
+      <span class="step-pill active"><span>●</span> Photograph</span>
+      <span class="sep">·</span>
+      <span class="step-pill"><span>○</span> Metadata</span>
+      <span class="sep">·</span>
+      <span class="step-pill"><span>○</span> Review</span>
+    </div>
+
+    <div class="cur-middle">
+      <div class="cur-zone-controls">
+        <div class="cur-toolbar-container">
+          <button class="cur-toolbar-btn" style="font-size:13px;font-weight:600"># ▾</button>
+          <div style="display:flex;gap:4px;font-size:11px;color:#ccc">□ □ □</div>
+          <button class="cur-toolbar-btn" style="font-size:17px">🔦</button>
+        </div>
+      </div>
+
+      <div class="cur-zone-camera">Camera preview</div>
+
+      <div class="cur-zone-primary">
+        <button class="cur-btn-primary">CAPTURE</button>
+      </div>
+    </div>
+
+    <div class="cur-zone-footer">
+      <button class="cur-btn-footer">Dashboard</button>
+      <button class="cur-btn-footer">Start Over</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROPOSED -->
+<div class="column">
+  <div class="label">PROPOSED</div>
+  <div class="phone">
+    <div class="pro-zone-header">
+      <span class="step-pill active"><span>●</span> Photograph</span>
+      <span class="sep">·</span>
+      <span class="step-pill"><span>○</span> Metadata</span>
+      <span class="sep">·</span>
+      <span class="step-pill"><span>○</span> Review</span>
+    </div>
+
+    <div class="pro-middle">
+      <div class="pro-zone-controls">
+        <div class="pro-toolbar-row">
+          <button class="pro-toolbar-btn" style="font-size:13px;font-weight:600;gap:4px">
+            # <i data-lucide="chevron-down" style="width:14px;height:14px"></i>
+          </button>
+          <div style="display:flex;gap:4px;font-size:11px;color:#ccc">□ □ □</div>
+          <button class="pro-toolbar-btn">
+            <i data-lucide="flashlight" style="width:18px;height:18px"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="pro-zone-camera">Camera preview</div>
+
+      <div class="pro-zone-primary">
+        <button class="pro-btn-primary">CAPTURE</button>
+      </div>
+    </div>
+
+    <div class="pro-zone-footer">
+      <button class="pro-btn-footer">Dashboard</button>
+      <button class="pro-btn-footer">Start Over</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROPOSED — LOOKUP / KEYBOARD MODE -->
+<div class="column">
+  <div class="label">PROPOSED — LOOKUP (camera)</div>
+  <div class="phone">
+    <div class="pro-zone-header">
+      <span class="step-pill"><span>○</span> Photograph</span>
+      <span class="sep">·</span>
+      <span class="step-pill active"><span>●</span> Metadata</span>
+      <span class="sep">·</span>
+      <span class="step-pill"><span>○</span> Review</span>
+    </div>
+
+    <div class="pro-middle">
+      <div class="pro-zone-controls">
+        <div class="pro-toolbar-row">
+          <button class="pro-toolbar-btn">
+            <i data-lucide="keyboard" style="width:18px;height:18px"></i>
+          </button>
+          <div></div>
+          <button class="pro-toolbar-btn torch-on">
+            <i data-lucide="flashlight" style="width:18px;height:18px"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="pro-zone-camera" style="position:relative">
+        Camera preview
+        <!-- barcode overlay hint -->
+        <div style="position:absolute;left:5%;right:5%;top:32%;bottom:32%;border-radius:4px;box-shadow:0 0 0 9999px rgba(0,0,0,0.45)">
+          <div style="position:absolute;top:-2px;left:-2px;width:22px;height:22px;border-top:3px solid #0070F3;border-left:3px solid #0070F3;border-radius:2px 0 0 0"></div>
+          <div style="position:absolute;top:-2px;right:-2px;width:22px;height:22px;border-top:3px solid #0070F3;border-right:3px solid #0070F3;border-radius:0 2px 0 0"></div>
+          <div style="position:absolute;bottom:-2px;left:-2px;width:22px;height:22px;border-bottom:3px solid #0070F3;border-left:3px solid #0070F3;border-radius:0 0 0 2px"></div>
+          <div style="position:absolute;bottom:-2px;right:-2px;width:22px;height:22px;border-bottom:3px solid #0070F3;border-right:3px solid #0070F3;border-radius:0 0 2px 0"></div>
+        </div>
+      </div>
+
+      <div class="pro-zone-primary">
+        <button class="pro-btn-primary">LOOKUP</button>
+      </div>
+    </div>
+
+    <div class="pro-zone-footer">
+      <button class="pro-btn-footer">Dashboard</button>
+      <button class="pro-btn-footer">Start Over</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROPOSED — LOOKUP keyboard mode + disabled SAVE -->
+<div class="column" style="gap:20px">
+  <div class="label">LOOKUP (keyboard mode)</div>
+  <div class="phone" style="height:340px;border-radius:24px">
+    <div class="pro-zone-header">
+      <span class="step-pill"><span>○</span> Photograph</span>
+      <span class="sep">·</span>
+      <span class="step-pill active"><span>●</span> Metadata</span>
+      <span class="sep">·</span>
+      <span class="step-pill"><span>○</span> Review</span>
+    </div>
+    <div class="pro-middle">
+      <div class="pro-zone-controls">
+        <div class="pro-toolbar-row">
+          <button class="pro-toolbar-btn">
+            <i data-lucide="camera" style="width:18px;height:18px"></i>
+          </button>
+        </div>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:0">
+        <input type="text" placeholder="Type ISBN-10 or ISBN-13…"
+          style="width:100%;padding:10px 14px;border:1px solid #E0E0E0;border-radius:8px;font-size:13px;text-align:center;color:#333;background:#fff;outline:none" />
+      </div>
+      <div class="pro-zone-primary">
+        <button class="pro-btn-primary">LOOKUP</button>
+      </div>
+    </div>
+    <div class="pro-zone-footer">
+      <button class="pro-btn-footer">Dashboard</button>
+      <button class="pro-btn-footer">Start Over</button>
+    </div>
+  </div>
+
+  <div class="label">REVIEW (disabled SAVE)</div>
+  <div class="phone" style="height:340px;border-radius:24px">
+    <div class="pro-zone-header">
+      <span class="step-pill"><span>○</span> Photograph</span>
+      <span class="sep">·</span>
+      <span class="step-pill"><span>○</span> Metadata</span>
+      <span class="sep">·</span>
+      <span class="step-pill active"><span>●</span> Review</span>
+    </div>
+    <div class="pro-middle">
+      <div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px">
+        Review content
+      </div>
+      <div class="pro-zone-primary">
+        <button class="pro-btn-primary disabled">SAVE</button>
+      </div>
+    </div>
+    <div class="pro-zone-footer">
+      <button class="pro-btn-footer">Dashboard</button>
+      <button class="pro-btn-footer">Start Over</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+</script>
+</body>
+</html>
