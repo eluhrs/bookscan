@@ -53,11 +53,25 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api alembic 
 docker compose -f docker-compose.yml -f docker-compose.dev.yml down
 ```
 
-App runs at `https://localhost:3001` (Vite serves HTTPS using mkcert certs). mkcert certs are in
-`frontend/localhost+1.pem` and `frontend/localhost+1-key.pem` — Vite loads them automatically if present.
+**Two ports in dev mode:**
+- `https://localhost:3001` — HTTPS, serves the app (Vite dev server with mkcert certs)
+- `http://localhost:3000` — HTTP, 301 redirects to HTTPS on 3001
 
-For phone camera access, use `https://<mac-ip>:3001`. Accept the certificate warning in Safari or
-install the mkcert CA root.
+Vite can only serve one protocol per port, so the HTTP redirect runs on a separate port via a Vite
+plugin (`httpRedirect` in `vite.config.ts`). On prod, Apache handles both protocols on standard
+ports (80/443) transparently.
+
+**mkcert certs:** `frontend/localhost+1.pem` and `frontend/localhost+1-key.pem` cover `localhost`,
+`127.0.0.1`, and `bloke.local` (the Mac's Bonjour hostname). Vite loads them automatically.
+
+**Phone access — two scenarios:**
+- **Home network** (phone and Mac on same subnet): use `https://bloke.local:3001`. Bonjour/mDNS
+  resolves the hostname automatically. No cert warning if the mkcert CA root is installed on the phone.
+- **Campus/split-subnet networks** (phone and Mac on different subnets): Bonjour won't resolve
+  across subnets. Use `https://<mac-ip>:3001` and accept the certificate warning. The camera still
+  works — browsers treat a user-accepted cert as a secure context.
+
+To regenerate the cert (e.g., after changing hostname): `cd frontend && mkcert localhost 127.0.0.1 bloke.local && mv localhost+2.pem localhost+1.pem && mv localhost+2-key.pem localhost+1-key.pem`.
 
 ---
 
@@ -500,11 +514,13 @@ Apache VirtualHost (apply manually):
 - `BookForm.tsx` deleted; `BookForm.test.tsx` deleted; `DashboardPage` updated to render `BookEditCard`
 - `LookupStep.tsx` unused `useEffect` import removed (pre-existing TS error surfaced by `tsc --noEmit`)
 
-**CHANGES-13** — all items implemented:
-- FIX-12: Horizontal scroll on camera workflow screens fixed — `maxWidth: '100vw'` added to `WorkflowWrapper` outer container
+**CHANGES-13** — all items implemented, plus QA fixes:
+- FIX-12: Horizontal scroll/drag on all mobile views fixed — `overflow-x: hidden` and `overscroll-behavior-y: none` on `html`/`body` globally in `index.html`; `maxWidth: '100vw'` and `overscrollBehavior: 'none'` on `WorkflowWrapper` outer container
 - FIX-13: Border color unified to `#E0E0E0` (matching `zoneBg` header/footer darkness) — single change to `theme.colors.border` propagates globally
 - FEAT-01: Mobile-responsive dashboard table — CSS media queries hide author/publisher/year/condition columns on `max-width: 767px`; desktop text action buttons (List/Edit/Delete) replaced by Lucide `Pencil`/`Trash2` icon buttons on mobile; row tap navigates to edit card; `stopPropagation` on all action buttons prevents double-fire with row click
 - FEAT-02: Condition column removed from desktop dashboard table; `CONDITION_COLOR` constant deleted; condition remains visible and editable on `BookEditCard`
+- QA fix: Camera error recovery — `retryCamera()` function added to `useCameraStream` hook; retry button shown in both PhotographStep and LookupStep when camera errors occur, so error state is recoverable without force-closing the browser
+- QA fix: HTTP→HTTPS redirect in local dev — Vite plugin starts HTTP server on port 5180 (mapped to host 3000) that 301-redirects to HTTPS on 3001; mkcert cert regenerated to cover `localhost`, `127.0.0.1`, and `bloke.local` for network-independent phone access
 
 ---
 
