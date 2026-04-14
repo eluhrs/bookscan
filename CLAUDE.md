@@ -500,6 +500,12 @@ Apache VirtualHost (apply manually):
 - `BookForm.tsx` deleted; `BookForm.test.tsx` deleted; `DashboardPage` updated to render `BookEditCard`
 - `LookupStep.tsx` unused `useEffect` import removed (pre-existing TS error surfaced by `tsc --noEmit`)
 
+**CHANGES-13** — all items implemented:
+- FIX-12: Horizontal scroll on camera workflow screens fixed — `maxWidth: '100vw'` added to `WorkflowWrapper` outer container
+- FIX-13: Border color unified to `#E0E0E0` (matching `zoneBg` header/footer darkness) — single change to `theme.colors.border` propagates globally
+- FEAT-01: Mobile-responsive dashboard table — CSS media queries hide author/publisher/year/condition columns on `max-width: 767px`; desktop text action buttons (List/Edit/Delete) replaced by Lucide `Pencil`/`Trash2` icon buttons on mobile; row tap navigates to edit card; `stopPropagation` on all action buttons prevents double-fire with row click
+- FEAT-02: Condition column removed from desktop dashboard table; `CONDITION_COLOR` constant deleted; condition remains visible and editable on `BookEditCard`
+
 ---
 
 ## Future Work
