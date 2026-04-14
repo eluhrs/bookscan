@@ -19,6 +19,13 @@ export const theme = {
     controlsBorder: '#CCCCCC',   // was #E5E5E5 — individual button borders
     footerButtonBg: '#FFFFFF',   // NEW — Dashboard / Start Over button fill
     pageBg:         '#F5F5F5',   // gray page background behind cards (edit/dashboard)
+    navBg:          '#E0E0E0',   // navbar/footer zones
+    tableHeaderBg:  '#F5F5F5',   // table header + filmstrip backgrounds
+    rowBorder:      '#F0F0F0',   // row separators inside the table
+    zoneBorder:     '#CCCCCC',   // content zone L/R borders + button borders
+    secondaryText:  '#666666',   // secondary button text
+    primaryBlue:    '#0070F3',
+    reviewGreen:    '#3B6D11',
   },
   font: {
     sans: "'Geist', 'Inter', system-ui, sans-serif",
