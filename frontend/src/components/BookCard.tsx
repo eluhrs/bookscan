@@ -283,6 +283,11 @@ const BookCard = forwardRef<BookCardHandle, BookCardProps>(function BookCard(pro
         weight: draft.weight || null,
         description: draft.description || null,
       };
+      // If the user edited the description text, mark the source as manual
+      // so the icon reflects the edit (matches the old BookEditCard behavior).
+      if ((draft.description ?? null) !== (book.description ?? null)) {
+        patch.description_source = 'manual';
+      }
       await props.onSave(patch);
     },
   }));
@@ -442,25 +447,53 @@ const BookCard = forwardRef<BookCardHandle, BookCardProps>(function BookCard(pro
         <div className="bc-description-label" style={{ marginBottom: 6 }}>
           <span className="bc-label">Description</span>
           <DescriptionSourceIcon
-            source={(props.descriptionSource ?? book.description_source ?? (book.data_sources?.description ?? null)) as Parameters<typeof DescriptionSourceIcon>[0]['source']}
+            source={(props.descriptionSource ?? book.description_source ?? (book.description && book.data_sources?.description ? book.data_sources.description : null)) as Parameters<typeof DescriptionSourceIcon>[0]['source']}
             regenerating={!!props.regeneratingDescription}
             onRegenerate={props.onRegenerateDescription ?? (() => {})}
           />
         </div>
-        {editable ? (
-          <InlineField
-            value={draft.description}
-            onChange={(v) => setDraft({ ...draft, description: v })}
-            multiline
-            fontSize={13}
-            color="#222"
-            placeholder="No description"
-          />
-        ) : (
-          <div style={{ fontSize: 13, color: '#222', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-            {book.description || <span style={{ color: theme.colors.muted, fontStyle: 'italic' }}>No description</span>}
-          </div>
-        )}
+        {(() => {
+          const aiPending = !!props.regeneratingDescription
+          const aiFailed = !!book.description_generation_failed
+          if (editable) {
+            if (aiPending && !draft.description) {
+              return (
+                <div style={{ fontSize: 13, color: theme.colors.muted, fontStyle: 'italic' }}>
+                  Generating summary…
+                </div>
+              )
+            }
+            return (
+              <InlineField
+                value={draft.description}
+                onChange={(v) => setDraft({ ...draft, description: v })}
+                multiline
+                fontSize={13}
+                color="#222"
+                placeholder={aiFailed ? 'Summary unavailable.' : 'No description'}
+              />
+            )
+          }
+          if (aiPending) {
+            return (
+              <div style={{ fontSize: 13, color: theme.colors.muted, fontStyle: 'italic' }}>
+                Generating summary…
+              </div>
+            )
+          }
+          if (book.description) {
+            return (
+              <div style={{ fontSize: 13, color: '#222', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                {book.description}
+              </div>
+            )
+          }
+          return (
+            <div style={{ fontSize: 13, color: theme.colors.muted, fontStyle: 'italic' }}>
+              {aiFailed ? 'Summary unavailable.' : 'No description'}
+            </div>
+          )
+        })()}
       </div>
 
       {/* Additional fields — Edition / Dimensions / Weight */}

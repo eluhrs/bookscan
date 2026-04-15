@@ -19,14 +19,17 @@ interface Props {
 const CATALOG: Source[] = ['open_library', 'google_books', 'library_of_congress']
 
 export default function DescriptionSourceIcon({ source, regenerating, onRegenerate }: Props) {
+  // Show the spinner any time AI generation is in flight, even before a source
+  // has been persisted (Review step fires Gemini in parallel with entering the
+  // step — source is still null at that moment).
+  if (regenerating) {
+    return (
+      <span aria-label="Regenerating summary" style={{ display: 'inline-flex', alignItems: 'center' }}>
+        <Loader2 size={14} color={theme.colors.aiPurple} className="ds-spin" />
+      </span>
+    )
+  }
   if (source === 'ai_generated') {
-    if (regenerating) {
-      return (
-        <span aria-label="Regenerating summary" style={{ display: 'inline-flex', alignItems: 'center' }}>
-          <Loader2 size={14} color={theme.colors.aiPurple} className="ds-spin" />
-        </span>
-      )
-    }
     return (
       <button
         type="button"
