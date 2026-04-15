@@ -42,13 +42,14 @@ export default function StatusFilter({ value, onChange }: Props) {
     return () => document.removeEventListener('mousedown', onDocClick)
   }, [])
 
-  // Border color matches the active filter so the button's accent reflects
-  // which review lane is being filtered.
-  const borderColor =
-    value === 'needs_metadata_review' ? '#BA7517' :
-    value === 'needs_photo_review' ? '#0070F3' :
-    value === 'needs_description_review' ? '#7F77DD' :
-    theme.colors.zoneBorder
+  // Active-state ring + subtle fill match the filter's lane so the button
+  // visually echoes the filter color.
+  const activeStyle =
+    value === 'needs_metadata_review'    ? { border: '#BA7517', fill: theme.colors.filterAmberFill } :
+    value === 'needs_photo_review'       ? { border: '#0070F3', fill: theme.colors.filterBlueFill } :
+    value === 'needs_description_review' ? { border: '#7F77DD', fill: theme.colors.filterPurpleFill } :
+    value === 'ready'                    ? { border: '#3B6D11', fill: theme.colors.filterGreenFill } :
+    { border: theme.colors.zoneBorder, fill: theme.colors.bg }
 
   return (
     <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
@@ -61,9 +62,9 @@ export default function StatusFilter({ value, onChange }: Props) {
           alignItems: 'center',
           gap: 4,
           padding: '0.5rem 0.55rem',
-          border: `1px solid ${borderColor}`,
+          border: `1px solid ${activeStyle.border}`,
           borderRadius: theme.radius.sm,
-          background: theme.colors.bg,
+          background: activeStyle.fill,
           color: theme.colors.secondaryText,
           cursor: 'pointer',
           fontFamily: theme.font.sans,

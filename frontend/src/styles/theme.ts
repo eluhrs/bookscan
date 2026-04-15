@@ -26,6 +26,11 @@ export const theme = {
     primaryBlue:    '#0070F3',
     reviewGreen:    '#3B6D11',
     aiPurple:       '#7F77DD',   // AI summary indicator (Sparkles icon)
+    // Light fill ramp stops for the StatusFilter active states.
+    filterAmberFill:  '#FAEEDA',
+    filterBlueFill:   '#E6F1FB',
+    filterPurpleFill: '#EEEDFE',
+    filterGreenFill:  '#EAF3DE',
   },
   font: {
     sans: "'Geist', 'Inter', system-ui, sans-serif",
