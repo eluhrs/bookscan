@@ -25,6 +25,10 @@ class BookLookupResponse(BaseModel):
     cover_image_url: Optional[str] = None
     data_sources: Optional[dict] = None
     needs_metadata_review: bool = True
+    # When a book with this ISBN already exists in the library, the lookup
+    # returns its UUID so the workflow can route the user to the existing
+    # record instead of trying to create a duplicate.
+    existing_book_id: Optional[uuid.UUID] = None
 
 
 class BookCreate(BaseModel):

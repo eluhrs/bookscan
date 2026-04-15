@@ -54,7 +54,7 @@ describe('BookEditCard', () => {
     expect(screen.getByText('Martin Fowler')).toBeInTheDocument()
   })
 
-  it('renders condition segmented bar with all five options', () => {
+  it('renders condition segmented bar with the three eBay used-book options', () => {
     render(
       <BookEditCard
         book={makeBook()}
@@ -70,11 +70,11 @@ describe('BookEditCard', () => {
         onGenerateListing={vi.fn()}
       />
     )
-    expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Very Good' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Good' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Acceptable' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Poor' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'New' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Poor' })).toBeNull()
   })
 
   it('clicking a condition button calls onImmediateSave with that value', () => {
@@ -94,8 +94,8 @@ describe('BookEditCard', () => {
         onGenerateListing={vi.fn()}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: 'New' }))
-    expect(onImmediateSave).toHaveBeenCalledWith({ condition: 'New' })
+    fireEvent.click(screen.getByRole('button', { name: 'Very Good' }))
+    expect(onImmediateSave).toHaveBeenCalledWith({ condition: 'Very Good' })
   })
 
   it('Review Metadata toggle reflects needs_metadata_review=true via aria-pressed', () => {

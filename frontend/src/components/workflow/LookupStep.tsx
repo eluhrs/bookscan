@@ -1,6 +1,7 @@
 // frontend/src/components/workflow/LookupStep.tsx
 
 import { useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Camera, Keyboard, Flashlight } from 'lucide-react'
 import { BrowserMultiFormatReader } from '@zxing/browser'
 import WorkflowWrapper from './WorkflowWrapper'
@@ -26,13 +27,15 @@ interface LookupStepProps {
 }
 
 export default function LookupStep({ onLookupComplete, onCancel }: LookupStepProps) {
+  const navigate = useNavigate()
   const [mode, setMode] = useState<LookupMode>('camera')
   const [isbn, setIsbn] = useState('')
   const [looking, setLooking] = useState(false)
   const [hintError, setHintError] = useState<string | null>(null)
+  const [duplicateBookId, setDuplicateBookId] = useState<string | null>(null)
 
   const { videoRef, canvasRef, torchAvailable, torchOn, cameraError, handleTorchToggle, retryCamera } =
-    useCameraStream({ enabled: mode === 'camera' })
+    useCameraStream({ enabled: mode === 'camera' && !duplicateBookId })
 
   const readerRef = useRef<BrowserMultiFormatReader | null>(null)
   if (!readerRef.current) readerRef.current = new BrowserMultiFormatReader()
@@ -93,6 +96,14 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
   async function submitIsbn(isbnValue: string) {
     try {
       const result = await lookupIsbn(isbnValue)
+      if (result.existing_book_id) {
+        // Duplicate ISBN: do not proceed to Review. Surface a message with a
+        // button that routes the user to the existing book's edit page.
+        playReview()
+        navigator.vibrate?.(25)
+        setDuplicateBookId(result.existing_book_id)
+        return
+      }
       onLookupComplete(result)
     } catch (e) {
       playReview()
@@ -184,7 +195,72 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
 
   const hintText = hintError ?? undefined
 
-  const mainContent = mode === 'camera' ? (
+  const duplicateContent = (
+    <div
+      style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '1rem',
+        padding: '2rem',
+        textAlign: 'center',
+      }}
+    >
+      <p
+        style={{
+          margin: 0,
+          fontSize: '1rem',
+          fontWeight: 600,
+          color: theme.colors.text,
+        }}
+      >
+        This book is already in your library.
+      </p>
+      <button
+        onClick={() => {
+          if (duplicateBookId) {
+            navigate('/dashboard', { state: { editBookId: duplicateBookId } })
+          }
+        }}
+        style={{
+          padding: '0.65rem 1.1rem',
+          fontSize: '0.9rem',
+          border: 'none',
+          borderRadius: theme.radius.sm,
+          background: theme.colors.primaryBlue,
+          color: '#fff',
+          cursor: 'pointer',
+          fontFamily: theme.font.sans,
+          fontWeight: 500,
+        }}
+      >
+        Open existing record
+      </button>
+      <button
+        onClick={() => {
+          setDuplicateBookId(null)
+          setIsbn('')
+          setHintError(null)
+        }}
+        style={{
+          padding: '0.5rem 1rem',
+          fontSize: '0.85rem',
+          border: `1px solid ${theme.colors.zoneBorder}`,
+          borderRadius: theme.radius.sm,
+          background: theme.colors.bg,
+          color: theme.colors.secondaryText,
+          cursor: 'pointer',
+          fontFamily: theme.font.sans,
+        }}
+      >
+        Scan a different book
+      </button>
+    </div>
+  )
+
+  const mainContent = duplicateBookId ? duplicateContent : mode === 'camera' ? (
     <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {cameraError ? (
         <div
@@ -313,10 +389,10 @@ export default function LookupStep({ onLookupComplete, onCancel }: LookupStepPro
   return (
     <WorkflowWrapper
       step="lookup"
-      controls={mode === 'camera' ? cameraControls : keyboardControls}
-      hintText={hintText}
+      controls={duplicateBookId ? null : (mode === 'camera' ? cameraControls : keyboardControls)}
+      hintText={duplicateBookId ? undefined : hintText}
       primaryLabel={looking ? 'Looking up…' : 'LOOKUP'}
-      primaryDisabled={looking}
+      primaryDisabled={looking || !!duplicateBookId}
       onPrimary={mode === 'camera' ? handleCameraLookup : handleKeyboardLookup}
       onCancel={onCancel}
     >

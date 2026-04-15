@@ -34,7 +34,8 @@ interface DraftFields {
   condition: string | null
 }
 
-const CONDITIONS = ['New', 'Very Good', 'Good', 'Acceptable', 'Poor'] as const
+// Condition options match eBay's used-book condition scale.
+const CONDITIONS = ['Very Good', 'Good', 'Acceptable'] as const
 
 const SMALL_CAPS_LABEL: React.CSSProperties = {
   display: 'block',
@@ -150,6 +151,10 @@ function InlineField({
   )
 }
 
+// Shared height for both button rows (condition + review toggles) so the
+// two rows look like a unified 2×3 control block.
+const ROW_BUTTON_HEIGHT = 48
+
 // ---- ConditionBar ----
 interface ConditionBarProps {
   value: string | null
@@ -176,16 +181,17 @@ function ConditionBar({ value, onChange }: ConditionBarProps) {
             onClick={() => onChange(c)}
             style={{
               flex: 1,
-              padding: '0.5rem 0.4rem',
-              fontSize: 12,
+              height: ROW_BUTTON_HEIGHT,
+              padding: '0 0.4rem',
+              fontSize: 13,
               fontWeight: selected ? 500 : 400,
-              background: selected ? theme.colors.accent : theme.colors.bg,
-              color: selected ? '#fff' : theme.colors.muted,
+              background: selected ? theme.colors.primaryBlue : theme.colors.bg,
+              color: selected ? '#fff' : theme.colors.secondaryText,
               border: 'none',
               borderLeft: i === 0 ? 'none' : `1px solid ${theme.colors.zoneBorder}`,
               cursor: 'pointer',
               fontFamily: theme.font.sans,
-              lineHeight: 1.2,
+              lineHeight: 1.15,
             }}
           >
             {c}
@@ -208,8 +214,8 @@ function ReviewToggle({ label, on, onToggle }: {
       onClick={() => onToggle(!on)}
       aria-pressed={on}
       style={{
-        padding: '0.6rem 0.5rem',
-        height: 40,
+        height: ROW_BUTTON_HEIGHT,
+        padding: '0 0.5rem',
         border: on ? 'none' : `1px solid ${theme.colors.zoneBorder}`,
         borderRadius: theme.radius.md,
         background: on ? theme.colors.primaryBlue : theme.colors.bg,
@@ -218,6 +224,7 @@ function ReviewToggle({ label, on, onToggle }: {
         fontSize: 13,
         cursor: 'pointer',
         fontFamily: theme.font.sans,
+        lineHeight: 1.15,
       }}
     >
       {label}
@@ -436,7 +443,10 @@ export default function BookEditCard({
         </div>
       </div>
 
-      {/* Scrollable content zone */}
+      {/* Scrollable content zone — matches DashboardPage pattern:
+          the scroll container is full-width and the max-width wrapper lives
+          inside it. Putting max-width on the scroll container itself breaks
+          flex sizing on mobile Safari and makes the header/footer float. */}
       <div
         style={{
           flex: 1,
@@ -444,15 +454,19 @@ export default function BookEditCard({
           overflowY: 'auto',
           overscrollBehavior: 'none',
           WebkitOverflowScrolling: 'touch',
-          maxWidth: 1200,
-          width: '100%',
-          margin: '0 auto',
-          background: theme.colors.bg,
-          borderLeft: `1px solid ${theme.colors.zoneBorder}`,
-          borderRight: `1px solid ${theme.colors.zoneBorder}`,
-          boxSizing: 'border-box',
         }}
       >
+        <div
+          style={{
+            maxWidth: 1200,
+            margin: '0 auto',
+            background: theme.colors.bg,
+            borderLeft: `1px solid ${theme.colors.zoneBorder}`,
+            borderRight: `1px solid ${theme.colors.zoneBorder}`,
+            minHeight: '100%',
+            boxSizing: 'border-box',
+          }}
+        >
         {/* Filmstrip */}
         <PhotoFilmstrip
           coverUrl={book.cover_image_url}
@@ -621,6 +635,7 @@ export default function BookEditCard({
               {error}
             </p>
           )}
+        </div>
         </div>
       </div>
 

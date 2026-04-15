@@ -48,11 +48,13 @@ describe('ReviewStep', () => {
     expect(screen.getByRole('button', { name: 'SAVE' })).not.toBeDisabled()
   })
 
-  it('all five condition options are rendered', () => {
+  it('renders the three eBay used-book condition options', () => {
     render(<ReviewStep {...defaultProps} />, { wrapper })
-    ;['New', 'Very Good', 'Good', 'Acceptable', 'Poor'].forEach((c) => {
+    ;['Very Good', 'Good', 'Acceptable'].forEach((c) => {
       expect(screen.getByRole('button', { name: c })).toBeInTheDocument()
     })
+    expect(screen.queryByRole('button', { name: 'New' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Poor' })).toBeNull()
   })
 
   it('flag for review is unchecked when needs_metadata_review is false', () => {

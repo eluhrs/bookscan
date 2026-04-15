@@ -42,7 +42,13 @@ export default function StatusFilter({ value, onChange }: Props) {
     return () => document.removeEventListener('mousedown', onDocClick)
   }, [])
 
-  const active = value !== 'all'
+  // Border color matches the active filter so the button's accent reflects
+  // which review lane is being filtered.
+  const borderColor =
+    value === 'needs_metadata_review' ? '#BA7517' :
+    value === 'needs_photo_review' ? '#0070F3' :
+    value === 'needs_description_review' ? '#7F77DD' :
+    theme.colors.zoneBorder
 
   return (
     <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
@@ -55,7 +61,7 @@ export default function StatusFilter({ value, onChange }: Props) {
           alignItems: 'center',
           gap: 4,
           padding: '0.5rem 0.55rem',
-          border: `1px solid ${active ? theme.colors.primaryBlue : theme.colors.zoneBorder}`,
+          border: `1px solid ${borderColor}`,
           borderRadius: theme.radius.sm,
           background: theme.colors.bg,
           color: theme.colors.secondaryText,

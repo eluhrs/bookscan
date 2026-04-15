@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Camera } from 'lucide-react'
 import BookTable from '../components/BookTable'
 import BookEditCard from '../components/BookEditCard'
 import ListingGenerator from '../components/ListingGenerator'
 import StatusFilter, { StatusFilterValue } from '../components/StatusFilter'
-import { listBooks, updateBook, deleteBook, exportListingsCSV } from '../api/books'
+import { listBooks, updateBook, deleteBook, exportListingsCSV, getBook } from '../api/books'
 import { listPhotos, deletePhoto, getPhotoUrl, uploadPhotos } from '../api/photos'
 import { Book, BookPhoto } from '../types'
 import { useAuth } from '../hooks/useAuth'
@@ -16,6 +16,7 @@ import { theme } from '../styles/theme'
 export default function DashboardPage() {
   const { logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const { height: vpHeight, offsetTop: vpOffset } = useVisualViewport()
   const [books, setBooks] = useState<Book[]>([])
   const [total, setTotal] = useState(0)
@@ -61,6 +62,19 @@ export default function DashboardPage() {
   }, [page, statusFilter, search])
 
   useEffect(() => { load() }, [load])
+
+  // If navigated here with { state: { editBookId } } (e.g. from the duplicate
+  // ISBN flow in LookupStep), open that book's edit view on mount and clear
+  // the location state so a browser refresh doesn't re-trigger it.
+  useEffect(() => {
+    const state = location.state as { editBookId?: string } | null
+    if (!state?.editBookId) return
+    const id = state.editBookId
+    navigate(location.pathname, { replace: true, state: null })
+    getBook(id).then((book) => setEditingBook(book)).catch(() => {})
+    // Only on mount / when the state changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state])
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null
@@ -276,7 +290,7 @@ export default function DashboardPage() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            {isMobileDevice() && (
+            {isMobileDevice() ? (
               <button
                 aria-label="Scan books"
                 onClick={() => navigate('/scan')}
@@ -293,6 +307,22 @@ export default function DashboardPage() {
                 }}
               >
                 <Camera size={18} />
+              </button>
+            ) : (
+              <button
+                onClick={() => exportListingsCSV().catch(() => alert('Export failed'))}
+                style={{
+                  padding: '0.4rem 0.75rem',
+                  fontSize: '0.85rem',
+                  border: `1px solid ${theme.colors.zoneBorder}`,
+                  borderRadius: theme.radius.sm,
+                  background: theme.colors.bg,
+                  color: theme.colors.secondaryText,
+                  cursor: 'pointer',
+                  fontFamily: theme.font.sans,
+                }}
+              >
+                CSV
               </button>
             )}
             <button
@@ -357,22 +387,6 @@ export default function DashboardPage() {
               value={statusFilter}
               onChange={(v) => { setStatusFilter(v); setPage(1) }}
             />
-            <button
-              onClick={() => exportListingsCSV().catch(() => alert('Export failed'))}
-              style={{
-                padding: '0.5rem 0.75rem',
-                fontSize: '0.85rem',
-                border: `1px solid ${theme.colors.zoneBorder}`,
-                borderRadius: theme.radius.sm,
-                background: theme.colors.bg,
-                color: theme.colors.secondaryText,
-                cursor: 'pointer',
-                fontFamily: theme.font.sans,
-                flexShrink: 0,
-              }}
-            >
-              CSV
-            </button>
           </div>
 
           {loading ? (

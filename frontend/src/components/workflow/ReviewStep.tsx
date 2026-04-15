@@ -9,8 +9,13 @@ import { theme } from '../../styles/theme'
 import PhotoFilmstrip from '../PhotoFilmstrip'
 import type { AiSummaryState } from '../../pages/PhotoWorkflowPage'
 
-const CONDITIONS = ['New', 'Very Good', 'Good', 'Acceptable', 'Poor'] as const
+// Condition options match eBay's used-book condition scale.
+const CONDITIONS = ['Very Good', 'Good', 'Acceptable'] as const
 type Condition = (typeof CONDITIONS)[number]
+
+// Shared height for both button rows (condition + review toggles) so the
+// two rows look like a unified 2×3 control block.
+const ROW_BUTTON_HEIGHT = 48
 
 interface ReviewStepProps {
   lookupResult: BookLookup
@@ -61,8 +66,8 @@ function ReviewToggleButton({
       onClick={() => onToggle(!on)}
       aria-pressed={on}
       style={{
-        padding: '0.6rem 0.5rem',
-        height: 40,
+        height: ROW_BUTTON_HEIGHT,
+        padding: '0 0.5rem',
         border: on ? 'none' : `1px solid ${theme.colors.zoneBorder}`,
         borderRadius: theme.radius.md,
         background: on ? theme.colors.primaryBlue : theme.colors.bg,
@@ -71,6 +76,7 @@ function ReviewToggleButton({
         fontSize: 13,
         cursor: 'pointer',
         fontFamily: theme.font.sans,
+        lineHeight: 1.15,
       }}
     >
       {label}
@@ -170,7 +176,6 @@ export default function ReviewStep({
   const aiPending = aiSummary.status === 'pending'
   const aiDescription = aiSummary.status === 'success' ? aiSummary.text : null
   const aiFailed = aiSummary.status === 'failed'
-  const showThirdToggle = !!aiDescription
 
   return (
     <WorkflowWrapper
@@ -243,50 +248,50 @@ export default function ReviewStep({
         </div>
 
         <div style={{ padding: '0 1.25rem 1rem' }}>
-          {/* Condition selector */}
-          <p
+          {/* Row 1: Condition — connected segmented bar, single-select */}
+          <div
             style={{
-              margin: '0 0 0.5rem',
-              fontSize: '0.75rem',
-              color: theme.colors.muted,
-              fontWeight: 600,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
+              display: 'flex',
+              width: '100%',
+              border: `1px solid ${theme.colors.zoneBorder}`,
+              borderRadius: theme.radius.md,
+              overflow: 'hidden',
+              marginBottom: 8,
             }}
           >
-            Condition
-          </p>
-          <div style={{ display: 'flex', gap: '0.35rem', marginBottom: '1rem' }}>
-            {CONDITIONS.map((c) => (
-              <button
-                key={c}
-                onClick={() => setCondition(c)}
-                style={{
-                  flex: 1,
-                  padding: '0.45rem 0.1rem',
-                  fontSize: '0.72rem',
-                  background: condition === c ? theme.colors.accent : theme.colors.subtle,
-                  color: condition === c ? '#fff' : theme.colors.text,
-                  border: condition === c
-                    ? `1px solid ${theme.colors.accent}`
-                    : `1px solid ${theme.colors.border}`,
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  fontWeight: condition === c ? 600 : 400,
-                  fontFamily: theme.font.sans,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {c}
-              </button>
-            ))}
+            {CONDITIONS.map((c, i) => {
+              const selected = condition === c
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setCondition(c)}
+                  style={{
+                    flex: 1,
+                    height: ROW_BUTTON_HEIGHT,
+                    padding: '0 0.4rem',
+                    fontSize: 13,
+                    fontWeight: selected ? 500 : 400,
+                    background: selected ? theme.colors.primaryBlue : theme.colors.bg,
+                    color: selected ? '#fff' : theme.colors.secondaryText,
+                    border: 'none',
+                    borderLeft: i === 0 ? 'none' : `1px solid ${theme.colors.zoneBorder}`,
+                    cursor: 'pointer',
+                    fontFamily: theme.font.sans,
+                    lineHeight: 1.15,
+                  }}
+                >
+                  {c}
+                </button>
+              )
+            })}
           </div>
 
-          {/* Review toggle buttons */}
+          {/* Row 2: Review toggle buttons — three independent buttons, multi-select */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: showThirdToggle ? '1fr 1fr 1fr' : '1fr 1fr',
+              gridTemplateColumns: '1fr 1fr 1fr',
               gap: 8,
               marginBottom: '0.75rem',
             }}
@@ -301,13 +306,11 @@ export default function ReviewStep({
               on={reviewPhotography}
               onToggle={setReviewPhotography}
             />
-            {showThirdToggle && (
-              <ReviewToggleButton
-                label="review description"
-                on={reviewDescription}
-                onToggle={setReviewDescription}
-              />
-            )}
+            <ReviewToggleButton
+              label="review description"
+              on={reviewDescription}
+              onToggle={setReviewDescription}
+            />
           </div>
 
           {/* Description block — AI pending, success, or failure */}
@@ -337,7 +340,7 @@ export default function ReviewStep({
               )}
               {aiFailed && (
                 <p style={{ margin: 0, fontStyle: 'italic', color: theme.colors.muted, fontSize: 13 }}>
-                  Summary unavailable — you can add one on the edit page.
+                  Summary unavailable.
                 </p>
               )}
             </div>

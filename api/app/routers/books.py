@@ -42,8 +42,13 @@ limiter = Limiter(key_func=get_remote_address)
 async def lookup_book(
     request: Request,
     isbn: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
     _user: Annotated[str, Depends(get_current_user)],
 ):
+    # Duplicate check: surface the existing record's UUID so the workflow can
+    # route the user to the edit page instead of entering Review with a stale
+    # lookup result that will 409 on save.
+    existing = await db.scalar(select(Book.id).where(Book.isbn == isbn))
     book_data, complete = await lookup_isbn(isbn)
     return BookLookupResponse(
         isbn=isbn,
@@ -59,6 +64,7 @@ async def lookup_book(
         cover_image_url=book_data.cover_image_url,
         data_sources=book_data.data_sources,
         needs_metadata_review=not complete,
+        existing_book_id=existing,
     )
 
 

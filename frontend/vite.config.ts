@@ -18,8 +18,12 @@ function httpRedirect(httpsPort: number): Plugin {
   }
 }
 
+// Skip the httpRedirect plugin when vitest boots — it binds :5180 which is
+// already held by the long-running dev container.
+const isTest = process.env.VITEST === 'true'
+
 export default defineConfig({
-  plugins: [react(), httpRedirect(3001)],
+  plugins: isTest ? [react()] : [react(), httpRedirect(3001)],
   server: {
     proxy: {
       '/api': {

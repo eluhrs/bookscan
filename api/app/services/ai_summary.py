@@ -36,7 +36,12 @@ async def generate_summary_text(
     year: int | None,
     publisher: str | None,
 ) -> str | None:
-    """Call Gemini once. Returns the text on success, None on any non-rate-limit failure.
+    """Call Gemini. Returns the text on success, None on any non-rate-limit failure.
+
+    Retries once after a short delay on transient 5xx / network errors —
+    Gemini 2.5 Flash intermittently returns 503 "high demand" during normal
+    use and a single retry rescues most of those calls well inside the
+    frontend's 8s budget.
 
     Raises GeminiRateLimitError on HTTP 429 so the caller can schedule a retry.
     """
@@ -50,39 +55,51 @@ async def generate_summary_text(
             "thinkingConfig": {"thinkingBudget": 0},
         },
     }
-    try:
-        async with httpx.AsyncClient(timeout=GEMINI_TIMEOUT_SECONDS) as client:
-            resp = await client.post(
-                GEMINI_URL,
-                params={"key": api_key},
-                json=payload,
-            )
-        if resp.status_code == 429:
-            logger.warning("ai_summary: gemini 429 rate limit")
-            raise GeminiRateLimitError()
-        if resp.status_code != 200:
-            logger.warning(
-                "ai_summary: gemini http %s — %s",
-                resp.status_code,
-                resp.text[:200],
-            )
+    # One retry on 5xx / network errors. 8s total budget on the frontend — with
+    # a 3.5s per-call timeout we can fit two attempts plus a short backoff.
+    for attempt in (0, 1):
+        try:
+            async with httpx.AsyncClient(timeout=3.5) as client:
+                resp = await client.post(
+                    GEMINI_URL,
+                    params={"key": api_key},
+                    json=payload,
+                )
+            if resp.status_code == 429:
+                logger.warning("ai_summary: gemini 429 rate limit")
+                raise GeminiRateLimitError()
+            if 500 <= resp.status_code < 600 and attempt == 0:
+                logger.info("ai_summary: gemini %s — retrying once", resp.status_code)
+                await asyncio.sleep(0.5)
+                continue
+            if resp.status_code != 200:
+                logger.warning(
+                    "ai_summary: gemini http %s — %s",
+                    resp.status_code,
+                    resp.text[:200],
+                )
+                return None
+            data = resp.json()
+            candidates = data.get("candidates") or []
+            if not candidates:
+                logger.warning("ai_summary: empty candidates")
+                return None
+            parts = (candidates[0].get("content") or {}).get("parts") or []
+            text = "".join(p.get("text", "") for p in parts).strip()
+            return text or None
+        except GeminiRateLimitError:
+            raise
+        except (httpx.HTTPError, httpx.TimeoutException) as e:
+            if attempt == 0:
+                logger.info("ai_summary: httpx %s — retrying once", type(e).__name__)
+                await asyncio.sleep(0.5)
+                continue
+            logger.warning("ai_summary: httpx error %s", type(e).__name__)
             return None
-        data = resp.json()
-        candidates = data.get("candidates") or []
-        if not candidates:
-            logger.warning("ai_summary: empty candidates")
+        except Exception as e:  # defensive — never let a background task crash
+            logger.exception("ai_summary: unexpected error %s", e)
             return None
-        parts = (candidates[0].get("content") or {}).get("parts") or []
-        text = "".join(p.get("text", "") for p in parts).strip()
-        return text or None
-    except GeminiRateLimitError:
-        raise
-    except (httpx.HTTPError, httpx.TimeoutException) as e:
-        logger.warning("ai_summary: httpx error %s", type(e).__name__)
-        return None
-    except Exception as e:  # defensive — never let a background task crash
-        logger.exception("ai_summary: unexpected error %s", e)
-        return None
+    return None
 
 
 def build_prompt(

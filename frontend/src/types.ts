@@ -46,6 +46,7 @@ export interface BookLookup {
   cover_image_url: string | null
   data_sources: Record<string, string> | null
   needs_metadata_review: boolean
+  existing_book_id: string | null
 }
 
 export interface Listing {
