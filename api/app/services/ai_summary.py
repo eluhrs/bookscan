@@ -1,7 +1,14 @@
 from __future__ import annotations
 
+import asyncio
 import logging
+import uuid
+
 import httpx
+
+from app.config import settings
+from app.database import async_session_maker
+from app.models import Book
 
 logger = logging.getLogger(__name__)
 
@@ -99,3 +106,57 @@ def build_prompt(
         "Focus on the book's subject matter, likely audience, and key themes. "
         "Do not fabricate specific facts not inferable from the metadata."
     )
+
+
+async def generate_and_store_summary(
+    book_id: uuid.UUID,
+    *,
+    retry_on_rate_limit: bool = True,
+) -> None:
+    """Background task: fetch a Gemini summary and persist it.
+
+    Opens its own session — the request session is closed by the time this runs.
+    Silent on failure — sets description_generation_failed=True and logs.
+    """
+    api_key = settings.gemini_api_key
+    if not api_key:
+        logger.info("ai_summary: skipped, no GEMINI_API_KEY")
+        return
+
+    async with async_session_maker() as db:
+        book = await db.get(Book, book_id)
+        if book is None:
+            logger.warning("ai_summary: book %s not found", book_id)
+            return
+        if book.description:
+            logger.info("ai_summary: book %s already has description, skipping", book_id)
+            return
+
+        try:
+            text = await generate_summary_text(
+                api_key=api_key,
+                title=book.title,
+                author=book.author,
+                year=book.year,
+                publisher=book.publisher,
+            )
+        except GeminiRateLimitError:
+            if retry_on_rate_limit:
+                logger.info("ai_summary: 429 — scheduling 60s retry for %s", book_id)
+                asyncio.create_task(_retry_after_delay(book_id, delay_seconds=60))
+                return
+            text = None
+
+        if text:
+            book.description = text
+            book.description_source = "ai_generated"
+            book.needs_description_review = True
+            book.description_generation_failed = False
+        else:
+            book.description_generation_failed = True
+        await db.commit()
+
+
+async def _retry_after_delay(book_id: uuid.UUID, *, delay_seconds: int) -> None:
+    await asyncio.sleep(delay_seconds)
+    await generate_and_store_summary(book_id, retry_on_rate_limit=False)

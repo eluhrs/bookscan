@@ -82,3 +82,124 @@ async def test_generate_summary_text_timeout_returns_none():
         router.post(GEMINI_URL).mock(side_effect=httpx.ReadTimeout("slow"))
         result = await generate_summary_text(api_key="fake", title="X", author=None, year=None, publisher=None)
     assert result is None
+
+
+# ---------------------------------------------------------------------------
+# generate_and_store_summary background task tests
+# ---------------------------------------------------------------------------
+
+from app.models import Book
+from app.services.ai_summary import generate_and_store_summary
+
+
+@pytest.mark.asyncio
+async def test_generate_and_store_summary_success(monkeypatch):
+    from tests._helpers import TestSession
+    monkeypatch.setattr("app.services.ai_summary.async_session_maker", TestSession, raising=True)
+    monkeypatch.setattr("app.services.ai_summary.settings.gemini_api_key", "fake-key", raising=False)
+
+    async with TestSession() as db:
+        book = Book(isbn="9999999990001", title="Dune", author="Herbert", year=1965, publisher="Chilton")
+        db.add(book)
+        await db.commit()
+        await db.refresh(book)
+        book_id = book.id
+
+    async def fake_generate(**kwargs):
+        return "An epic about sand."
+
+    monkeypatch.setattr("app.services.ai_summary.generate_summary_text", fake_generate, raising=True)
+
+    await generate_and_store_summary(book_id)
+
+    async with TestSession() as db:
+        b = await db.get(Book, book_id)
+        assert b.description == "An epic about sand."
+        assert b.description_source == "ai_generated"
+        assert b.needs_description_review is True
+        assert b.description_generation_failed is False
+
+
+@pytest.mark.asyncio
+async def test_generate_and_store_summary_failure(monkeypatch):
+    from tests._helpers import TestSession
+    monkeypatch.setattr("app.services.ai_summary.async_session_maker", TestSession, raising=True)
+    monkeypatch.setattr("app.services.ai_summary.settings.gemini_api_key", "fake-key", raising=False)
+
+    async with TestSession() as db:
+        book = Book(isbn="9999999990002", title="X", author="Y", year=2000, publisher="Z")
+        db.add(book)
+        await db.commit()
+        await db.refresh(book)
+        book_id = book.id
+
+    async def fake_generate(**kwargs):
+        return None
+
+    monkeypatch.setattr("app.services.ai_summary.generate_summary_text", fake_generate, raising=True)
+
+    await generate_and_store_summary(book_id)
+
+    async with TestSession() as db:
+        b = await db.get(Book, book_id)
+        assert b.description is None
+        assert b.description_source is None
+        assert b.needs_description_review is False
+        assert b.description_generation_failed is True
+
+
+@pytest.mark.asyncio
+async def test_generate_and_store_summary_skips_when_description_already_set(monkeypatch):
+    from tests._helpers import TestSession
+    monkeypatch.setattr("app.services.ai_summary.async_session_maker", TestSession, raising=True)
+    monkeypatch.setattr("app.services.ai_summary.settings.gemini_api_key", "fake-key", raising=False)
+
+    async with TestSession() as db:
+        book = Book(
+            isbn="9999999990003",
+            title="X",
+            description="already populated by lookup",
+            description_source="google_books",
+        )
+        db.add(book)
+        await db.commit()
+        await db.refresh(book)
+        book_id = book.id
+
+    called = False
+
+    async def fake_generate(**kwargs):
+        nonlocal called
+        called = True
+        return "should not run"
+
+    monkeypatch.setattr("app.services.ai_summary.generate_summary_text", fake_generate, raising=True)
+
+    await generate_and_store_summary(book_id)
+    assert called is False
+
+    async with TestSession() as db:
+        b = await db.get(Book, book_id)
+        assert b.description == "already populated by lookup"
+        assert b.description_source == "google_books"
+
+
+@pytest.mark.asyncio
+async def test_generate_and_store_summary_no_api_key_does_nothing(monkeypatch):
+    from tests._helpers import TestSession
+    monkeypatch.setattr("app.services.ai_summary.async_session_maker", TestSession, raising=True)
+    monkeypatch.setattr("app.services.ai_summary.settings.gemini_api_key", None, raising=False)
+
+    async with TestSession() as db:
+        book = Book(isbn="9999999990004", title="X")
+        db.add(book)
+        await db.commit()
+        await db.refresh(book)
+        book_id = book.id
+
+    await generate_and_store_summary(book_id)
+
+    async with TestSession() as db:
+        b = await db.get(Book, book_id)
+        assert b.description_generation_failed is False
+        assert b.description is None
