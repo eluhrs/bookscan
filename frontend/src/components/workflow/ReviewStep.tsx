@@ -97,7 +97,10 @@ export default function ReviewStep({
   const [condition, setCondition] = useState<Condition | null>(null)
   const [reviewMetadata, setReviewMetadata] = useState(lookupResult.needs_metadata_review)
   const [reviewPhotography, setReviewPhotography] = useState(skippedPhotography)
-  const [reviewDescription, setReviewDescription] = useState(true)
+  // Default OFF when the public-source lookup already returned a description
+  // (Google Books etc.) — no AI is called and no user review is needed.
+  // Default ON otherwise, so AI-generated summaries flag themselves for review.
+  const [reviewDescription, setReviewDescription] = useState(!lookupResult.description)
   const [localPhotos, setLocalPhotos] = useState<Array<{ id: string; file: File }>>(
     () => photos.map((file) => ({ id: crypto.randomUUID(), file }))
   )
