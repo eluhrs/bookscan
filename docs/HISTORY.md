@@ -152,3 +152,19 @@ When a book lookup returns no `description` (none of Open Library / Google Books
 - `description_generation_failed` BOOL default false — set on timeout/5xx/empty/repeated 429 (only the legacy background-task path writes it; the lookup-time path surfaces failure as `aiSummary.status === 'failed'` instead).
 
 **`?status=needs_description_review`** is a `Literal` on `GET /api/books`. The `ready` filter requires all three review flags to be false.
+
+---
+
+## CHANGES-19 additions (moved from CLAUDE.md at CHANGES-20)
+
+**iOS viewport lock (BUG-01).** `frontend/index.html` viewport meta is `width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no` — blocks iOS text-input auto-zoom. Single-user app, a11y tradeoff is intentional. The inline `<style>` also adds `html { touch-action: manipulation }` for double-tap zoom.
+
+**Mobile overflow guards (BUG-02).** Top-level page wrappers all have `overflowX: 'hidden'`. Review toggles and ISBN cell have `wordBreak` (`break-word` on toggles, `break-all` on the monospace ISBN) so long strings don't push past 375px.
+
+**Review-toggle two-line wrap (BUG-03).** `frontend/src/styles/reviewToggle.css` → `.review-toggle-label` with a `.rt-break` span that is `display: inline` on desktop, `display: block` ≤ 600px. `ReviewToggleButton` (ReviewStep pre-CHANGES-20) and `ReviewToggle` (BookEditCard pre-CHANGES-20; now `BookCard`) take `word1`/`word2` props and render `{word1}<span class="rt-break"> </span>{word2}` with `aria-label="{word1} {word2}"`. All three toggles identical height both breakpoints.
+
+**Scholarly AI prompt (FEAT-01).** `build_prompt` in `api/app/services/ai_summary.py` asks for factual/scholarly 3-5 sentences with explicit bans on `captivating`, `perfect for`, `delve`, `journey`, `exploration`, value judgments. Test: `test_build_prompt_has_scholarly_tone_guardrails`.
+
+**StatusFilter ring + fill (FEAT-02).** Active states are `{border, fill}` pairs: amber/blue/purple/green for needs_metadata_review/needs_photo_review/needs_description_review/ready, gray+white default. Fill tokens: `filterAmberFill` `#FAEEDA`, `filterBlueFill` `#E6F1FB`, `filterPurpleFill` `#EEEDFE`, `filterGreenFill` `#EAF3DE`.
+
+**Mobile scrollbar (FEAT-04).** `frontend/src/styles/mobileScroll.css` → `.mobile-scroll` class on the scroll containers in ReviewStep and (pre-CHANGES-20) BookEditCard. Thin 6px bar under `@media (max-width: 600px)`, desktop untouched. Imported from `main.tsx`.

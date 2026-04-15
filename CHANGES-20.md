@@ -13,7 +13,7 @@ both Review and Edit views.
 
 ---
 
-## FEAT-01: Shared BookCard component
+## ✓ FEAT-01: Shared BookCard component
 
 Create a new shared `BookCard` component that replaces the current
 separate implementations in ReviewStep and BookEditCard. The component
@@ -51,7 +51,7 @@ appearance.
 
 ---
 
-## FEAT-02: Field layout redesign
+## ✓ FEAT-02: Field layout redesign
 
 Replace the current field layout on both Review and Edit with the
 following unified structure. Apply identically on both screens
@@ -88,7 +88,7 @@ underlined.
 
 ---
 
-## FEAT-03: Additional fields — hide when empty
+## ✓ FEAT-03: Additional fields — hide when empty
 
 On the Edit page (editable=true only):
 - Show Edition, Dimensions, Weight below Description
@@ -101,7 +101,7 @@ On the Edit page (editable=true only):
 
 ---
 
-## FEAT-04: Year and Publisher inline editable on Edit page
+## ✓ FEAT-04: Year and Publisher inline editable on Edit page
 
 Year and Publisher are currently display-only on the Edit page.
 Make them inline editable consistent with Title, Author, and other
@@ -115,7 +115,7 @@ fields:
 
 ---
 
-## FEAT-05: + button on Review step filmstrip
+## ✓ FEAT-05: + button on Review step filmstrip
 
 Add a + button to the filmstrip on the Review step, matching the
 existing + button on the Edit page:
@@ -129,7 +129,7 @@ existing + button on the Edit page:
 
 ---
 
-## TECH-01: tsconfig.json test directory exclusion cleanup
+## ✓ TECH-01: tsconfig.json test directory exclusion cleanup
 tsconfig.json currently excludes both test directories to keep
 tsc --noEmit happy. This is a pre-existing workaround. Proper fix:
 set up a dedicated vitest tsconfig that handles test files correctly
