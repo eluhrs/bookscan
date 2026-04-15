@@ -4,7 +4,8 @@ import PhotographStep from '../components/workflow/PhotographStep'
 import LookupStep from '../components/workflow/LookupStep'
 import ReviewStep from '../components/workflow/ReviewStep'
 import { useScanAudio } from '../hooks/useScanAudio'
-import { BookLookup } from '../types'
+import { getBook } from '../api/books'
+import { Book, BookLookup } from '../types'
 import { theme } from '../styles/theme'
 
 type WorkflowStep = 'photograph' | 'lookup' | 'review' | 'confirmation'
@@ -18,6 +19,7 @@ export default function PhotoWorkflowPage() {
   const [lookupResult, setLookupResult] = useState<BookLookup | null>(null)
   const [savedBookId, setSavedBookId] = useState<string | null>(null)
   const [skippedPhotography, setSkippedPhotography] = useState(false)
+  const [polledBook, setPolledBook] = useState<Book | null>(null)
 
   // Tracks current step immediately (before React re-renders) so handleLookupComplete
   // can detect stale calls caused by cancel being pressed while a lookup is in-flight.
@@ -35,10 +37,36 @@ export default function PhotoWorkflowPage() {
       setLookupResult(null)
       setSavedBookId(null)
       setSkippedPhotography(false)
+      setPolledBook(null)
       setStep('photograph')
     }, 800)
     return () => clearTimeout(t)
   }, [step, playSuccess])
+
+  // After save, poll the book until the AI summary arrives, fails, or 12s elapses.
+  useEffect(() => {
+    if (step !== 'review' || !savedBookId) return
+    let cancelled = false
+    const start = Date.now()
+    const poll = async () => {
+      try {
+        const b = await getBook(savedBookId)
+        if (cancelled) return
+        setPolledBook(b)
+        const done =
+          b.description_source === 'ai_generated' ||
+          b.description_generation_failed === true ||
+          Date.now() - start > 12000
+        if (!done) {
+          window.setTimeout(poll, 1500)
+        }
+      } catch {
+        // Silent — review step still works without the polled state.
+      }
+    }
+    poll()
+    return () => { cancelled = true }
+  }, [step, savedBookId])
 
   function handlePhotoAdded(file: File) {
     setPhotos((prev) => {
@@ -86,6 +114,7 @@ export default function PhotoWorkflowPage() {
     setLookupResult(null)
     setSavedBookId(null)
     setSkippedPhotography(false)
+    setPolledBook(null)
     setStep('photograph')
   }
 
@@ -144,6 +173,7 @@ export default function PhotoWorkflowPage() {
         onSaveComplete={handleSaveComplete}
         onCancel={handleCancel}
         skippedPhotography={skippedPhotography}
+        polledBook={polledBook}
       />
     )
   }

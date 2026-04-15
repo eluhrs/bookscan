@@ -25,6 +25,10 @@ export async function listBooks(params?: {
   return apiFetch(`/api/books?${q}`)
 }
 
+export async function getBook(id: string): Promise<Book> {
+  return apiFetch(`/api/books/${id}`)
+}
+
 export async function updateBook(id: string, update: Partial<Book>): Promise<Book> {
   return apiFetch(`/api/books/${id}`, { method: 'PATCH', body: JSON.stringify(update) })
 }
