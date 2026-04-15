@@ -125,6 +125,53 @@ describe('BookCard', () => {
     expect(onImmediateSave).toHaveBeenCalledWith(expect.objectContaining({ needs_photo_review: true }));
   });
 
+  it('hides additional fields section when edition/dimensions/weight all empty', () => {
+    render(
+      <BookCard
+        editable
+        book={{ ...baseBook, edition: null, dimensions: null, weight: null } as typeof baseBook}
+        photos={[]}
+        photoUrls={{}}
+        onSave={vi.fn()}
+        onImmediateSave={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/Edition/i)).toBeNull();
+    expect(screen.queryByText(/Dimensions/i)).toBeNull();
+    expect(screen.queryByText(/Weight/i)).toBeNull();
+  });
+
+  it('shows all three fields when at least one has a value', () => {
+    render(
+      <BookCard
+        editable
+        book={{ ...baseBook, edition: '1st', dimensions: null, weight: null } as typeof baseBook}
+        photos={[]}
+        photoUrls={{}}
+        onSave={vi.fn()}
+        onImmediateSave={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/Edition/i)).toBeInTheDocument();
+    expect(screen.getByText(/Dimensions/i)).toBeInTheDocument();
+    expect(screen.getByText(/Weight/i)).toBeInTheDocument();
+    expect(screen.getByText('1st')).toBeInTheDocument();
+  });
+
+  it('never shows additional fields when editable=false', () => {
+    render(
+      <BookCard
+        editable={false}
+        book={{ ...baseBook, edition: '1st' } as typeof baseBook}
+        photos={[]}
+        photoUrls={{}}
+        onSave={vi.fn()}
+        onImmediateSave={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/Edition/i)).toBeNull();
+  });
+
   it('renders description label + source icon + value; regenerate click bubbles up', async () => {
     const userEvent = (await import('@testing-library/user-event')).default;
     const user = userEvent.setup();

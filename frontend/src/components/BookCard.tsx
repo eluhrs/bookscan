@@ -420,6 +420,42 @@ export default function BookCard(props: BookCardProps) {
           </p>
         )}
       </div>
+
+      {/* Additional fields — Edition / Dimensions / Weight */}
+      {props.editable && (book.edition || book.dimensions || book.weight) && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginTop: 16 }}>
+          <div>
+            <div className="bc-label">Edition</div>
+            <InlineField
+              value={draft.edition}
+              onChange={(v) => setDraft({ ...draft, edition: v })}
+              fontSize={12}
+              color="#222"
+              placeholder="—"
+            />
+          </div>
+          <div>
+            <div className="bc-label">Dimensions</div>
+            <InlineField
+              value={draft.dimensions}
+              onChange={(v) => setDraft({ ...draft, dimensions: v })}
+              fontSize={12}
+              color="#222"
+              placeholder="—"
+            />
+          </div>
+          <div>
+            <div className="bc-label">Weight</div>
+            <InlineField
+              value={draft.weight}
+              onChange={(v) => setDraft({ ...draft, weight: v })}
+              fontSize={12}
+              color="#222"
+              placeholder="—"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
