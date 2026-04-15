@@ -77,6 +77,8 @@ function ReviewToggleButton({
         cursor: 'pointer',
         fontFamily: theme.font.sans,
         lineHeight: 1.15,
+        overflow: 'hidden',
+        wordBreak: 'break-word',
       }}
     >
       {label}
@@ -199,6 +201,7 @@ export default function ReviewStep({
         style={{
           height: '100%',
           overflowY: 'auto',
+          overflowX: 'hidden',
           color: theme.colors.text,
         }}
       >

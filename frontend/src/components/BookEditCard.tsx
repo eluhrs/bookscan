@@ -225,6 +225,8 @@ function ReviewToggle({ label, on, onToggle }: {
         cursor: 'pointer',
         fontFamily: theme.font.sans,
         lineHeight: 1.15,
+        overflow: 'hidden',
+        wordBreak: 'break-word',
       }}
     >
       {label}
@@ -556,6 +558,7 @@ export default function BookEditCard({
                   display: 'block',
                   padding: '1px 3px',
                   lineHeight: 1.4,
+                  wordBreak: 'break-all',
                 }}
               >
                 {book.isbn}

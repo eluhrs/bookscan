@@ -31,6 +31,7 @@ export default function LoginPage() {
         justifyContent: 'center',
         background: theme.colors.surface,
         padding: '1rem',
+        overflowX: 'hidden',
       }}
     >
       <div
