@@ -12,7 +12,7 @@ from app.models import Book
 
 logger = logging.getLogger(__name__)
 
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-2.5-flash-lite"
 GEMINI_TIMEOUT_SECONDS = 8.0
 # Generous: Gemini 2.5 Flash uses internal "thinking" tokens that count against
 # this budget. We also set thinkingBudget=0 below to disable thinking entirely,
@@ -69,21 +69,33 @@ async def generate_summary_text(
             if resp.status_code == 429:
                 if attempt < 2:
                     logger.warning(
-                        "ai_summary: gemini 429 — backing off 2s then retrying"
+                        "ai_summary: gemini %s 429 — backing off 2s then retrying: %s",
+                        GEMINI_MODEL,
+                        resp.text[:500],
                     )
                     await asyncio.sleep(2.0)
                     continue
-                logger.warning("ai_summary: gemini 429 rate limit (final)")
+                logger.warning(
+                    "ai_summary: gemini %s 429 rate limit (final): %s",
+                    GEMINI_MODEL,
+                    resp.text[:500],
+                )
                 raise GeminiRateLimitError()
             if 500 <= resp.status_code < 600 and attempt < 2:
-                logger.info("ai_summary: gemini %s — retrying", resp.status_code)
+                logger.info(
+                    "ai_summary: gemini %s %s — retrying: %s",
+                    GEMINI_MODEL,
+                    resp.status_code,
+                    resp.text[:500],
+                )
                 await asyncio.sleep(0.5)
                 continue
             if resp.status_code != 200:
                 logger.warning(
-                    "ai_summary: gemini http %s — %s",
+                    "ai_summary: gemini %s http %s — %s",
+                    GEMINI_MODEL,
                     resp.status_code,
-                    resp.text[:200],
+                    resp.text[:500],
                 )
                 return None
             data = resp.json()
