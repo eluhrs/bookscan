@@ -335,10 +335,10 @@ export default function DashboardPage() {
               style={{
                 maxWidth: 1200,
                 margin: '0 auto',
+                padding: '1rem 1.25rem',
                 background: theme.colors.bg,
                 borderLeft: `1px solid ${theme.colors.zoneBorder}`,
                 borderRight: `1px solid ${theme.colors.zoneBorder}`,
-                minHeight: '100%',
                 boxSizing: 'border-box',
               }}
             >

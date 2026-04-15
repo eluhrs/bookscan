@@ -284,32 +284,36 @@ const BookCard = forwardRef<BookCardHandle, BookCardProps>(function BookCard(pro
       />
 
       {/* Title */}
-      {editable ? (
-        <InlineField
-          value={draft.title}
-          fontSize={18}
-          fontWeight={500}
-          color="#222"
-          onChange={(v) => setDraft((d) => ({ ...d, title: v || null }))}
-          placeholder="Title"
-        />
-      ) : (
-        <h2 className="bc-title">{book.title ?? ''}</h2>
-      )}
+      <div className="bc-title-row">
+        {editable ? (
+          <InlineField
+            value={draft.title}
+            fontSize={18}
+            fontWeight={500}
+            color="#222"
+            onChange={(v) => setDraft((d) => ({ ...d, title: v || null }))}
+            placeholder="Title"
+          />
+        ) : (
+          <h2 className="bc-title">{book.title ?? ''}</h2>
+        )}
+      </div>
 
       {/* Author */}
-      {editable ? (
-        <InlineField
-          value={draft.author}
-          fontSize={14}
-          fontWeight={400}
-          color="#222"
-          onChange={(v) => setDraft((d) => ({ ...d, author: v || null }))}
-          placeholder="Author"
-        />
-      ) : (
-        <div className="bc-author">{book.author ?? ''}</div>
-      )}
+      <div className="bc-author-row">
+        {editable ? (
+          <InlineField
+            value={draft.author}
+            fontSize={14}
+            fontWeight={400}
+            color="#222"
+            onChange={(v) => setDraft((d) => ({ ...d, author: v || null }))}
+            placeholder="Author"
+          />
+        ) : (
+          <div className="bc-author">{book.author ?? ''}</div>
+        )}
+      </div>
 
       {/* Publisher */}
       <div className="bc-field-full">
