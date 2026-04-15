@@ -48,4 +48,38 @@ describe('BookCard', () => {
     expect(screen.getByText('9781250255785')).toBeInTheDocument();
     expect(screen.getByText('336')).toBeInTheDocument();
   });
+
+  it('renders dashed-underline editable Title, Author, Publisher, Year, ISBN, Pages when editable=true', () => {
+    render(
+      <BookCard
+        editable
+        book={baseBook}
+        photos={[]}
+        photoUrls={{}}
+        onSave={vi.fn()}
+        onImmediateSave={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Vortex').closest('.bc-editable')).not.toBeNull();
+    expect(screen.getByText('Robert Charles Wilson').closest('.bc-editable')).not.toBeNull();
+    expect(screen.getByText('2012').closest('.bc-editable')).not.toBeNull();
+    expect(screen.getByText('Tor Books').closest('.bc-editable')).not.toBeNull();
+    expect(screen.getByText('9781250255785').closest('.bc-editable')).not.toBeNull();
+    expect(screen.getByText('336').closest('.bc-editable')).not.toBeNull();
+  });
+
+  it('does NOT dashed-underline any fields when editable=false', () => {
+    render(
+      <BookCard
+        editable={false}
+        book={baseBook}
+        photos={[]}
+        photoUrls={{}}
+        onSave={vi.fn()}
+        onImmediateSave={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Vortex').closest('.bc-editable')).toBeNull();
+    expect(screen.getByText('2012').closest('.bc-editable')).toBeNull();
+  });
 });
