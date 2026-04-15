@@ -55,21 +55,28 @@ async def generate_summary_text(
             "thinkingConfig": {"thinkingBudget": 0},
         },
     }
-    # One retry on 5xx / network errors. 8s total budget on the frontend — with
-    # a 3.5s per-call timeout we can fit two attempts plus a short backoff.
-    for attempt in (0, 1):
+    # Up to three attempts. Gemini free tier has per-minute quotas that a rapid
+    # lookup+regenerate sequence will trip, so we back off and retry on 429 in
+    # addition to the existing 5xx/network retry.
+    for attempt in (0, 1, 2):
         try:
-            async with httpx.AsyncClient(timeout=3.5) as client:
+            async with httpx.AsyncClient(timeout=3.0) as client:
                 resp = await client.post(
                     GEMINI_URL,
                     params={"key": api_key},
                     json=payload,
                 )
             if resp.status_code == 429:
-                logger.warning("ai_summary: gemini 429 rate limit")
+                if attempt < 2:
+                    logger.warning(
+                        "ai_summary: gemini 429 — backing off 2s then retrying"
+                    )
+                    await asyncio.sleep(2.0)
+                    continue
+                logger.warning("ai_summary: gemini 429 rate limit (final)")
                 raise GeminiRateLimitError()
-            if 500 <= resp.status_code < 600 and attempt == 0:
-                logger.info("ai_summary: gemini %s — retrying once", resp.status_code)
+            if 500 <= resp.status_code < 600 and attempt < 2:
+                logger.info("ai_summary: gemini %s — retrying", resp.status_code)
                 await asyncio.sleep(0.5)
                 continue
             if resp.status_code != 200:
@@ -90,8 +97,8 @@ async def generate_summary_text(
         except GeminiRateLimitError:
             raise
         except (httpx.HTTPError, httpx.TimeoutException) as e:
-            if attempt == 0:
-                logger.info("ai_summary: httpx %s — retrying once", type(e).__name__)
+            if attempt < 2:
+                logger.info("ai_summary: httpx %s — retrying", type(e).__name__)
                 await asyncio.sleep(0.5)
                 continue
             logger.warning("ai_summary: httpx error %s", type(e).__name__)

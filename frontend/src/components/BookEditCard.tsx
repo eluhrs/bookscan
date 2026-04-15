@@ -653,12 +653,19 @@ export default function BookEditCard({
             </div>
           </div>
 
-          {/* Description */}
+          {/* Description — source icon falls back to data_sources.description
+              for books saved before description_source was being persisted
+              correctly (pre-CHANGES-19 fix). */}
           <div style={{ marginBottom: '0.5rem' }}>
             <span style={{ ...SMALL_CAPS_LABEL, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               Description
               <DescriptionSourceIcon
-                source={book.description_source as any}
+                source={
+                  (book.description_source
+                    ?? (book.description && book.data_sources?.description
+                        ? book.data_sources.description
+                        : null)) as any
+                }
                 regenerating={regenerating}
                 onRegenerate={handleRegenerate}
               />

@@ -152,19 +152,26 @@ export default function ReviewStep({
 
       // Step 1: Create book if not already created
       if (!bookId) {
-        // If the AI summary came back successfully, include it + source in the
-        // single POST so the backend skips firing its own background task.
+        // Prefer an AI summary when present; otherwise keep whatever the
+        // public-source lookup returned. The source string must reflect the
+        // *actual* origin so the edit page renders the correct icon —
+        // 'ai_generated' for Gemini, or the catalog name (e.g. 'google_books')
+        // for a public-source description. Passing null for a catalog
+        // description would skip the backend's auto-derive path and leave
+        // description_source unset in the DB (CHANGES-19 post-fix).
         const description = aiDescription ?? lookupResult.description ?? null
         const description_source = aiDescription
           ? 'ai_generated'
-          : (lookupResult.description ? null : null)
+          : lookupResult.description
+            ? (lookupResult.data_sources?.description ?? null)
+            : null
         const book = await saveBook({
           ...lookupResult,
           description,
           condition,
           needs_metadata_review: reviewMetadata ? true : lookupResult.needs_metadata_review,
           needs_photo_review: reviewPhotography,
-          needs_description_review: aiDescription ? reviewDescription : false,
+          needs_description_review: reviewDescription,
           description_source,
           description_generation_failed: aiFailed,
         })
