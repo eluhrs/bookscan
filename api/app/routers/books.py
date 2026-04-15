@@ -136,7 +136,13 @@ async def list_books(
     _user: Annotated[str, Depends(get_current_user)],
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    status: Literal["all", "needs_metadata_review", "needs_photo_review", "ready"] = Query("all"),
+    status: Literal[
+        "all",
+        "needs_metadata_review",
+        "needs_photo_review",
+        "needs_description_review",
+        "ready",
+    ] = Query("all"),
     search: Optional[str] = Query(None),
 ):
     q = select(Book)
@@ -144,9 +150,12 @@ async def list_books(
         q = q.where(Book.needs_metadata_review == True)  # noqa: E712
     elif status == "needs_photo_review":
         q = q.where(Book.needs_photo_review == True)  # noqa: E712
+    elif status == "needs_description_review":
+        q = q.where(Book.needs_description_review == True)  # noqa: E712
     elif status == "ready":
         q = q.where(Book.needs_metadata_review == False)  # noqa: E712
         q = q.where(Book.needs_photo_review == False)  # noqa: E712
+        q = q.where(Book.needs_description_review == False)  # noqa: E712
     if search:
         term = f"%{search}%"
         q = q.where(

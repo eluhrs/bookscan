@@ -234,3 +234,47 @@ async def test_create_book_does_not_schedule_when_no_api_key(
     )
     assert resp.status_code == 201
     assert len(calls) == 0
+
+
+@pytest.mark.asyncio
+async def test_status_filter_needs_description_review(client, auth_headers):
+    from tests._helpers import TestSession
+    from app.models import Book
+    async with TestSession() as db:
+        db.add(Book(isbn="9780000000010", title="A", needs_description_review=True))
+        db.add(Book(isbn="9780000000011", title="B", needs_description_review=False))
+        await db.commit()
+
+    resp = await client.get("/api/books?status=needs_description_review", headers=auth_headers)
+    assert resp.status_code == 200
+    isbns = [b["isbn"] for b in resp.json()["items"]]
+    assert "9780000000010" in isbns
+    assert "9780000000011" not in isbns
+
+
+@pytest.mark.asyncio
+async def test_status_filter_ready_excludes_description_review(client, auth_headers):
+    from tests._helpers import TestSession
+    from app.models import Book
+    async with TestSession() as db:
+        db.add(Book(
+            isbn="9780000000020",
+            title="Ready",
+            needs_metadata_review=False,
+            needs_photo_review=False,
+            needs_description_review=False,
+        ))
+        db.add(Book(
+            isbn="9780000000021",
+            title="NotReady",
+            needs_metadata_review=False,
+            needs_photo_review=False,
+            needs_description_review=True,
+        ))
+        await db.commit()
+
+    resp = await client.get("/api/books?status=ready", headers=auth_headers)
+    assert resp.status_code == 200
+    isbns = [b["isbn"] for b in resp.json()["items"]]
+    assert "9780000000020" in isbns
+    assert "9780000000021" not in isbns
