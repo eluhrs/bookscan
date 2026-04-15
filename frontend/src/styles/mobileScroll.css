@@ -1,0 +1,18 @@
+/* Shared mobile scrollbar treatment for Review step and Edit page.
+   ~6px thin bar with a small right gutter. Desktop is untouched. */
+@media (max-width: 600px) {
+  .mobile-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  .mobile-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .mobile-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 3px;
+  }
+  .mobile-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.25) transparent;
+  }
+}

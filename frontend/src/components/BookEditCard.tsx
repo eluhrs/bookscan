@@ -454,6 +454,7 @@ export default function BookEditCard({
           inside it. Putting max-width on the scroll container itself breaks
           flex sizing on mobile Safari and makes the header/footer float. */}
       <div
+        className="mobile-scroll"
         style={{
           flex: 1,
           minHeight: 0,

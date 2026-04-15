@@ -203,6 +203,7 @@ export default function ReviewStep({
       onCancel={onCancel}
     >
       <div
+        className="mobile-scroll"
         style={{
           height: '100%',
           overflowY: 'auto',
