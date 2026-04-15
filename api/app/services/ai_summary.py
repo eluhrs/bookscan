@@ -127,9 +127,16 @@ def build_prompt(
         parts.append(f"({', '.join(paren_bits)})")
     subject = " ".join(parts) if parts else "this book"
     return (
-        f"Write a 2-3 sentence summary suitable for an eBay book listing for {subject}. "
-        "Focus on the book's subject matter, likely audience, and key themes. "
-        "Do not fabricate specific facts not inferable from the metadata."
+        f"Write a factual, scholarly description of {subject} for an online "
+        "bookseller's listing. Length: 3 to 5 sentences. Tone: sedate, "
+        "understated — write as a librarian or academic bookseller would, "
+        "not as a marketing copywriter. State what the book is about, its "
+        "intellectual or academic context where inferable from the metadata, "
+        "and its likely audience. Do not fabricate specific facts not "
+        "directly inferable from the title, author, publisher, or year. "
+        "Do not use superlatives or value judgments. Do not use promotional "
+        "phrases such as 'captivating', 'perfect for', 'delve into', "
+        "'journey', or 'exploration'."
     )
 
 

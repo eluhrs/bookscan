@@ -21,14 +21,28 @@ def test_build_prompt_includes_all_metadata():
     assert "Frank Herbert" in prompt
     assert "1965" in prompt
     assert "Chilton Books" in prompt
-    assert "2-3 sentence" in prompt or "2–3 sentence" in prompt
-    assert "eBay" in prompt
+    assert "sentence" in prompt.lower()
+    assert "booksell" in prompt.lower()
 
 
 def test_build_prompt_handles_missing_fields():
     prompt = build_prompt(title="Untitled", author=None, year=None, publisher=None)
     assert "Untitled" in prompt
     assert "None" not in prompt  # do not leak Python None into the prompt
+
+
+def test_build_prompt_has_scholarly_tone_guardrails():
+    from app.services.ai_summary import build_prompt
+    p = build_prompt("Bauhaus", "Nicholas Fox Weber", 2009, "Knopf")
+    lower = p.lower()
+    # Positive guidance
+    assert "factual" in lower or "scholarly" in lower
+    assert "3" in p and "5" in p and "sentence" in lower
+    # Explicit bans
+    for banned in ["captivating", "perfect for", "delve", "journey", "exploration"]:
+        assert banned in lower, f"prompt should name-ban the phrase '{banned}'"
+    # Do-not-fabricate rule retained
+    assert "fabricate" in lower or "inferable" in lower
 
 
 @pytest.mark.asyncio
