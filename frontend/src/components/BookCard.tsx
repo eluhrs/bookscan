@@ -6,6 +6,10 @@ import { theme } from '../styles/theme';
 
 export interface BookCardHandle {
   commitDraft: () => Promise<void>;
+  /** Read the current draft without any side effects. Used by ReviewStep,
+      which has no persisted book yet and needs the latest values to build
+      its POST /books payload. */
+  getDraft: () => Partial<Book>;
 }
 
 export interface BookCardProps {
@@ -252,7 +256,10 @@ const BookCard = forwardRef<BookCardHandle, BookCardProps>(function BookCard(pro
     condition: book.condition,
   });
 
-  // Re-sync draft when book prop changes (e.g. after parent save)
+  // Re-seed the full draft only when a DIFFERENT book is loaded (id change).
+  // Re-syncing on every book reference change would clobber in-flight user
+  // edits in ReviewStep, where virtualBook re-memoizes on every unrelated
+  // state change (condition toggles, aiSummary transitions, etc.).
   useEffect(() => {
     setDraft({
       title: book.title,
@@ -267,29 +274,43 @@ const BookCard = forwardRef<BookCardHandle, BookCardProps>(function BookCard(pro
       description: book.description,
       condition: book.condition,
     });
-  }, [book]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [book.id]);
+
+  // Description can arrive asynchronously — Gemini in the Review step, or
+  // regenerate on the Edit page — so keep draft.description in sync with
+  // book.description when the external value changes.
+  useEffect(() => {
+    setDraft((d) => ({ ...d, description: book.description }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [book.description]);
+
+  const buildPatch = (): Partial<Book> => {
+    const patch: Partial<Book> = {
+      title: draft.title || null,
+      author: draft.author || null,
+      publisher: draft.publisher || null,
+      isbn: draft.isbn || book.isbn,
+      year: draft.year ? Number(draft.year) : null,
+      pages: draft.pages ? Number(draft.pages) : null,
+      edition: draft.edition || null,
+      dimensions: draft.dimensions || null,
+      weight: draft.weight || null,
+      description: draft.description || null,
+    };
+    // If the user edited the description text, mark the source as manual
+    // so the icon reflects the edit (matches the old BookEditCard behavior).
+    if ((draft.description ?? null) !== (book.description ?? null)) {
+      patch.description_source = 'manual';
+    }
+    return patch;
+  };
 
   useImperativeHandle(ref, () => ({
     commitDraft: async () => {
-      const patch: Partial<Book> = {
-        title: draft.title || null,
-        author: draft.author || null,
-        publisher: draft.publisher || null,
-        isbn: draft.isbn || book.isbn,
-        year: draft.year ? Number(draft.year) : null,
-        pages: draft.pages ? Number(draft.pages) : null,
-        edition: draft.edition || null,
-        dimensions: draft.dimensions || null,
-        weight: draft.weight || null,
-        description: draft.description || null,
-      };
-      // If the user edited the description text, mark the source as manual
-      // so the icon reflects the edit (matches the old BookEditCard behavior).
-      if ((draft.description ?? null) !== (book.description ?? null)) {
-        patch.description_source = 'manual';
-      }
-      await props.onSave(patch);
+      await props.onSave(buildPatch());
     },
+    getDraft: () => buildPatch(),
   }));
 
   return (

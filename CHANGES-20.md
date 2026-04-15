@@ -129,6 +129,33 @@ existing + button on the Edit page:
 
 ---
 
+## ✓ FEAT-06: Review step fully editable (scope addition)
+
+Added after the initial CHANGES-20 merge, in contradiction to the
+original spec ("All fields display only — no dashed underlines, no
+tap-to-edit"). Makes the Review step match the Edit page exactly for
+all inline text fields:
+
+- Title / Author / Publisher / Year / ISBN / Pages / Description all
+  inline editable via BookCard's InlineField with dashed-underline
+  affordance.
+- `BookCardHandle.getDraft()` method added: returns the current draft
+  as a `Partial<Book>` synchronously without calling `onSave`. Used by
+  ReviewStep which has no persisted book yet.
+- ReviewStep holds a `bookCardRef`, passes `editable={true}`, and on
+  SAVE calls `bookCardRef.current?.getDraft()` to pull user edits,
+  then merges them with `lookupResult` to build the POST /books payload.
+- BookCard draft re-sync changed from `[book]` to `[book.id]` so
+  unrelated parent re-renders (virtualBook re-memoizing on condition /
+  review-toggle / aiSummary state transitions) don't clobber in-flight
+  edits.
+- Separate `[book.description]` effect keeps draft.description in sync
+  when Gemini's async response arrives or when the user clicks
+  regenerate on the Edit page.
+- `description_source: 'manual'` is written when the user edited the
+  description away from the catalog/AI value — matches the old
+  BookEditCard behavior.
+
 ## ✓ TECH-01: tsconfig.json test directory exclusion cleanup
 tsconfig.json currently excludes both test directories to keep
 tsc --noEmit happy. This is a pre-existing workaround. Proper fix:

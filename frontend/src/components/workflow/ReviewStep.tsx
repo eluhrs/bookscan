@@ -1,11 +1,11 @@
 // frontend/src/components/workflow/ReviewStep.tsx
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import WorkflowWrapper from './WorkflowWrapper'
 import { Book, BookLookup } from '../../types'
 import { saveBook } from '../../api/books'
 import { uploadPhotos } from '../../api/photos'
-import BookCard from '../BookCard'
+import BookCard, { BookCardHandle } from '../BookCard'
 import type { AiSummaryState } from '../../pages/PhotoWorkflowPage'
 
 // Condition options match eBay's used-book condition scale.
@@ -71,6 +71,7 @@ export default function ReviewStep({
   const [blobUrls, setBlobUrls] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const bookCardRef = useRef<BookCardHandle>(null)
 
   // Create and revoke blob URLs whenever localPhotos changes
   useEffect(() => {
@@ -167,22 +168,37 @@ export default function ReviewStep({
 
       // Step 1: Create book if not already created
       if (!bookId) {
-        // Prefer an AI summary when present; otherwise keep whatever the
-        // public-source lookup returned. The source string must reflect the
-        // *actual* origin so the edit page renders the correct icon —
-        // 'ai_generated' for Gemini, or the catalog name (e.g. 'google_books')
-        // for a public-source description. Passing null for a catalog
-        // description would skip the backend's auto-derive path and leave
-        // description_source unset in the DB (CHANGES-19 post-fix).
-        const description = aiDescription ?? lookupResult.description ?? null
-        const description_source = aiDescription
+        // Pull the latest user edits straight from BookCard's internal draft.
+        // Review fields (title/author/publisher/isbn/year/pages/description)
+        // are fully inline-editable, so draftPatch overrides the lookup values.
+        const draftPatch = bookCardRef.current?.getDraft() ?? {}
+
+        // Decide description_source. The buildPatch inside BookCard already
+        // marks it 'manual' when the user typed over the description. When the
+        // user did NOT edit, fall back to the context-appropriate source:
+        // ai_generated when an AI summary succeeded, otherwise the catalog
+        // source for a public-source description, otherwise null.
+        const contextSource: string | null = aiDescription
           ? 'ai_generated'
           : lookupResult.description
             ? (lookupResult.data_sources?.description ?? null)
             : null
+        const description_source =
+          (draftPatch.description_source as string | undefined) ?? contextSource
+
         const book = await saveBook({
-          ...lookupResult,
-          description,
+          isbn: (draftPatch.isbn as string | undefined) ?? lookupResult.isbn,
+          title: draftPatch.title ?? lookupResult.title,
+          author: draftPatch.author ?? lookupResult.author,
+          publisher: draftPatch.publisher ?? lookupResult.publisher,
+          edition: draftPatch.edition ?? lookupResult.edition,
+          year: (draftPatch.year as number | null | undefined) ?? lookupResult.year,
+          pages: (draftPatch.pages as number | null | undefined) ?? lookupResult.pages,
+          dimensions: draftPatch.dimensions ?? lookupResult.dimensions,
+          weight: draftPatch.weight ?? lookupResult.weight,
+          description: draftPatch.description ?? aiDescription ?? lookupResult.description ?? null,
+          cover_image_url: lookupResult.cover_image_url,
+          data_sources: lookupResult.data_sources,
           condition,
           needs_metadata_review: reviewMetadata ? true : lookupResult.needs_metadata_review,
           needs_photo_review: reviewPhotography,
@@ -231,7 +247,8 @@ export default function ReviewStep({
         }}
       >
         <BookCard
-          editable={false}
+          ref={bookCardRef}
+          editable
           book={virtualBook}
           photos={localPhotos.map((p) => ({ key: p.id, url: blobUrls[p.id] ?? '' }))}
           photoUrls={blobUrls}

@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { createRef } from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import BookCard from '../BookCard';
+import BookCard, { BookCardHandle } from '../BookCard';
 import type { Book } from '../../types';
 
 const baseBook: Book = {
@@ -248,5 +249,102 @@ describe('BookCard', () => {
       <BookCard editable={false} book={emptyBook} photos={[]} photoUrls={{}} onSave={vi.fn()} onImmediateSave={vi.fn()} />,
     );
     expect(container.textContent).toContain('No description');
+  });
+
+  // ---- FEAT-06: editable Review step — getDraft handle exposes user edits ----
+  it('getDraft returns the current draft including user edits, without calling onSave', () => {
+    const ref = createRef<BookCardHandle>();
+    const onSave = vi.fn();
+    render(
+      <BookCard
+        ref={ref}
+        editable
+        book={baseBook}
+        photos={[]}
+        photoUrls={{}}
+        onSave={onSave}
+        onImmediateSave={vi.fn()}
+      />,
+    );
+
+    // Click the Title to enter edit mode, change value, blur to commit to draft.
+    const titleSpan = screen.getByText('Vortex');
+    fireEvent.click(titleSpan);
+    const titleInput = screen.getByDisplayValue('Vortex') as HTMLInputElement;
+    fireEvent.change(titleInput, { target: { value: 'Vortex (edited)' } });
+    fireEvent.blur(titleInput);
+
+    // getDraft reflects the edit; onSave was NOT called.
+    const draft = ref.current!.getDraft();
+    expect(draft.title).toBe('Vortex (edited)');
+    expect(draft.author).toBe('Robert Charles Wilson');
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('draft survives a book prop re-reference when book.id is unchanged', () => {
+    const ref = createRef<BookCardHandle>();
+    const { rerender } = render(
+      <BookCard
+        ref={ref}
+        editable
+        book={baseBook}
+        photos={[]}
+        photoUrls={{}}
+        onSave={vi.fn()}
+        onImmediateSave={vi.fn()}
+      />,
+    );
+    // Edit title
+    fireEvent.click(screen.getByText('Vortex'));
+    const input = screen.getByDisplayValue('Vortex') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'User Edit' } });
+    fireEvent.blur(input);
+
+    // Re-render with a brand new book OBJECT but same id (simulates
+    // virtualBook useMemo recomputing on unrelated state change).
+    const newBookRef = { ...baseBook } as Book;
+    rerender(
+      <BookCard
+        ref={ref}
+        editable
+        book={newBookRef}
+        photos={[]}
+        photoUrls={{}}
+        onSave={vi.fn()}
+        onImmediateSave={vi.fn()}
+      />,
+    );
+    expect(ref.current!.getDraft().title).toBe('User Edit');
+  });
+
+  it('description syncs from book.description when it arrives async (AI in Review)', () => {
+    const ref = createRef<BookCardHandle>();
+    const pending = { ...baseBook, description: null } as Book;
+    const { rerender } = render(
+      <BookCard
+        ref={ref}
+        editable
+        book={pending}
+        photos={[]}
+        photoUrls={{}}
+        onSave={vi.fn()}
+        onImmediateSave={vi.fn()}
+      />,
+    );
+    expect(ref.current!.getDraft().description).toBeNull();
+
+    const arrived = { ...baseBook, description: 'AI arrived.' } as Book;
+    rerender(
+      <BookCard
+        ref={ref}
+        editable
+        book={arrived}
+        photos={[]}
+        photoUrls={{}}
+        onSave={vi.fn()}
+        onImmediateSave={vi.fn()}
+      />,
+    );
+    expect(ref.current!.getDraft().description).toBe('AI arrived.');
   });
 });
