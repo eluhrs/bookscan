@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import WorkflowWrapper from './WorkflowWrapper'
-import { BookLookup } from '../../types'
+import { Book, BookLookup } from '../../types'
 import { saveBook } from '../../api/books'
 import { uploadPhotos } from '../../api/photos'
 import { theme } from '../../styles/theme'
@@ -19,6 +19,7 @@ interface ReviewStepProps {
   onSaveComplete: () => void
   onCancel: () => void
   skippedPhotography: boolean
+  polledBook: Book | null
 }
 
 async function compressPhoto(file: File): Promise<Blob> {
@@ -44,6 +45,38 @@ async function compressPhoto(file: File): Promise<Blob> {
   })
 }
 
+function ReviewToggleButton({
+  label,
+  on,
+  onToggle,
+}: {
+  label: string
+  on: boolean
+  onToggle: (v: boolean) => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(!on)}
+      aria-pressed={on}
+      style={{
+        padding: '0.6rem 0.5rem',
+        height: 40,
+        border: on ? 'none' : `1px solid ${theme.colors.zoneBorder}`,
+        borderRadius: theme.radius.md,
+        background: on ? theme.colors.primaryBlue : theme.colors.bg,
+        color: on ? '#fff' : theme.colors.secondaryText,
+        fontWeight: on ? 500 : 400,
+        fontSize: 13,
+        cursor: 'pointer',
+        fontFamily: theme.font.sans,
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
 export default function ReviewStep({
   lookupResult,
   photos,
@@ -52,10 +85,12 @@ export default function ReviewStep({
   onSaveComplete,
   onCancel,
   skippedPhotography,
+  polledBook,
 }: ReviewStepProps) {
   const [condition, setCondition] = useState<Condition | null>(null)
   const [reviewMetadata, setReviewMetadata] = useState(lookupResult.needs_metadata_review)
   const [reviewPhotography, setReviewPhotography] = useState(skippedPhotography)
+  const [reviewDescription, setReviewDescription] = useState(true)
   const [localPhotos, setLocalPhotos] = useState<Array<{ id: string; file: File }>>(
     () => photos.map((file) => ({ id: crypto.randomUUID(), file }))
   )
@@ -71,6 +106,13 @@ export default function ReviewStep({
       urls.forEach((u) => URL.revokeObjectURL(u))
     }
   }, [localPhotos])
+
+  // Re-assert review ON when an AI description arrives
+  useEffect(() => {
+    if (polledBook?.description_source === 'ai_generated') {
+      setReviewDescription(true)
+    }
+  }, [polledBook?.description_source])
 
   function handleDeletePhoto(id: string) {
     const next = localPhotos.filter((p) => p.id !== id)
@@ -95,8 +137,8 @@ export default function ReviewStep({
           condition,
           needs_metadata_review: reviewMetadata ? true : lookupResult.needs_metadata_review,
           needs_photo_review: reviewPhotography,
+          needs_description_review: showThirdToggle ? reviewDescription : false,
           description_source: null,
-          needs_description_review: false,
           description_generation_failed: false,
         })
         bookId = book.id
@@ -116,6 +158,13 @@ export default function ReviewStep({
       setSaving(false)
     }
   }
+
+  const aiDescription = polledBook?.description_source === 'ai_generated'
+    ? polledBook.description ?? null
+    : null
+  const aiFailed = polledBook?.description_generation_failed === true
+  const aiPending = !!savedBookId && !aiDescription && !aiFailed
+  const showThirdToggle = !!aiDescription
 
   return (
     <WorkflowWrapper
@@ -227,45 +276,61 @@ export default function ReviewStep({
             ))}
           </div>
 
-          {/* Review Metadata? checkbox */}
-          <label
+          {/* Review toggle buttons */}
+          <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              cursor: 'pointer',
-              marginBottom: '0.5rem',
-              fontSize: '0.875rem',
-              color: theme.colors.text,
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={reviewMetadata}
-              onChange={(e) => setReviewMetadata(e.target.checked)}
-            />
-            Review Metadata?
-          </label>
-
-          {/* Review Photography? checkbox — auto-checked when skippedPhotography or all photos deleted */}
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              cursor: 'pointer',
+              display: 'grid',
+              gridTemplateColumns: showThirdToggle ? '1fr 1fr 1fr' : '1fr 1fr',
+              gap: 8,
               marginBottom: '0.75rem',
-              fontSize: '0.875rem',
-              color: theme.colors.text,
             }}
           >
-            <input
-              type="checkbox"
-              checked={reviewPhotography}
-              onChange={(e) => setReviewPhotography(e.target.checked)}
+            <ReviewToggleButton
+              label="review metadata"
+              on={reviewMetadata}
+              onToggle={setReviewMetadata}
             />
-            Review Photography?
-          </label>
+            <ReviewToggleButton
+              label="review photography"
+              on={reviewPhotography}
+              onToggle={setReviewPhotography}
+            />
+            {showThirdToggle && (
+              <ReviewToggleButton
+                label="review description"
+                on={reviewDescription}
+                onToggle={setReviewDescription}
+              />
+            )}
+          </div>
+
+          {/* Description block — AI pending or AI success */}
+          {(aiPending || aiDescription) && (
+            <div style={{ marginBottom: '0.75rem' }}>
+              <p
+                style={{
+                  margin: '0 0 0.35rem',
+                  fontSize: '0.72rem',
+                  color: theme.colors.muted,
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                Description
+              </p>
+              {aiPending && (
+                <p style={{ margin: 0, fontStyle: 'italic', color: theme.colors.muted, fontSize: 13 }}>
+                  Generating summary…
+                </p>
+              )}
+              {aiDescription && (
+                <p style={{ margin: 0, color: theme.colors.text, fontSize: 13, lineHeight: 1.45 }}>
+                  {aiDescription}
+                </p>
+              )}
+            </div>
+          )}
 
           {error && (
             <p style={{ color: theme.colors.danger, fontSize: '0.85rem', margin: '0.5rem 0' }}>
