@@ -43,6 +43,9 @@ class BookCreate(BaseModel):
     needs_metadata_review: bool = True
     condition: Optional[str] = None
     needs_photo_review: bool = False
+    description_source: Optional[str] = None
+    needs_description_review: bool = False
+    description_generation_failed: bool = False
 
 
 class BookUpdate(BaseModel):
@@ -59,6 +62,9 @@ class BookUpdate(BaseModel):
     needs_metadata_review: Optional[bool] = None
     condition: Optional[str] = None
     needs_photo_review: Optional[bool] = None
+    description_source: Optional[str] = None
+    needs_description_review: Optional[bool] = None
+    description_generation_failed: Optional[bool] = None
 
 
 class BookPhotoResponse(BaseModel):
@@ -88,6 +94,9 @@ class BookResponse(BaseModel):
     needs_metadata_review: bool
     condition: Optional[str] = None
     needs_photo_review: bool = False
+    description_source: Optional[str] = None
+    needs_description_review: bool = False
+    description_generation_failed: bool = False
     has_photos: bool = False
     photos: list[BookPhotoResponse] = []
     created_at: datetime
