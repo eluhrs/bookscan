@@ -203,8 +203,9 @@ function ConditionBar({ value, onChange }: ConditionBarProps) {
 }
 
 // ---- ReviewToggle ----
-function ReviewToggle({ label, on, onToggle }: {
-  label: string
+function ReviewToggle({ word1, word2, on, onToggle }: {
+  word1: string
+  word2: string
   on: boolean
   onToggle: (v: boolean) => void
 }) {
@@ -213,6 +214,7 @@ function ReviewToggle({ label, on, onToggle }: {
       type="button"
       onClick={() => onToggle(!on)}
       aria-pressed={on}
+      aria-label={`${word1} ${word2}`}
       style={{
         height: ROW_BUTTON_HEIGHT,
         padding: '0 0.5rem',
@@ -224,12 +226,14 @@ function ReviewToggle({ label, on, onToggle }: {
         fontSize: 13,
         cursor: 'pointer',
         fontFamily: theme.font.sans,
-        lineHeight: 1.15,
+        lineHeight: 1.1,
         overflow: 'hidden',
         wordBreak: 'break-word',
       }}
     >
-      {label}
+      <span className="review-toggle-label">
+        {word1}<span className="rt-break"> </span>{word2}
+      </span>
     </button>
   )
 }
@@ -521,17 +525,20 @@ export default function BookEditCard({
             }}
           >
             <ReviewToggle
-              label="review metadata"
+              word1="review"
+              word2="metadata"
               on={book.needs_metadata_review}
               onToggle={(v) => onImmediateSave({ needs_metadata_review: v })}
             />
             <ReviewToggle
-              label="review photography"
+              word1="review"
+              word2="photography"
               on={book.needs_photo_review}
               onToggle={(v) => onImmediateSave({ needs_photo_review: v })}
             />
             <ReviewToggle
-              label="review description"
+              word1="review"
+              word2="description"
               on={book.needs_description_review}
               onToggle={(v) => onImmediateSave({ needs_description_review: v })}
             />

@@ -52,11 +52,13 @@ async function compressPhoto(file: File): Promise<Blob> {
 }
 
 function ReviewToggleButton({
-  label,
+  word1,
+  word2,
   on,
   onToggle,
 }: {
-  label: string
+  word1: string
+  word2: string
   on: boolean
   onToggle: (v: boolean) => void
 }) {
@@ -65,6 +67,7 @@ function ReviewToggleButton({
       type="button"
       onClick={() => onToggle(!on)}
       aria-pressed={on}
+      aria-label={`${word1} ${word2}`}
       style={{
         height: ROW_BUTTON_HEIGHT,
         padding: '0 0.5rem',
@@ -76,12 +79,14 @@ function ReviewToggleButton({
         fontSize: 13,
         cursor: 'pointer',
         fontFamily: theme.font.sans,
-        lineHeight: 1.15,
+        lineHeight: 1.1,
         overflow: 'hidden',
         wordBreak: 'break-word',
       }}
     >
-      {label}
+      <span className="review-toggle-label">
+        {word1}<span className="rt-break"> </span>{word2}
+      </span>
     </button>
   )
 }
@@ -309,17 +314,20 @@ export default function ReviewStep({
             }}
           >
             <ReviewToggleButton
-              label="review metadata"
+              word1="review"
+              word2="metadata"
               on={reviewMetadata}
               onToggle={setReviewMetadata}
             />
             <ReviewToggleButton
-              label="review photography"
+              word1="review"
+              word2="photography"
               on={reviewPhotography}
               onToggle={setReviewPhotography}
             />
             <ReviewToggleButton
-              label="review description"
+              word1="review"
+              word2="description"
               on={reviewDescription}
               onToggle={setReviewDescription}
             />

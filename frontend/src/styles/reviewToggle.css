@@ -1,0 +1,13 @@
+/* Review-toggle button label: two lines on mobile, one line on desktop. */
+.review-toggle-label {
+  display: block;
+  line-height: 1.1;
+}
+.review-toggle-label > .rt-break {
+  display: inline;
+}
+@media (max-width: 600px) {
+  .review-toggle-label > .rt-break {
+    display: block;
+  }
+}
