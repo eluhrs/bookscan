@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Camera } from 'lucide-react'
 import BookTable from '../components/BookTable'
-import BookEditCard from '../components/BookEditCard'
+import BookCard, { BookCardHandle } from '../components/BookCard'
 import ListingGenerator from '../components/ListingGenerator'
 import StatusFilter, { StatusFilterValue } from '../components/StatusFilter'
-import { listBooks, updateBook, deleteBook, exportListingsCSV, getBook } from '../api/books'
+import { listBooks, updateBook, deleteBook, exportListingsCSV, getBook, generateSummary } from '../api/books'
 import { listPhotos, deletePhoto, getPhotoUrl, uploadPhotos } from '../api/photos'
 import { Book, BookPhoto } from '../types'
 import { useAuth } from '../hooks/useAuth'
@@ -28,6 +28,9 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false)
   const [bookPhotos, setBookPhotos] = useState<BookPhoto[]>([])
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
+  const bookCardRef = useRef<BookCardHandle>(null)
   const PAGE_SIZE = 20
 
   const load = useCallback(async () => {
@@ -190,6 +193,30 @@ export default function DashboardPage() {
     setEditingBook(updated)
   }
 
+  async function handleRegenerate() {
+    if (!editingBook || regenerating) return
+    setRegenerating(true)
+    try {
+      const { description } = await generateSummary({
+        title: editingBook.title,
+        author: editingBook.author,
+        year: editingBook.year,
+        publisher: editingBook.publisher,
+      })
+      if (description) {
+        await handleImmediateSave({
+          description,
+          description_source: 'ai_generated',
+          needs_description_review: true,
+        })
+      }
+    } catch {
+      // Silently swallow — BookEditCard pattern
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
   async function handleDelete(id: string) {
     try {
       await deleteBook(id)
@@ -202,22 +229,190 @@ export default function DashboardPage() {
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
   if (editingBook) {
+    const secondaryButtonStyle: React.CSSProperties = {
+      flex: 1,
+      height: 44,
+      fontSize: 13,
+      fontWeight: 500,
+      border: `1px solid ${theme.colors.zoneBorder}`,
+      borderRadius: theme.radius.md,
+      background: theme.colors.bg,
+      color: theme.colors.secondaryText,
+      cursor: 'pointer',
+      fontFamily: theme.font.sans,
+    }
+
     return (
       <>
-        <BookEditCard
-          book={editingBook}
-          photos={bookPhotos}
-          photoUrls={photoUrls}
-          totalCount={total}
-          onDeletePhoto={handleDeletePhoto}
-          onAddPhoto={handleAddPhoto}
-          onSave={handleSave}
-          onImmediateSave={handleImmediateSave}
-          onBack={() => setEditingBook(null)}
-          onSaved={() => setEditingBook(null)}
-          onLogout={logout}
-          onGenerateListing={() => setListingBook(editingBook)}
-        />
+        {/* Viewport-pinned shell: navbar + scroll zone + footer */}
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            maxWidth: '100vw',
+            height: vpHeight,
+            transform: `translateY(${vpOffset}px)`,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            overscrollBehavior: 'none',
+            background: theme.colors.bg,
+            color: theme.colors.text,
+            fontFamily: theme.font.sans,
+          }}
+        >
+          {/* Navbar */}
+          <div
+            style={{
+              flexShrink: 0,
+              background: theme.colors.navBg,
+              borderBottom: `1px solid ${theme.colors.zoneBorder}`,
+            }}
+          >
+            <div
+              style={{
+                maxWidth: 1200,
+                margin: '0 auto',
+                padding: '1rem 1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '1rem',
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, letterSpacing: '-0.02em' }}>
+                  BookScan
+                </h1>
+                <p style={{ margin: '0.2rem 0 0', fontSize: '0.85rem', color: theme.colors.muted }}>
+                  {total} book{total !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <div
+                style={{
+                  fontSize: '1rem',
+                  fontWeight: 500,
+                  color: theme.colors.text,
+                  textAlign: 'center',
+                  flex: 'none',
+                }}
+              >
+                Edit Book
+              </div>
+              <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={logout}
+                  style={{
+                    padding: '0.4rem 0.75rem',
+                    fontSize: '0.85rem',
+                    border: `1px solid ${theme.colors.zoneBorder}`,
+                    borderRadius: theme.radius.sm,
+                    background: theme.colors.bg,
+                    cursor: 'pointer',
+                    fontFamily: theme.font.sans,
+                  }}
+                >
+                  Log out
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Scrollable content zone */}
+          <div
+            className="mobile-scroll"
+            style={{
+              flex: 1,
+              minHeight: 0,
+              overflowY: 'auto',
+              overscrollBehavior: 'none',
+              WebkitOverflowScrolling: 'touch',
+            }}
+          >
+            <div
+              style={{
+                maxWidth: 1200,
+                margin: '0 auto',
+                background: theme.colors.bg,
+                borderLeft: `1px solid ${theme.colors.zoneBorder}`,
+                borderRight: `1px solid ${theme.colors.zoneBorder}`,
+                minHeight: '100%',
+                boxSizing: 'border-box',
+              }}
+            >
+              <BookCard
+                ref={bookCardRef}
+                editable
+                book={editingBook}
+                photos={bookPhotos.map((p) => ({ key: p.id, url: photoUrls[p.id] ?? '' }))}
+                photoUrls={photoUrls}
+                onDeletePhoto={handleDeletePhoto}
+                onAddPhoto={handleAddPhoto}
+                onSave={handleSave}
+                onImmediateSave={handleImmediateSave}
+                onRegenerateDescription={handleRegenerate}
+                regeneratingDescription={regenerating}
+              />
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div
+            style={{
+              flexShrink: 0,
+              background: theme.colors.navBg,
+              borderTop: `1px solid ${theme.colors.zoneBorder}`,
+              padding: '12px 16px calc(12px + env(safe-area-inset-bottom))',
+            }}
+          >
+            <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={async () => {
+                    setSaving(true)
+                    try {
+                      await bookCardRef.current?.commitDraft()
+                      setEditingBook(null)
+                    } catch (e) {
+                      alert(e instanceof Error ? e.message : 'Save failed')
+                    } finally {
+                      setSaving(false)
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    height: 44,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                    border: 'none',
+                    borderRadius: theme.radius.md,
+                    background: saving ? theme.colors.disabled : theme.colors.primaryBlue,
+                    color: '#fff',
+                    cursor: saving ? 'default' : 'pointer',
+                    fontFamily: theme.font.sans,
+                  }}
+                >
+                  {saving ? 'Saving…' : 'Save'}
+                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button type="button" onClick={() => setEditingBook(null)} style={secondaryButtonStyle}>
+                    Dashboard
+                  </button>
+                  <button type="button" onClick={() => setListingBook(editingBook)} style={secondaryButtonStyle}>
+                    Generate Listing
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {listingBook && (
           <div
             style={{

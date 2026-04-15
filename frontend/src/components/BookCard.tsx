@@ -1,8 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import type { Book } from '../types';
 import PhotoFilmstrip from './PhotoFilmstrip';
 import DescriptionSourceIcon from './DescriptionSourceIcon';
 import { theme } from '../styles/theme';
+
+export interface BookCardHandle {
+  commitDraft: () => Promise<void>;
+}
 
 export interface BookCardProps {
   editable: boolean;
@@ -221,7 +225,7 @@ function InlineField({
   );
 }
 
-export default function BookCard(props: BookCardProps) {
+const BookCard = forwardRef<BookCardHandle, BookCardProps>(function BookCard(props, ref) {
   const { book, editable } = props;
 
   const [draft, setDraft] = useState<DraftFields>({
@@ -252,6 +256,23 @@ export default function BookCard(props: BookCardProps) {
       condition: book.condition,
     });
   }, [book]);
+
+  useImperativeHandle(ref, () => ({
+    commitDraft: async () => {
+      const patch: Partial<Book> = {
+        title: draft.title || null,
+        author: draft.author || null,
+        publisher: draft.publisher || null,
+        year: draft.year ? Number(draft.year) : null,
+        pages: draft.pages ? Number(draft.pages) : null,
+        edition: draft.edition || null,
+        dimensions: draft.dimensions || null,
+        weight: draft.weight || null,
+        description: draft.description || null,
+      };
+      await props.onSave(patch);
+    },
+  }));
 
   return (
     <div className="bc-root">
@@ -458,4 +479,6 @@ export default function BookCard(props: BookCardProps) {
       )}
     </div>
   );
-}
+});
+
+export default BookCard;
