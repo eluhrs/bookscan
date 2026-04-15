@@ -34,6 +34,7 @@ describe('ReviewStep', () => {
     onSaveComplete: vi.fn(),
     onCancel: vi.fn(),
     skippedPhotography: false,
+    polledBook: null,
   }
 
   it('SAVE button is disabled before condition is selected', () => {
@@ -56,20 +57,20 @@ describe('ReviewStep', () => {
 
   it('flag for review is unchecked when needs_metadata_review is false', () => {
     render(<ReviewStep {...defaultProps} lookupResult={{ ...baseLookup, needs_metadata_review: false }} />, { wrapper })
-    expect(screen.getByRole('checkbox', { name: /Review Metadata/ })).not.toBeChecked()
+    expect(screen.getByRole('button', { name: /review metadata/i })).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('flag for review is pre-checked when needs_metadata_review is true', () => {
     render(<ReviewStep {...defaultProps} lookupResult={{ ...baseLookup, needs_metadata_review: true }} />, { wrapper })
-    expect(screen.getByRole('checkbox', { name: /Review Metadata/ })).toBeChecked()
+    expect(screen.getByRole('button', { name: /review metadata/i })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('user can override the flag for review checkbox', () => {
     render(<ReviewStep {...defaultProps} lookupResult={{ ...baseLookup, needs_metadata_review: true }} />, { wrapper })
-    const checkbox = screen.getByRole('checkbox', { name: /Review Metadata/ })
-    expect(checkbox).toBeChecked()
-    fireEvent.click(checkbox)
-    expect(checkbox).not.toBeChecked()
+    const button = screen.getByRole('button', { name: /review metadata/i })
+    expect(button).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(button)
+    expect(button).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('displays title and author from lookup result', () => {
@@ -80,20 +81,20 @@ describe('ReviewStep', () => {
 
   it('Review Photography checkbox is unchecked when skippedPhotography is false', () => {
     render(<ReviewStep {...defaultProps} skippedPhotography={false} />, { wrapper })
-    expect(screen.getByRole('checkbox', { name: /Review Photography/ })).not.toBeChecked()
+    expect(screen.getByRole('button', { name: /review photography/i })).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('Review Photography checkbox is pre-checked when skippedPhotography is true', () => {
     render(<ReviewStep {...defaultProps} skippedPhotography={true} />, { wrapper })
-    expect(screen.getByRole('checkbox', { name: /Review Photography/ })).toBeChecked()
+    expect(screen.getByRole('button', { name: /review photography/i })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('user can override the Review Photography checkbox', () => {
     render(<ReviewStep {...defaultProps} skippedPhotography={true} />, { wrapper })
-    const checkbox = screen.getByRole('checkbox', { name: /Review Photography/ })
-    expect(checkbox).toBeChecked()
-    fireEvent.click(checkbox)
-    expect(checkbox).not.toBeChecked()
+    const button = screen.getByRole('button', { name: /review photography/i })
+    expect(button).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(button)
+    expect(button).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('filmstrip renders cover image when cover_image_url is provided', () => {
@@ -119,9 +120,9 @@ describe('ReviewStep', () => {
   it('deleting all user photos auto-checks Review Photography?', () => {
     const fakeFile = new File(['x'], 'photo.jpg', { type: 'image/jpeg' })
     render(<ReviewStep {...defaultProps} photos={[fakeFile]} skippedPhotography={false} />, { wrapper })
-    expect(screen.getByRole('checkbox', { name: /Review Photography/ })).not.toBeChecked()
+    expect(screen.getByRole('button', { name: /review photography/i })).toHaveAttribute('aria-pressed', 'false')
     fireEvent.click(screen.getByRole('button', { name: /delete photo/i }))
-    expect(screen.getByRole('checkbox', { name: /Review Photography/ })).toBeChecked()
+    expect(screen.getByRole('button', { name: /review photography/i })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('deleting a photo when others remain does not auto-check Review Photography?', () => {
@@ -130,17 +131,17 @@ describe('ReviewStep', () => {
     render(<ReviewStep {...defaultProps} photos={[file1, file2]} skippedPhotography={false} />, { wrapper })
     const deleteBtns = screen.getAllByRole('button', { name: /delete photo/i })
     fireEvent.click(deleteBtns[0])
-    expect(screen.getByRole('checkbox', { name: /Review Photography/ })).not.toBeChecked()
+    expect(screen.getByRole('button', { name: /review photography/i })).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('user can manually re-check Review Photography? after auto-uncheck', () => {
     // Start with skippedPhotography true (auto-checked), then manually uncheck
     render(<ReviewStep {...defaultProps} skippedPhotography={true} />, { wrapper })
-    const checkbox = screen.getByRole('checkbox', { name: /Review Photography/ })
-    expect(checkbox).toBeChecked()
-    fireEvent.click(checkbox)
-    expect(checkbox).not.toBeChecked()
-    fireEvent.click(checkbox)
-    expect(checkbox).toBeChecked()
+    const button = screen.getByRole('button', { name: /review photography/i })
+    expect(button).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(button)
+    expect(button).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(button)
+    expect(button).toHaveAttribute('aria-pressed', 'true')
   })
 })
