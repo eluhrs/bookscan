@@ -36,6 +36,9 @@ const mockBook = {
   needs_metadata_review: false,
   has_photos: false,
   needs_photo_review: false,
+  description_source: null,
+  needs_description_review: false,
+  description_generation_failed: false,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 }

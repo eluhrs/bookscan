@@ -35,7 +35,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 )
 
 describe('LookupStep', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => { vi.clearAllMocks() })
 
   it('renders in camera mode by default — shows video element', () => {
     render(
@@ -93,6 +93,7 @@ describe('LookupStep', () => {
       isbn: '9781234567890',
       title: 'Test',
       needs_metadata_review: false,
+      existing_book_id: null,
       author: null, publisher: null, edition: null, year: null,
       pages: null, dimensions: null, weight: null,
       description: null, condition: null, cover_image_url: null, data_sources: null,

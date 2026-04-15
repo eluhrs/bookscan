@@ -4,10 +4,10 @@ import { MemoryRouter } from 'react-router-dom'
 import PhotographStep from '../../components/workflow/PhotographStep'
 
 beforeEach(() => {
-  global.ResizeObserver = class ResizeObserver {
+  window.ResizeObserver = class ResizeObserver {
     private cb: ResizeObserverCallback
     constructor(cb: ResizeObserverCallback) { this.cb = cb }
-    observe(el: Element) {
+    observe(_el: Element) {
       this.cb(
         [{ contentRect: { width: 300, height: 400 } } as ResizeObserverEntry],
         this,

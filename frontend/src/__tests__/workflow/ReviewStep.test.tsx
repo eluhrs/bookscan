@@ -19,6 +19,7 @@ const baseLookup: BookLookup = {
   cover_image_url: null,
   data_sources: null,
   needs_metadata_review: false,
+  existing_book_id: null,
 }
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
