@@ -198,4 +198,55 @@ describe('BookCard', () => {
       expect(screen.getByText(/ai text here/)).toBeInTheDocument();
     }
   });
+
+  // ---- Description state machine (regression guard for CHANGES-20 BUG-E) ----
+  const emptyBook = { ...baseBook, description: null, description_source: null } as Book;
+
+  it('editable=false catalog book: shows text + Database icon', () => {
+    const catalog = { ...baseBook, description: 'Catalog text.', description_source: 'google_books' } as Book;
+    const { container } = render(
+      <BookCard editable={false} book={catalog} photos={[]} photoUrls={{}} onSave={vi.fn()} onImmediateSave={vi.fn()} descriptionSource="google_books" />,
+    );
+    expect(container.textContent).toContain('Catalog text.');
+    expect(screen.getByLabelText(/catalog source/i)).toBeInTheDocument();
+  });
+
+  it('editable=false ai_generated book: shows text + Sparkles regenerate button', () => {
+    const ai = { ...baseBook, description: 'AI text.', description_source: 'ai_generated' } as Book;
+    const { container } = render(
+      <BookCard editable={false} book={ai} photos={[]} photoUrls={{}} onSave={vi.fn()} onImmediateSave={vi.fn()} onRegenerateDescription={vi.fn()} descriptionSource="ai_generated" />,
+    );
+    expect(container.textContent).toContain('AI text.');
+    expect(screen.getByRole('button', { name: /regenerate ai summary/i })).toBeInTheDocument();
+  });
+
+  it('editable=false Review-step pending (no description yet): shows "Generating summary…" + Loader spinner', () => {
+    const { container } = render(
+      <BookCard editable={false} book={emptyBook} photos={[]} photoUrls={{}} onSave={vi.fn()} onImmediateSave={vi.fn()} onRegenerateDescription={vi.fn()} regeneratingDescription descriptionSource={null} />,
+    );
+    expect(container.textContent).toContain('Generating summary');
+    expect(screen.getByLabelText(/regenerating summary/i)).toBeInTheDocument();
+  });
+
+  it('editable=true pending (no description yet): shows "Generating summary…"', () => {
+    const { container } = render(
+      <BookCard editable book={emptyBook} photos={[]} photoUrls={{}} onSave={vi.fn()} onImmediateSave={vi.fn()} onRegenerateDescription={vi.fn()} regeneratingDescription />,
+    );
+    expect(container.textContent).toContain('Generating summary');
+  });
+
+  it('editable=false failed generation: shows "Summary unavailable."', () => {
+    const failed = { ...emptyBook, description_generation_failed: true } as Book;
+    const { container } = render(
+      <BookCard editable={false} book={failed} photos={[]} photoUrls={{}} onSave={vi.fn()} onImmediateSave={vi.fn()} />,
+    );
+    expect(container.textContent).toContain('Summary unavailable');
+  });
+
+  it('editable=false no description + no AI activity: shows "No description"', () => {
+    const { container } = render(
+      <BookCard editable={false} book={emptyBook} photos={[]} photoUrls={{}} onSave={vi.fn()} onImmediateSave={vi.fn()} />,
+    );
+    expect(container.textContent).toContain('No description');
+  });
 });
