@@ -211,7 +211,7 @@ export default function DashboardPage() {
         })
       }
     } catch {
-      // Silently swallow — BookEditCard pattern
+      // Silently swallow — user can retry the regenerate button
     } finally {
       setRegenerating(false)
     }
