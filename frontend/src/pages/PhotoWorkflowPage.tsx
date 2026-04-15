@@ -4,11 +4,20 @@ import PhotographStep from '../components/workflow/PhotographStep'
 import LookupStep from '../components/workflow/LookupStep'
 import ReviewStep from '../components/workflow/ReviewStep'
 import { useScanAudio } from '../hooks/useScanAudio'
-import { getBook } from '../api/books'
-import { Book, BookLookup } from '../types'
+import { generateSummary } from '../api/books'
+import { BookLookup } from '../types'
 import { theme } from '../styles/theme'
 
 type WorkflowStep = 'photograph' | 'lookup' | 'review' | 'confirmation'
+
+export type AiSummaryStatus = 'idle' | 'pending' | 'success' | 'failed'
+
+export interface AiSummaryState {
+  status: AiSummaryStatus
+  text: string | null
+}
+
+const IDLE_AI: AiSummaryState = { status: 'idle', text: null }
 
 export default function PhotoWorkflowPage() {
   const [step, setStep] = useState<WorkflowStep>('photograph')
@@ -19,11 +28,14 @@ export default function PhotoWorkflowPage() {
   const [lookupResult, setLookupResult] = useState<BookLookup | null>(null)
   const [savedBookId, setSavedBookId] = useState<string | null>(null)
   const [skippedPhotography, setSkippedPhotography] = useState(false)
-  const [polledBook, setPolledBook] = useState<Book | null>(null)
+  const [aiSummary, setAiSummary] = useState<AiSummaryState>(IDLE_AI)
 
   // Tracks current step immediately (before React re-renders) so handleLookupComplete
   // can detect stale calls caused by cancel being pressed while a lookup is in-flight.
   const stepRef = useRef<WorkflowStep>('photograph')
+  // Generation token: lets us discard a stale Gemini response if the user cancelled
+  // and started a new scan while the previous AI request was still in flight.
+  const aiGenIdRef = useRef(0)
 
   const { playSuccess, playReview } = useScanAudio()
 
@@ -37,36 +49,11 @@ export default function PhotoWorkflowPage() {
       setLookupResult(null)
       setSavedBookId(null)
       setSkippedPhotography(false)
-      setPolledBook(null)
+      setAiSummary(IDLE_AI)
       setStep('photograph')
     }, 800)
     return () => clearTimeout(t)
   }, [step, playSuccess])
-
-  // After save, poll the book until the AI summary arrives, fails, or 12s elapses.
-  useEffect(() => {
-    if (step !== 'review' || !savedBookId) return
-    let cancelled = false
-    const start = Date.now()
-    const poll = async () => {
-      try {
-        const b = await getBook(savedBookId)
-        if (cancelled) return
-        setPolledBook(b)
-        const done =
-          b.description_source === 'ai_generated' ||
-          b.description_generation_failed === true ||
-          Date.now() - start > 12000
-        if (!done) {
-          window.setTimeout(poll, 1500)
-        }
-      } catch {
-        // Silent — review step still works without the polled state.
-      }
-    }
-    poll()
-    return () => { cancelled = true }
-  }, [step, savedBookId])
 
   function handlePhotoAdded(file: File) {
     setPhotos((prev) => {
@@ -102,6 +89,34 @@ export default function PhotoWorkflowPage() {
       navigator.vibrate?.(25)
       stepRef.current = 'review'
       setStep('review')
+
+      // Fire Gemini summary in parallel with entering Review step.
+      // Skip if the lookup already returned a description (Google Books etc.) or
+      // if the lookup failed badly enough that we have no usable metadata.
+      if (result.description || !result.title) {
+        setAiSummary(IDLE_AI)
+        return
+      }
+      const myGen = ++aiGenIdRef.current
+      setAiSummary({ status: 'pending', text: null })
+      generateSummary({
+        title: result.title,
+        author: result.author,
+        year: result.year,
+        publisher: result.publisher,
+      })
+        .then((resp) => {
+          if (myGen !== aiGenIdRef.current) return // stale — user cancelled / restarted
+          if (resp.description) {
+            setAiSummary({ status: 'success', text: resp.description })
+          } else {
+            setAiSummary({ status: 'failed', text: null })
+          }
+        })
+        .catch(() => {
+          if (myGen !== aiGenIdRef.current) return
+          setAiSummary({ status: 'failed', text: null })
+        })
     },
     [playSuccess, playReview]
   )
@@ -110,11 +125,12 @@ export default function PhotoWorkflowPage() {
     // Update ref immediately so any in-flight lookup callback is ignored
     // even if it fires before the React re-render completes.
     stepRef.current = 'photograph'
+    aiGenIdRef.current++ // invalidate any in-flight AI request
     setPhotos([])
     setLookupResult(null)
     setSavedBookId(null)
     setSkippedPhotography(false)
-    setPolledBook(null)
+    setAiSummary(IDLE_AI)
     setStep('photograph')
   }
 
@@ -173,7 +189,7 @@ export default function PhotoWorkflowPage() {
         onSaveComplete={handleSaveComplete}
         onCancel={handleCancel}
         skippedPhotography={skippedPhotography}
-        polledBook={polledBook}
+        aiSummary={aiSummary}
       />
     )
   }

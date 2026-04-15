@@ -21,9 +21,15 @@ from app.schemas import (
     BookPhotoResponse,
     BookResponse,
     BookUpdate,
+    SummaryRequest,
+    SummaryResponse,
 )
 from app.config import settings
-from app.services.ai_summary import generate_and_store_summary
+from app.services.ai_summary import (
+    generate_and_store_summary,
+    generate_summary_text,
+    GeminiRateLimitError,
+)
 from app.services.lookup import lookup_isbn
 from app.services.covers import download_cover
 
@@ -54,6 +60,35 @@ async def lookup_book(
         data_sources=book_data.data_sources,
         needs_metadata_review=not complete,
     )
+
+
+@router.post("/generate-summary", response_model=SummaryResponse)
+@limiter.limit("20/minute")
+async def generate_summary(
+    request: Request,
+    payload: SummaryRequest,
+    _user: Annotated[str, Depends(get_current_user)],
+):
+    """Fire-and-return Gemini summary for in-flight workflow use.
+
+    No DB writes. The caller (LookupStep → PhotoWorkflowPage) holds the
+    response in memory and includes it in the eventual POST /books payload.
+    Returns {description: null} on any failure (including missing API key
+    or rate limit) so the caller can fall back to a blank description.
+    """
+    if not settings.gemini_api_key:
+        return SummaryResponse(description=None)
+    try:
+        text = await generate_summary_text(
+            api_key=settings.gemini_api_key,
+            title=payload.title,
+            author=payload.author,
+            year=payload.year,
+            publisher=payload.publisher,
+        )
+    except GeminiRateLimitError:
+        return SummaryResponse(description=None)
+    return SummaryResponse(description=text)
 
 
 @router.post("", response_model=BookResponse, status_code=201)

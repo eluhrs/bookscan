@@ -14,7 +14,10 @@ logger = logging.getLogger(__name__)
 
 GEMINI_MODEL = "gemini-2.5-flash"
 GEMINI_TIMEOUT_SECONDS = 8.0
-MAX_OUTPUT_TOKENS = 150
+# Generous: Gemini 2.5 Flash uses internal "thinking" tokens that count against
+# this budget. We also set thinkingBudget=0 below to disable thinking entirely,
+# so visible output gets the full allowance.
+MAX_OUTPUT_TOKENS = 400
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
     f"{GEMINI_MODEL}:generateContent"
@@ -40,7 +43,12 @@ async def generate_summary_text(
     prompt = build_prompt(title, author, year, publisher)
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"maxOutputTokens": MAX_OUTPUT_TOKENS},
+        "generationConfig": {
+            "maxOutputTokens": MAX_OUTPUT_TOKENS,
+            # Disable internal "thinking" tokens — for a 2-3 sentence blurb the
+            # thinking tokens just eat the output budget and truncate the reply.
+            "thinkingConfig": {"thinkingBudget": 0},
+        },
     }
     try:
         async with httpx.AsyncClient(timeout=GEMINI_TIMEOUT_SECONDS) as client:

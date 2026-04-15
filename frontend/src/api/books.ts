@@ -5,6 +5,20 @@ export async function lookupIsbn(isbn: string): Promise<BookLookup> {
   return apiFetch(`/api/books/lookup/${encodeURIComponent(isbn)}`)
 }
 
+export interface SummaryRequest {
+  title: string | null
+  author: string | null
+  year: number | null
+  publisher: string | null
+}
+
+export async function generateSummary(req: SummaryRequest): Promise<{ description: string | null }> {
+  return apiFetch('/api/books/generate-summary', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  })
+}
+
 export async function saveBook(
   book: Omit<Book, 'id' | 'cover_image_local' | 'created_at' | 'updated_at' | 'has_photos'>
 ): Promise<Book> {

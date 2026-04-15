@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import WorkflowWrapper from './WorkflowWrapper'
-import { Book, BookLookup } from '../../types'
+import { BookLookup } from '../../types'
 import { saveBook } from '../../api/books'
 import { uploadPhotos } from '../../api/photos'
 import { theme } from '../../styles/theme'
 import PhotoFilmstrip from '../PhotoFilmstrip'
+import type { AiSummaryState } from '../../pages/PhotoWorkflowPage'
 
 const CONDITIONS = ['New', 'Very Good', 'Good', 'Acceptable', 'Poor'] as const
 type Condition = (typeof CONDITIONS)[number]
@@ -19,7 +20,7 @@ interface ReviewStepProps {
   onSaveComplete: () => void
   onCancel: () => void
   skippedPhotography: boolean
-  polledBook: Book | null
+  aiSummary: AiSummaryState
 }
 
 async function compressPhoto(file: File): Promise<Blob> {
@@ -85,7 +86,7 @@ export default function ReviewStep({
   onSaveComplete,
   onCancel,
   skippedPhotography,
-  polledBook,
+  aiSummary,
 }: ReviewStepProps) {
   const [condition, setCondition] = useState<Condition | null>(null)
   const [reviewMetadata, setReviewMetadata] = useState(lookupResult.needs_metadata_review)
@@ -109,10 +110,10 @@ export default function ReviewStep({
 
   // Re-assert review ON when an AI description arrives
   useEffect(() => {
-    if (polledBook?.description_source === 'ai_generated') {
+    if (aiSummary.status === 'success') {
       setReviewDescription(true)
     }
-  }, [polledBook?.description_source])
+  }, [aiSummary.status])
 
   function handleDeletePhoto(id: string) {
     const next = localPhotos.filter((p) => p.id !== id)
@@ -132,14 +133,21 @@ export default function ReviewStep({
 
       // Step 1: Create book if not already created
       if (!bookId) {
+        // If the AI summary came back successfully, include it + source in the
+        // single POST so the backend skips firing its own background task.
+        const description = aiDescription ?? lookupResult.description ?? null
+        const description_source = aiDescription
+          ? 'ai_generated'
+          : (lookupResult.description ? null : null)
         const book = await saveBook({
           ...lookupResult,
+          description,
           condition,
           needs_metadata_review: reviewMetadata ? true : lookupResult.needs_metadata_review,
           needs_photo_review: reviewPhotography,
-          needs_description_review: showThirdToggle ? reviewDescription : false,
-          description_source: null,
-          description_generation_failed: false,
+          needs_description_review: aiDescription ? reviewDescription : false,
+          description_source,
+          description_generation_failed: aiFailed,
         })
         bookId = book.id
         onSavedBookId(bookId)
@@ -159,11 +167,9 @@ export default function ReviewStep({
     }
   }
 
-  const aiDescription = polledBook?.description_source === 'ai_generated'
-    ? polledBook.description ?? null
-    : null
-  const aiFailed = polledBook?.description_generation_failed === true
-  const aiPending = !!savedBookId && !aiDescription && !aiFailed
+  const aiPending = aiSummary.status === 'pending'
+  const aiDescription = aiSummary.status === 'success' ? aiSummary.text : null
+  const aiFailed = aiSummary.status === 'failed'
   const showThirdToggle = !!aiDescription
 
   return (
@@ -304,8 +310,8 @@ export default function ReviewStep({
             )}
           </div>
 
-          {/* Description block — AI pending or AI success */}
-          {(aiPending || aiDescription) && (
+          {/* Description block — AI pending, success, or failure */}
+          {(aiPending || aiDescription || aiFailed) && (
             <div style={{ marginBottom: '0.75rem' }}>
               <p
                 style={{
@@ -327,6 +333,11 @@ export default function ReviewStep({
               {aiDescription && (
                 <p style={{ margin: 0, color: theme.colors.text, fontSize: 13, lineHeight: 1.45 }}>
                   {aiDescription}
+                </p>
+              )}
+              {aiFailed && (
+                <p style={{ margin: 0, fontStyle: 'italic', color: theme.colors.muted, fontSize: 13 }}>
+                  Summary unavailable — you can add one on the edit page.
                 </p>
               )}
             </div>

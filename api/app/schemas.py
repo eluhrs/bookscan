@@ -112,6 +112,17 @@ class BookListResponse(BaseModel):
     page_size: int
 
 
+class SummaryRequest(BaseModel):
+    title: Optional[str] = None
+    author: Optional[str] = None
+    year: Optional[int] = None
+    publisher: Optional[str] = None
+
+
+class SummaryResponse(BaseModel):
+    description: Optional[str] = None
+
+
 # Listing
 class ListingResponse(BaseModel):
     id: uuid.UUID
