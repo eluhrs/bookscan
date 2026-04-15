@@ -35,6 +35,7 @@ describe('ReviewStep', () => {
     onCancel: vi.fn(),
     skippedPhotography: false,
     aiSummary: { status: 'idle' as const, text: null },
+    onRegenerateSummary: vi.fn(),
   }
 
   it('SAVE button is disabled before condition is selected', () => {

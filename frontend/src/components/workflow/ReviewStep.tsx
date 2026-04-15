@@ -8,6 +8,7 @@ import { uploadPhotos } from '../../api/photos'
 import { theme } from '../../styles/theme'
 import PhotoFilmstrip from '../PhotoFilmstrip'
 import type { AiSummaryState } from '../../pages/PhotoWorkflowPage'
+import DescriptionSourceIcon from '../DescriptionSourceIcon'
 
 // Condition options match eBay's used-book condition scale.
 const CONDITIONS = ['Very Good', 'Good', 'Acceptable'] as const
@@ -26,6 +27,7 @@ interface ReviewStepProps {
   onCancel: () => void
   skippedPhotography: boolean
   aiSummary: AiSummaryState
+  onRegenerateSummary: () => void
 }
 
 async function compressPhoto(file: File): Promise<Blob> {
@@ -100,6 +102,7 @@ export default function ReviewStep({
   onCancel,
   skippedPhotography,
   aiSummary,
+  onRegenerateSummary,
 }: ReviewStepProps) {
   const [condition, setCondition] = useState<Condition | null>(null)
   const [reviewMetadata, setReviewMetadata] = useState(lookupResult.needs_metadata_review)
@@ -192,6 +195,12 @@ export default function ReviewStep({
   // Gemini was never called.
   const effectiveDescription = aiDescription ?? lookupResult.description ?? null
   const showDescriptionBlock = aiPending || effectiveDescription !== null || aiFailed
+  // Source icon: ai_generated when AI summary is in use, otherwise derive from
+  // the lookup data_sources field (e.g. 'google_books'), or null for no icon.
+  const effectiveDescriptionSource: string | null =
+    aiDescription ? 'ai_generated'
+    : lookupResult.description ? (lookupResult.data_sources?.description ?? null)
+    : null
 
   return (
     <WorkflowWrapper
@@ -347,9 +356,17 @@ export default function ReviewStep({
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
                 }}
               >
                 Description
+                <DescriptionSourceIcon
+                  source={effectiveDescriptionSource as any}
+                  regenerating={aiPending}
+                  onRegenerate={onRegenerateSummary}
+                />
               </p>
               {aiPending ? (
                 <p style={{ margin: 0, fontStyle: 'italic', color: theme.colors.muted, fontSize: 13 }}>

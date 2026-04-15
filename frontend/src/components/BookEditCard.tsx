@@ -1,11 +1,12 @@
 // frontend/src/components/BookEditCard.tsx
 
 import { useState, useEffect } from 'react'
-import { Sparkles } from 'lucide-react'
 import { Book, BookPhoto } from '../types'
 import { theme } from '../styles/theme'
 import PhotoFilmstrip from './PhotoFilmstrip'
 import { useVisualViewport } from '../hooks/useVisualViewport'
+import DescriptionSourceIcon from './DescriptionSourceIcon'
+import { generateSummary } from '../api/books'
 
 interface BookEditCardProps {
   book: Book
@@ -265,6 +266,7 @@ export default function BookEditCard({
     condition: book.condition,
   })
   const [saving, setSaving] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -313,6 +315,34 @@ export default function BookEditCard({
       await onImmediateSave({ condition: v })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed')
+    }
+  }
+
+  async function handleRegenerate() {
+    if (regenerating) return
+    setRegenerating(true)
+    setError('')
+    try {
+      const { description } = await generateSummary({
+        title: draft.title,
+        author: draft.author,
+        year: book.year,
+        publisher: draft.publisher,
+      })
+      if (description) {
+        setDraft((d) => ({ ...d, description }))
+        await onImmediateSave({
+          description,
+          description_source: 'ai_generated',
+          needs_description_review: true,
+        })
+      } else {
+        setError('Could not regenerate summary — try again later.')
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Regeneration failed')
+    } finally {
+      setRegenerating(false)
     }
   }
 
@@ -627,9 +657,11 @@ export default function BookEditCard({
           <div style={{ marginBottom: '0.5rem' }}>
             <span style={{ ...SMALL_CAPS_LABEL, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               Description
-              {book.description_source === 'ai_generated' && (
-                <Sparkles size={14} color={theme.colors.aiPurple} aria-label="AI-generated summary" />
-              )}
+              <DescriptionSourceIcon
+                source={book.description_source as any}
+                regenerating={regenerating}
+                onRegenerate={handleRegenerate}
+              />
             </span>
             <InlineField
               value={draft.description}

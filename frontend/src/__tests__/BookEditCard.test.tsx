@@ -266,15 +266,14 @@ describe('BookEditCard', () => {
       expect(screen.getByRole('button', { name: /review description/i })).toBeInTheDocument()
     })
 
-    it('renders Sparkles icon when description_source is ai_generated', () => {
-      const { container } = render(
+    it('renders Sparkles button when description_source is ai_generated', () => {
+      render(
         <BookEditCard
           book={makeBook({ description_source: 'ai_generated', description: 'An AI summary' })}
           {...defaultProps}
         />
       )
-      const sparkles = container.querySelector('[aria-label="AI-generated summary"]')
-      expect(sparkles).not.toBeNull()
+      expect(screen.getByRole('button', { name: /regenerate ai summary/i })).toBeInTheDocument()
     })
 
     it('sends description_source: manual when description is edited', async () => {

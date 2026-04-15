@@ -121,6 +121,25 @@ export default function PhotoWorkflowPage() {
     [playSuccess, playReview]
   )
 
+  async function handleRegenerateSummary() {
+    if (!lookupResult) return
+    const myGenId = ++aiGenIdRef.current
+    setAiSummary({ status: 'pending', text: null })
+    try {
+      const { description } = await generateSummary({
+        title: lookupResult.title,
+        author: lookupResult.author,
+        year: lookupResult.year,
+        publisher: lookupResult.publisher,
+      })
+      if (myGenId !== aiGenIdRef.current) return
+      if (description) setAiSummary({ status: 'success', text: description })
+      else setAiSummary({ status: 'failed', text: null })
+    } catch {
+      if (myGenId === aiGenIdRef.current) setAiSummary({ status: 'failed', text: null })
+    }
+  }
+
   function handleCancel() {
     // Update ref immediately so any in-flight lookup callback is ignored
     // even if it fires before the React re-render completes.
@@ -190,6 +209,7 @@ export default function PhotoWorkflowPage() {
         onCancel={handleCancel}
         skippedPhotography={skippedPhotography}
         aiSummary={aiSummary}
+        onRegenerateSummary={handleRegenerateSummary}
       />
     )
   }

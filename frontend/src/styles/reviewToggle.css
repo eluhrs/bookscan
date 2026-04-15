@@ -11,3 +11,6 @@
     display: block;
   }
 }
+
+@keyframes ds-spin { to { transform: rotate(360deg); } }
+.ds-spin { animation: ds-spin 0.9s linear infinite; }
