@@ -116,6 +116,7 @@ interface DraftFields {
   title: string | null;
   author: string | null;
   publisher: string | null;
+  isbn: string;
   year: string;
   pages: string;
   edition: string | null;
@@ -135,6 +136,8 @@ interface InlineFieldProps {
   mono?: boolean;
   multiline?: boolean;
   placeholder?: string;
+  /** compact = sized to content (for Year/Pages/ISBN), not full-width block */
+  compact?: boolean;
 }
 
 function InlineField({
@@ -142,10 +145,11 @@ function InlineField({
   onChange,
   fontSize = 13,
   fontWeight = 400,
-  color = theme.colors.subtleText,
+  color = '#222',
   mono = false,
   multiline = false,
   placeholder = '',
+  compact = false,
 }: InlineFieldProps) {
   const [editing, setEditing] = useState(false);
   const [local, setLocal] = useState(value === null || value === undefined ? '' : String(value));
@@ -160,7 +164,11 @@ function InlineField({
     color: local ? color : theme.colors.muted,
     fontStyle: local ? 'normal' : 'italic',
     fontFamily: mono ? theme.font.mono : theme.font.sans,
-    display: 'inline-block',
+    display: compact ? 'inline' : 'block',
+    whiteSpace: multiline ? 'pre-wrap' : undefined,
+    minHeight: compact ? undefined : '1.4em',
+    lineHeight: 1.4,
+    cursor: 'text',
   };
 
   const inputStyle: React.CSSProperties = {
@@ -168,7 +176,7 @@ function InlineField({
     fontWeight,
     color,
     fontFamily: mono ? theme.font.mono : theme.font.sans,
-    width: '100%',
+    width: compact ? `${Math.max(2, local.length || (placeholder || '').length || 4) + 1}ch` : '100%',
     padding: '1px 3px',
     border: `1px solid ${theme.colors.accent}`,
     borderRadius: 3,
@@ -177,6 +185,8 @@ function InlineField({
     minHeight: multiline ? 160 : undefined,
     lineHeight: 1.4,
     boxSizing: 'border-box',
+    display: compact ? 'inline-block' : 'block',
+    verticalAlign: 'baseline',
   };
 
   if (editing) {
@@ -220,7 +230,7 @@ function InlineField({
         if (e.key === 'Enter' || e.key === ' ') setEditing(true);
       }}
     >
-      {local || <span style={{ color: theme.colors.muted, fontStyle: 'italic' }}>{placeholder || '\u200b'}</span>}
+      {local || <span style={{ color: theme.colors.muted, fontStyle: 'italic' }}>{placeholder || '—'}</span>}
     </span>
   );
 }
@@ -232,6 +242,7 @@ const BookCard = forwardRef<BookCardHandle, BookCardProps>(function BookCard(pro
     title: book.title,
     author: book.author,
     publisher: book.publisher,
+    isbn: book.isbn ?? '',
     year: book.year != null ? String(book.year) : '',
     pages: book.pages != null ? String(book.pages) : '',
     edition: book.edition,
@@ -247,6 +258,7 @@ const BookCard = forwardRef<BookCardHandle, BookCardProps>(function BookCard(pro
       title: book.title,
       author: book.author,
       publisher: book.publisher,
+      isbn: book.isbn ?? '',
       year: book.year != null ? String(book.year) : '',
       pages: book.pages != null ? String(book.pages) : '',
       edition: book.edition,
@@ -263,6 +275,7 @@ const BookCard = forwardRef<BookCardHandle, BookCardProps>(function BookCard(pro
         title: draft.title || null,
         author: draft.author || null,
         publisher: draft.publisher || null,
+        isbn: draft.isbn || book.isbn,
         year: draft.year ? Number(draft.year) : null,
         pages: draft.pages ? Number(draft.pages) : null,
         edition: draft.edition || null,
@@ -342,6 +355,7 @@ const BookCard = forwardRef<BookCardHandle, BookCardProps>(function BookCard(pro
               fontSize={11}
               fontWeight={400}
               color="#222"
+              compact
               onChange={(v) => {
                 const sanitized = v.replace(/[^0-9]/g, '').slice(0, 4);
                 setDraft((d) => ({ ...d, year: sanitized }));
@@ -353,16 +367,20 @@ const BookCard = forwardRef<BookCardHandle, BookCardProps>(function BookCard(pro
           )}
         </span>
 
-        {/* ISBN — always read-only, but gets .bc-editable class when editable=true for visual consistency */}
+        {/* ISBN */}
         <span>
           <span className="bc-label">ISBN</span>
           {editable ? (
-            <span
-              className="bc-value-sm bc-value-mono bc-editable"
-              style={{ cursor: 'default', fontSize: 11, display: 'inline-block' }}
-            >
-              {book.isbn ?? ''}
-            </span>
+            <InlineField
+              value={draft.isbn}
+              fontSize={11}
+              fontWeight={400}
+              color="#222"
+              mono
+              compact
+              onChange={(v) => setDraft((d) => ({ ...d, isbn: v.replace(/[^0-9Xx]/g, '') }))}
+              placeholder="ISBN"
+            />
           ) : (
             <span className="bc-value-sm bc-value-mono">{book.isbn ?? ''}</span>
           )}
@@ -378,6 +396,7 @@ const BookCard = forwardRef<BookCardHandle, BookCardProps>(function BookCard(pro
               fontWeight={400}
               color="#222"
               mono
+              compact
               onChange={(v) => {
                 const sanitized = v.replace(/[^0-9]/g, '');
                 setDraft((d) => ({ ...d, pages: sanitized }));
@@ -419,8 +438,8 @@ const BookCard = forwardRef<BookCardHandle, BookCardProps>(function BookCard(pro
       </div>
 
       {/* Description */}
-      <div style={{ marginTop: 16 }}>
-        <div className="bc-description-label">
+      <div style={{ marginTop: 20 }}>
+        <div className="bc-description-label" style={{ marginBottom: 6 }}>
           <span className="bc-label">Description</span>
           <DescriptionSourceIcon
             source={(props.descriptionSource ?? book.description_source ?? (book.data_sources?.description ?? null)) as Parameters<typeof DescriptionSourceIcon>[0]['source']}
@@ -429,20 +448,18 @@ const BookCard = forwardRef<BookCardHandle, BookCardProps>(function BookCard(pro
           />
         </div>
         {editable ? (
-          <div className="bc-field-full" style={{ marginTop: 6 }}>
-            <InlineField
-              value={draft.description}
-              onChange={(v) => setDraft({ ...draft, description: v })}
-              multiline
-              fontSize={13}
-              color="#222"
-              placeholder="No description"
-            />
-          </div>
+          <InlineField
+            value={draft.description}
+            onChange={(v) => setDraft({ ...draft, description: v })}
+            multiline
+            fontSize={13}
+            color="#222"
+            placeholder="No description"
+          />
         ) : (
-          <p style={{ marginTop: 6, fontSize: 13, color: '#222' }}>
-            {book.description || ''}
-          </p>
+          <div style={{ fontSize: 13, color: '#222', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+            {book.description || <span style={{ color: theme.colors.muted, fontStyle: 'italic' }}>No description</span>}
+          </div>
         )}
       </div>
 
