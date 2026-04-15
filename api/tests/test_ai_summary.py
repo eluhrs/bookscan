@@ -98,6 +98,108 @@ async def test_generate_summary_text_timeout_returns_none():
     assert result is None
 
 
+@pytest.mark.asyncio
+async def test_generate_summary_text_retries_once_on_5xx_then_succeeds():
+    """First attempt returns 503, second attempt returns 200 — final result succeeds."""
+    success_body = {
+        "candidates": [{"content": {"parts": [{"text": "A retry-rescued blurb about the book."}]}}]
+    }
+    call_count = {"n": 0}
+
+    def handler(request):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            return httpx.Response(503, text="high demand")
+        return httpx.Response(200, json=success_body)
+
+    with respx.mock() as router:
+        router.post(GEMINI_URL).mock(side_effect=handler)
+        result = await generate_summary_text(
+            api_key="fake", title="X", author=None, year=None, publisher=None
+        )
+    assert result is not None
+    assert "retry-rescued" in result
+    assert call_count["n"] == 2
+
+
+@pytest.mark.asyncio
+async def test_generate_summary_text_retries_at_most_once_on_5xx():
+    """Two 5xx failures in a row → return None (no third attempt)."""
+    call_count = {"n": 0}
+
+    def handler(request):
+        call_count["n"] += 1
+        return httpx.Response(503, text="still down")
+
+    with respx.mock() as router:
+        router.post(GEMINI_URL).mock(side_effect=handler)
+        result = await generate_summary_text(
+            api_key="fake", title="X", author=None, year=None, publisher=None
+        )
+    assert result is None
+    assert call_count["n"] == 2  # exactly 2 attempts — original + 1 retry
+
+
+@pytest.mark.asyncio
+async def test_generate_summary_text_retries_once_on_timeout_then_succeeds():
+    """First attempt times out, second succeeds."""
+    success_body = {
+        "candidates": [{"content": {"parts": [{"text": "After a timeout recovery."}]}}]
+    }
+    call_count = {"n": 0}
+
+    def handler(request):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            raise httpx.ReadTimeout("first one slow")
+        return httpx.Response(200, json=success_body)
+
+    with respx.mock() as router:
+        router.post(GEMINI_URL).mock(side_effect=handler)
+        result = await generate_summary_text(
+            api_key="fake", title="X", author=None, year=None, publisher=None
+        )
+    assert result is not None
+    assert "timeout recovery" in result
+    assert call_count["n"] == 2
+
+
+@pytest.mark.asyncio
+async def test_generate_summary_text_empty_candidates_retries_once():
+    """Empty candidates (possible safety block) retries once before giving up."""
+    call_count = {"n": 0}
+
+    def handler(request):
+        call_count["n"] += 1
+        return httpx.Response(200, json={"candidates": []})
+
+    with respx.mock() as router:
+        router.post(GEMINI_URL).mock(side_effect=handler)
+        result = await generate_summary_text(
+            api_key="fake", title="X", author=None, year=None, publisher=None
+        )
+    assert result is None
+    assert call_count["n"] == 2
+
+
+@pytest.mark.asyncio
+async def test_generate_summary_text_429_does_not_retry_inline():
+    """429 raises on first attempt — caller schedules a longer-delay retry."""
+    call_count = {"n": 0}
+
+    def handler(request):
+        call_count["n"] += 1
+        return httpx.Response(429, text="rate")
+
+    with respx.mock() as router:
+        router.post(GEMINI_URL).mock(side_effect=handler)
+        with pytest.raises(GeminiRateLimitError):
+            await generate_summary_text(
+                api_key="fake", title="X", author=None, year=None, publisher=None
+            )
+    assert call_count["n"] == 1
+
+
 # ---------------------------------------------------------------------------
 # generate_and_store_summary background task tests
 # ---------------------------------------------------------------------------

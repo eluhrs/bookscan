@@ -13,7 +13,10 @@ from app.models import Book
 logger = logging.getLogger(__name__)
 
 GEMINI_MODEL = "gemini-2.5-flash-lite"
-GEMINI_TIMEOUT_SECONDS = 8.0
+# Per-attempt httpx timeout. With one retry (2 attempts total) this gives a
+# worst-case wall time of ~7s, comfortably inside the frontend's 8s budget.
+GEMINI_TIMEOUT_SECONDS = 3.5
+MAX_ATTEMPTS = 2  # original call + one retry
 # Generous: Gemini 2.5 Flash uses internal "thinking" tokens that count against
 # this budget. We also set thinkingBudget=0 below to disable thinking entirely,
 # so visible output gets the full allowance.
@@ -38,12 +41,10 @@ async def generate_summary_text(
 ) -> str | None:
     """Call Gemini. Returns the text on success, None on any non-rate-limit failure.
 
-    Retries once after a short delay on transient 5xx / network errors —
-    Gemini 2.5 Flash intermittently returns 503 "high demand" during normal
-    use and a single retry rescues most of those calls well inside the
-    frontend's 8s budget.
-
-    Raises GeminiRateLimitError on HTTP 429 so the caller can schedule a retry.
+    Two attempts total: the original call plus one retry on transient errors
+    (5xx / network / timeout) after a brief backoff. Each attempt has its own
+    3.5s httpx timeout. On HTTP 429 we raise GeminiRateLimitError so the caller
+    can decide whether to schedule a longer-delay retry.
     """
     prompt = build_prompt(title, author, year, publisher)
     payload = {
@@ -55,69 +56,118 @@ async def generate_summary_text(
             "thinkingConfig": {"thinkingBudget": 0},
         },
     }
-    # Up to three attempts. Gemini free tier has per-minute quotas that a rapid
-    # lookup+regenerate sequence will trip, so we back off and retry on 429 in
-    # addition to the existing 5xx/network retry.
-    for attempt in (0, 1, 2):
+    last_status: int | None = None
+    last_body: str = ""
+    for attempt in range(MAX_ATTEMPTS):
+        is_retry = attempt > 0
         try:
-            async with httpx.AsyncClient(timeout=3.0) as client:
+            async with httpx.AsyncClient(timeout=GEMINI_TIMEOUT_SECONDS) as client:
                 resp = await client.post(
                     GEMINI_URL,
                     params={"key": api_key},
                     json=payload,
                 )
+            last_status = resp.status_code
+            last_body = resp.text[:500]
             if resp.status_code == 429:
-                if attempt < 2:
-                    logger.warning(
-                        "ai_summary: gemini %s 429 — backing off 2s then retrying: %s",
-                        GEMINI_MODEL,
-                        resp.text[:500],
-                    )
-                    await asyncio.sleep(2.0)
-                    continue
+                # Rate limits aren't transient within seconds — surface to caller
+                # so the background-task path can schedule a 60s retry instead of
+                # hammering Gemini here.
                 logger.warning(
-                    "ai_summary: gemini %s 429 rate limit (final): %s",
+                    "ai_summary: gemini %s 429 rate limit (attempt %d): %s",
                     GEMINI_MODEL,
-                    resp.text[:500],
+                    attempt + 1,
+                    last_body,
                 )
                 raise GeminiRateLimitError()
-            if 500 <= resp.status_code < 600 and attempt < 2:
-                logger.info(
-                    "ai_summary: gemini %s %s — retrying: %s",
+            if 500 <= resp.status_code < 600:
+                if not is_retry:
+                    logger.info(
+                        "ai_summary: gemini %s %d (attempt %d) — retrying in 500ms: %s",
+                        GEMINI_MODEL,
+                        resp.status_code,
+                        attempt + 1,
+                        last_body,
+                    )
+                    await asyncio.sleep(0.5)
+                    continue
+                logger.warning(
+                    "ai_summary: gemini %s %d (final attempt %d): %s",
                     GEMINI_MODEL,
                     resp.status_code,
-                    resp.text[:500],
+                    attempt + 1,
+                    last_body,
                 )
-                await asyncio.sleep(0.5)
-                continue
+                return None
             if resp.status_code != 200:
                 logger.warning(
-                    "ai_summary: gemini %s http %s — %s",
+                    "ai_summary: gemini %s http %d (attempt %d) — %s",
                     GEMINI_MODEL,
                     resp.status_code,
-                    resp.text[:500],
+                    attempt + 1,
+                    last_body,
                 )
                 return None
             data = resp.json()
             candidates = data.get("candidates") or []
             if not candidates:
-                logger.warning("ai_summary: empty candidates")
+                # Empty candidates commonly means safety block or prompt issue —
+                # log the full response body so we can see promptFeedback /
+                # finishReason. Safe to retry once in case of a transient blip.
+                logger.warning(
+                    "ai_summary: gemini %s empty candidates (attempt %d): %s",
+                    GEMINI_MODEL,
+                    attempt + 1,
+                    last_body,
+                )
+                if not is_retry:
+                    await asyncio.sleep(0.5)
+                    continue
                 return None
             parts = (candidates[0].get("content") or {}).get("parts") or []
             text = "".join(p.get("text", "") for p in parts).strip()
-            return text or None
+            if text:
+                return text
+            # Empty text with candidates: same retry logic as empty candidates
+            logger.warning(
+                "ai_summary: gemini %s empty text (attempt %d) finishReason=%s",
+                GEMINI_MODEL,
+                attempt + 1,
+                candidates[0].get("finishReason"),
+            )
+            if not is_retry:
+                await asyncio.sleep(0.5)
+                continue
+            return None
         except GeminiRateLimitError:
             raise
         except (httpx.HTTPError, httpx.TimeoutException) as e:
-            if attempt < 2:
-                logger.info("ai_summary: httpx %s — retrying", type(e).__name__)
+            if not is_retry:
+                logger.info(
+                    "ai_summary: httpx %s (attempt %d) — retrying in 500ms",
+                    type(e).__name__,
+                    attempt + 1,
+                )
                 await asyncio.sleep(0.5)
                 continue
-            logger.warning("ai_summary: httpx error %s", type(e).__name__)
+            logger.warning(
+                "ai_summary: httpx %s (final attempt %d): %s",
+                type(e).__name__,
+                attempt + 1,
+                e,
+            )
             return None
         except Exception as e:  # defensive — never let a background task crash
             logger.exception("ai_summary: unexpected error %s", e)
             return None
+    # Exhausted attempts without returning — log the last-known state.
+    logger.warning(
+        "ai_summary: gemini %s exhausted %d attempts, last_status=%s body=%s",
+        GEMINI_MODEL,
+        MAX_ATTEMPTS,
+        last_status,
+        last_body,
+    )
     return None
 
 
