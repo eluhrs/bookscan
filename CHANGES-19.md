@@ -256,6 +256,20 @@ in order without being asked:
 
 ---
 
+## Post-iteration fixes (2026-04-15)
+
+Four follow-ups shipped after initial CHANGES-19 completion:
+
+1. ✓ **Regeneration shows "Summary unavailable" on every Sparkles tap.** Root cause: `gemini-2.5-flash` free-tier quota on the project key is capped at 20 requests per ~30s rolling window; every call after the daily burn surfaces HTTP 429. Fix: switch `GEMINI_MODEL` to `gemini-2.5-flash-lite` (separate quota, same prompt/config), add error-body logging so future quota issues are visible in `docker compose logs api`. Backend retry loop (3 attempts, 2s backoff on 429) retained.
+
+2. ✓ **Database icon missing on the edit page for catalog-sourced books.** Root cause: `ReviewStep.handleSave` had a dead ternary (`lookupResult.description ? null : null`) that wrote `description_source = null` for every catalog-sourced book, defeating the backend's auto-derive path. Fix: pipe `lookupResult.data_sources?.description` (e.g. `'google_books'`) through on POST. Also added a frontend fallback in `BookEditCard` that reads `book.data_sources?.description` when `book.description_source` is null, so older books without explicit source still show the correct icon retroactively.
+
+3. ✓ **`needs_description_review` user toggle ignored when no AI summary.** Root cause: save path had `needs_description_review: aiDescription ? reviewDescription : false` — forced false whenever no Gemini summary. Fix: honor the user's toggle state regardless.
+
+4. ✓ **Post-save follow-up bugs discovered during CHANGES-19 manual QA.** Covered by the same three commits above. Tests: 91/91 frontend, 67/67 backend.
+
+---
+
 ## Notes for Claude Code
 - Read CLAUDE.md, SPEC.md, and this file before planning
 - Use Superpowers to decompose into small tasks
