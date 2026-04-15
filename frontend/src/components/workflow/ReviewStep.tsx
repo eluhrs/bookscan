@@ -176,6 +176,12 @@ export default function ReviewStep({
   const aiPending = aiSummary.status === 'pending'
   const aiDescription = aiSummary.status === 'success' ? aiSummary.text : null
   const aiFailed = aiSummary.status === 'failed'
+  // The description shown on the Review step — AI result wins, then whatever
+  // the public-source lookup returned. Display is decoupled from the AI state
+  // machine so a Google Books description is still visible even though
+  // Gemini was never called.
+  const effectiveDescription = aiDescription ?? lookupResult.description ?? null
+  const showDescriptionBlock = aiPending || effectiveDescription !== null || aiFailed
 
   return (
     <WorkflowWrapper
@@ -313,8 +319,10 @@ export default function ReviewStep({
             />
           </div>
 
-          {/* Description block — AI pending, success, or failure */}
-          {(aiPending || aiDescription || aiFailed) && (
+          {/* Description block — renders when a summary is pending, present,
+              or failed. "Present" now includes a public-source description
+              coming back from the lookup itself, not just an AI result. */}
+          {showDescriptionBlock && (
             <div style={{ marginBottom: '0.75rem' }}>
               <p
                 style={{
@@ -328,21 +336,19 @@ export default function ReviewStep({
               >
                 Description
               </p>
-              {aiPending && (
+              {aiPending ? (
                 <p style={{ margin: 0, fontStyle: 'italic', color: theme.colors.muted, fontSize: 13 }}>
                   Generating summary…
                 </p>
-              )}
-              {aiDescription && (
+              ) : effectiveDescription ? (
                 <p style={{ margin: 0, color: theme.colors.text, fontSize: 13, lineHeight: 1.45 }}>
-                  {aiDescription}
+                  {effectiveDescription}
                 </p>
-              )}
-              {aiFailed && (
+              ) : aiFailed ? (
                 <p style={{ margin: 0, fontStyle: 'italic', color: theme.colors.muted, fontSize: 13 }}>
                   Summary unavailable.
                 </p>
-              )}
+              ) : null}
             </div>
           )}
 
