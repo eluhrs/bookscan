@@ -17,6 +17,95 @@ export interface BookCardProps {
   descriptionSource?: string | null;
 }
 
+const CONDITIONS = ['Very Good', 'Good', 'Acceptable'] as const
+
+// Shared height for both button rows (condition + review toggles) so the
+// two rows look like a unified 2×3 control block.
+const ROW_BUTTON_HEIGHT = 48
+
+// ---- ConditionBar ----
+interface ConditionBarProps {
+  value: string | null
+  onChange: (v: string) => void
+}
+
+function ConditionBar({ value, onChange }: ConditionBarProps) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        width: '100%',
+        border: `1px solid ${theme.colors.zoneBorder}`,
+        borderRadius: theme.radius.md,
+        overflow: 'hidden',
+      }}
+    >
+      {CONDITIONS.map((c, i) => {
+        const selected = value === c
+        return (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onChange(c)}
+            style={{
+              flex: 1,
+              height: ROW_BUTTON_HEIGHT,
+              padding: '0 0.4rem',
+              fontSize: 13,
+              fontWeight: selected ? 500 : 400,
+              background: selected ? theme.colors.primaryBlue : theme.colors.bg,
+              color: selected ? '#fff' : theme.colors.secondaryText,
+              border: 'none',
+              borderLeft: i === 0 ? 'none' : `1px solid ${theme.colors.zoneBorder}`,
+              cursor: 'pointer',
+              fontFamily: theme.font.sans,
+              lineHeight: 1.15,
+            }}
+          >
+            {c}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ---- ReviewToggle ----
+function ReviewToggle({ word1, word2, on, onToggle }: {
+  word1: string
+  word2: string
+  on: boolean
+  onToggle: (v: boolean) => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(!on)}
+      aria-pressed={on}
+      aria-label={`${word1} ${word2}`}
+      style={{
+        height: ROW_BUTTON_HEIGHT,
+        padding: '0 0.5rem',
+        border: on ? 'none' : `1px solid ${theme.colors.zoneBorder}`,
+        borderRadius: theme.radius.md,
+        background: on ? theme.colors.primaryBlue : theme.colors.bg,
+        color: on ? '#fff' : theme.colors.secondaryText,
+        fontWeight: on ? 500 : 400,
+        fontSize: 13,
+        cursor: 'pointer',
+        fontFamily: theme.font.sans,
+        lineHeight: 1.1,
+        overflow: 'hidden',
+        wordBreak: 'break-word',
+      }}
+    >
+      <span className="review-toggle-label">
+        {word1}<span className="rt-break"> </span>{word2}
+      </span>
+    </button>
+  )
+}
+
 // ---- DraftFields ----
 interface DraftFields {
   title: string | null;
@@ -273,6 +362,34 @@ export default function BookCard(props: BookCardProps) {
             <span className="bc-value-sm">{book.pages ?? ''}</span>
           )}
         </span>
+      </div>
+
+      <ConditionBar
+        value={((draft.condition as string) || (book.condition as string) || '') as 'Very Good' | 'Good' | 'Acceptable' | ''}
+        onChange={(c) => {
+          setDraft({ ...draft, condition: c ?? '' });
+          props.onImmediateSave({ condition: c });
+        }}
+      />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 8 }}>
+        <ReviewToggle
+          word1="review"
+          word2="metadata"
+          on={!!book.needs_metadata_review}
+          onToggle={(next) => props.onImmediateSave({ needs_metadata_review: next })}
+        />
+        <ReviewToggle
+          word1="review"
+          word2="photography"
+          on={!!book.needs_photo_review}
+          onToggle={(next) => props.onImmediateSave({ needs_photo_review: next })}
+        />
+        <ReviewToggle
+          word1="review"
+          word2="description"
+          on={!!book.needs_description_review}
+          onToggle={(next) => props.onImmediateSave({ needs_description_review: next })}
+        />
       </div>
     </div>
   );

@@ -82,4 +82,46 @@ describe('BookCard', () => {
     expect(screen.getByText('Vortex').closest('.bc-editable')).toBeNull();
     expect(screen.getByText('2012').closest('.bc-editable')).toBeNull();
   });
+
+  it('renders three condition buttons and three review toggles on both modes', () => {
+    const onImmediateSave = vi.fn();
+    const { rerender } = render(
+      <BookCard editable={false} book={baseBook} photos={[]} photoUrls={{}} onSave={vi.fn()} onImmediateSave={onImmediateSave} />,
+    );
+    for (const label of ['Very Good', 'Good', 'Acceptable']) {
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
+    }
+    expect(screen.getAllByRole('button', { name: /review metadata/i })[0]).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /review photography/i })[0]).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /review description/i })[0]).toBeInTheDocument();
+
+    rerender(
+      <BookCard editable book={baseBook} photos={[]} photoUrls={{}} onSave={vi.fn()} onImmediateSave={onImmediateSave} />,
+    );
+    for (const label of ['Very Good', 'Good', 'Acceptable']) {
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
+    }
+  });
+
+  it('tapping condition button calls onImmediateSave with {condition}', async () => {
+    const userEvent = (await import('@testing-library/user-event')).default;
+    const user = userEvent.setup();
+    const onImmediateSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <BookCard editable book={baseBook} photos={[]} photoUrls={{}} onSave={vi.fn()} onImmediateSave={onImmediateSave} />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Acceptable' }));
+    expect(onImmediateSave).toHaveBeenCalledWith(expect.objectContaining({ condition: 'Acceptable' }));
+  });
+
+  it('tapping a review toggle calls onImmediateSave with the correct field', async () => {
+    const userEvent = (await import('@testing-library/user-event')).default;
+    const user = userEvent.setup();
+    const onImmediateSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <BookCard editable book={baseBook} photos={[]} photoUrls={{}} onSave={vi.fn()} onImmediateSave={onImmediateSave} />,
+    );
+    await user.click(screen.getByRole('button', { name: /review photography/i }));
+    expect(onImmediateSave).toHaveBeenCalledWith(expect.objectContaining({ needs_photo_review: true }));
+  });
 });
