@@ -14,7 +14,7 @@ export async function saveBook(
 export async function listBooks(params?: {
   page?: number
   page_size?: number
-  status?: 'all' | 'needs_metadata_review' | 'needs_photo_review' | 'ready'
+  status?: 'all' | 'needs_metadata_review' | 'needs_photo_review' | 'needs_description_review' | 'ready'
   search?: string
 }): Promise<BookListResponse> {
   const q = new URLSearchParams()

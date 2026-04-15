@@ -6,6 +6,7 @@ export type StatusFilterValue =
   | 'all'
   | 'needs_metadata_review'
   | 'needs_photo_review'
+  | 'needs_description_review'
   | 'ready'
   | 'archived'
 
@@ -19,6 +20,7 @@ const OPTIONS: Option[] = [
   { value: 'all', label: 'All records' },
   { value: 'needs_metadata_review', label: 'Needs metadata review' },
   { value: 'needs_photo_review', label: 'Needs photography' },
+  { value: 'needs_description_review', label: 'Needs description review' },
   { value: 'ready', label: 'Ready to list' },
   { value: 'archived', label: 'Archived', disabled: true },
 ]
