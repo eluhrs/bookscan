@@ -25,6 +25,7 @@ export const theme = {
     secondaryText:  '#666666',   // secondary button text
     primaryBlue:    '#0070F3',
     reviewGreen:    '#3B6D11',
+    aiPurple:       '#7F77DD',   // AI summary indicator (Sparkles icon)
   },
   font: {
     sans: "'Geist', 'Inter', system-ui, sans-serif",

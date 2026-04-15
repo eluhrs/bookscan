@@ -95,6 +95,9 @@ export default function ReviewStep({
           condition,
           needs_metadata_review: reviewMetadata ? true : lookupResult.needs_metadata_review,
           needs_photo_review: reviewPhotography,
+          description_source: null,
+          needs_description_review: false,
+          description_generation_failed: false,
         })
         bookId = book.id
         onSavedBookId(bookId)

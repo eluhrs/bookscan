@@ -17,6 +17,9 @@ export interface Book {
   needs_metadata_review: boolean
   has_photos: boolean
   needs_photo_review: boolean
+  description_source: string | null
+  needs_description_review: boolean
+  description_generation_failed: boolean
   created_at: string
   updated_at: string
 }
