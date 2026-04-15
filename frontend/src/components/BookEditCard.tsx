@@ -1,6 +1,7 @@
 // frontend/src/components/BookEditCard.tsx
 
 import { useState, useEffect } from 'react'
+import { Sparkles } from 'lucide-react'
 import { Book, BookPhoto } from '../types'
 import { theme } from '../styles/theme'
 import PhotoFilmstrip from './PhotoFilmstrip'
@@ -280,7 +281,11 @@ export default function BookEditCard({
     setSaving(true)
     setError('')
     try {
-      await onSave(draft as Partial<Book>)
+      const payload: Partial<Book> = { ...(draft as Partial<Book>) }
+      if (draft.description !== book.description) {
+        payload.description_source = 'manual'
+      }
+      await onSave(payload)
       onSaved?.()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed')
@@ -494,7 +499,7 @@ export default function BookEditCard({
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
+              gridTemplateColumns: '1fr 1fr 1fr',
               gap: 8,
               marginBottom: '1.25rem',
             }}
@@ -508,6 +513,11 @@ export default function BookEditCard({
               label="review photography"
               on={book.needs_photo_review}
               onToggle={(v) => onImmediateSave({ needs_photo_review: v })}
+            />
+            <ReviewToggle
+              label="review description"
+              on={book.needs_description_review}
+              onToggle={(v) => onImmediateSave({ needs_description_review: v })}
             />
           </div>
 
@@ -590,7 +600,12 @@ export default function BookEditCard({
 
           {/* Description */}
           <div style={{ marginBottom: '0.5rem' }}>
-            <span style={SMALL_CAPS_LABEL}>Description</span>
+            <span style={{ ...SMALL_CAPS_LABEL, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              Description
+              {book.description_source === 'ai_generated' && (
+                <Sparkles size={14} color={theme.colors.aiPurple} aria-label="AI-generated summary" />
+              )}
+            </span>
             <InlineField
               value={draft.description}
               onChange={(v) => setField('description', v)}
