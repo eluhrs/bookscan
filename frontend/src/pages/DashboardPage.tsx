@@ -398,7 +398,7 @@ export default function DashboardPage() {
                     fontFamily: theme.font.sans,
                   }}
                 >
-                  {saving ? 'Saving…' : 'Save'}
+                  {saving ? 'SAVING…' : 'SAVE'}
                 </button>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button type="button" onClick={() => setEditingBook(null)} style={secondaryButtonStyle}>
