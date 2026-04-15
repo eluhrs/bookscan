@@ -160,3 +160,77 @@ async def test_update_book_needs_photo_review(client, auth_headers):
     )
     assert resp.status_code == 200
     assert resp.json()["needs_photo_review"] is True
+
+
+@pytest.mark.asyncio
+async def test_create_book_schedules_ai_summary_when_description_empty(
+    client, auth_headers, monkeypatch
+):
+    calls: list = []
+
+    async def fake_task(book_id, **kw):
+        calls.append(book_id)
+
+    monkeypatch.setattr(
+        "app.routers.books.generate_and_store_summary", fake_task, raising=False
+    )
+    monkeypatch.setattr("app.routers.books.settings.gemini_api_key", "fake-key", raising=False)
+
+    resp = await client.post(
+        "/api/books",
+        headers=auth_headers,
+        json={"isbn": "9780000000101", "title": "Test", "author": "A", "year": 2000, "publisher": "P"},
+    )
+    assert resp.status_code == 201
+    assert len(calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_create_book_does_not_schedule_when_description_present(
+    client, auth_headers, monkeypatch
+):
+    calls: list = []
+
+    async def fake_task(book_id, **kw):
+        calls.append(book_id)
+
+    monkeypatch.setattr(
+        "app.routers.books.generate_and_store_summary", fake_task, raising=False
+    )
+    monkeypatch.setattr("app.routers.books.settings.gemini_api_key", "fake-key", raising=False)
+
+    resp = await client.post(
+        "/api/books",
+        headers=auth_headers,
+        json={
+            "isbn": "9780000000102",
+            "title": "Test",
+            "description": "Already has one",
+            "description_source": "google_books",
+        },
+    )
+    assert resp.status_code == 201
+    assert len(calls) == 0
+
+
+@pytest.mark.asyncio
+async def test_create_book_does_not_schedule_when_no_api_key(
+    client, auth_headers, monkeypatch
+):
+    calls: list = []
+
+    async def fake_task(book_id, **kw):
+        calls.append(book_id)
+
+    monkeypatch.setattr(
+        "app.routers.books.generate_and_store_summary", fake_task, raising=False
+    )
+    monkeypatch.setattr("app.routers.books.settings.gemini_api_key", None, raising=False)
+
+    resp = await client.post(
+        "/api/books",
+        headers=auth_headers,
+        json={"isbn": "9780000000103", "title": "Test"},
+    )
+    assert resp.status_code == 201
+    assert len(calls) == 0

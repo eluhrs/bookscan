@@ -3,7 +3,7 @@ import shutil
 import uuid
 from pathlib import Path
 from typing import Annotated, Literal, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -22,6 +22,8 @@ from app.schemas import (
     BookResponse,
     BookUpdate,
 )
+from app.config import settings
+from app.services.ai_summary import generate_and_store_summary
 from app.services.lookup import lookup_isbn
 from app.services.covers import download_cover
 
@@ -57,6 +59,7 @@ async def lookup_book(
 @router.post("", response_model=BookResponse, status_code=201)
 async def create_book(
     payload: BookCreate,
+    background_tasks: BackgroundTasks,
     db: Annotated[AsyncSession, Depends(get_db)],
     _user: Annotated[str, Depends(get_current_user)],
 ):
@@ -64,6 +67,12 @@ async def create_book(
     if existing:
         raise HTTPException(status_code=409, detail="Book with this ISBN already exists")
     data = payload.model_dump()
+    # Derive description_source from data_sources when description came from a lookup.
+    # If the caller explicitly passed description_source, respect that.
+    if "description_source" not in payload.model_fields_set:
+        ds = data.get("data_sources") or {}
+        if data.get("description") and ds.get("description"):
+            data["description_source"] = ds["description"]
     # Auto-compute needs_metadata_review on create unless the caller set it explicitly.
     if "needs_metadata_review" not in payload.model_fields_set:
         key_fields = ("title", "author", "publisher", "year")
@@ -73,6 +82,9 @@ async def create_book(
     db.add(book)
     await db.commit()
     await db.refresh(book)
+    # Schedule AI summary generation when no description came from lookup sources.
+    if not book.description and settings.gemini_api_key:
+        background_tasks.add_task(generate_and_store_summary, book.id)
     # Download cover in background (fire and forget)
     if book.cover_image_url:
         import asyncio
@@ -98,6 +110,9 @@ async def create_book(
         needs_metadata_review=book.needs_metadata_review,
         condition=book.condition,
         needs_photo_review=book.needs_photo_review,
+        description_source=book.description_source,
+        needs_description_review=book.needs_description_review,
+        description_generation_failed=book.description_generation_failed,
         has_photos=False,
         photos=[],
         created_at=book.created_at,
@@ -173,6 +188,9 @@ async def list_books(
             needs_metadata_review=b.needs_metadata_review,
             condition=b.condition,
             needs_photo_review=b.needs_photo_review,
+            description_source=b.description_source,
+            needs_description_review=b.needs_description_review,
+            description_generation_failed=b.description_generation_failed,
             has_photos=b.id in photo_book_ids,
             photos=[],
             created_at=b.created_at,
