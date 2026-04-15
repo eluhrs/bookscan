@@ -22,6 +22,9 @@ function makeBook(overrides: Partial<Book> = {}): Book {
     needs_metadata_review: false,
     has_photos: false,
     needs_photo_review: false,
+    description_source: null,
+    needs_description_review: false,
+    description_generation_failed: false,
     created_at: '2026-01-01T00:00:00',
     updated_at: '2026-01-01T00:00:00',
     ...overrides,
@@ -237,5 +240,73 @@ describe('BookEditCard', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: /generate listing/i }))
     expect(onGenerateListing).toHaveBeenCalled()
+  })
+
+  describe('CHANGES-17', () => {
+    const defaultProps = {
+      photos: [] as import('../types').BookPhoto[],
+      photoUrls: {} as Record<string, string>,
+      onDeletePhoto: noOp,
+      onAddPhoto: noOp,
+      onSave: noOp,
+      onImmediateSave: noOp,
+      onBack: vi.fn(),
+      totalCount: 0,
+      onLogout: vi.fn(),
+      onGenerateListing: vi.fn(),
+    }
+
+    it('renders the third "review description" toggle', () => {
+      render(
+        <BookEditCard
+          book={makeBook({ needs_description_review: true })}
+          {...defaultProps}
+        />
+      )
+      expect(screen.getByRole('button', { name: /review description/i })).toBeInTheDocument()
+    })
+
+    it('renders Sparkles icon when description_source is ai_generated', () => {
+      const { container } = render(
+        <BookEditCard
+          book={makeBook({ description_source: 'ai_generated', description: 'An AI summary' })}
+          {...defaultProps}
+        />
+      )
+      const sparkles = container.querySelector('[aria-label="AI-generated summary"]')
+      expect(sparkles).not.toBeNull()
+    })
+
+    it('sends description_source: manual when description is edited', async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined)
+      render(
+        <BookEditCard
+          book={makeBook({ description: 'An AI summary', description_source: 'ai_generated' })}
+          {...defaultProps}
+          onSave={onSave}
+        />
+      )
+
+      // Click the display span to enter edit mode
+      const desc = screen.getByText('An AI summary')
+      fireEvent.click(desc)
+
+      // A textarea should now appear with the current value
+      const textarea = await screen.findByDisplayValue('An AI summary') as HTMLTextAreaElement
+      fireEvent.change(textarea, { target: { value: 'Manually rewritten' } })
+      fireEvent.blur(textarea)
+
+      // Click Save
+      const saveBtn = screen.getByRole('button', { name: /^save$/i })
+      fireEvent.click(saveBtn)
+
+      // Wait a tick for the async handler
+      await new Promise((r) => setTimeout(r, 0))
+
+      expect(onSave).toHaveBeenCalled()
+      const payload = onSave.mock.calls[0][0]
+      expect(payload.description).toBe('Manually rewritten')
+      expect(payload.description_source).toBe('manual')
+    })
   })
 })
