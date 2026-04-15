@@ -1,22 +1,16 @@
 // frontend/src/components/workflow/ReviewStep.tsx
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import WorkflowWrapper from './WorkflowWrapper'
-import { BookLookup } from '../../types'
+import { Book, BookLookup } from '../../types'
 import { saveBook } from '../../api/books'
 import { uploadPhotos } from '../../api/photos'
-import { theme } from '../../styles/theme'
-import PhotoFilmstrip from '../PhotoFilmstrip'
+import BookCard from '../BookCard'
 import type { AiSummaryState } from '../../pages/PhotoWorkflowPage'
-import DescriptionSourceIcon from '../DescriptionSourceIcon'
 
 // Condition options match eBay's used-book condition scale.
 const CONDITIONS = ['Very Good', 'Good', 'Acceptable'] as const
 type Condition = (typeof CONDITIONS)[number]
-
-// Shared height for both button rows (condition + review toggles) so the
-// two rows look like a unified 2×3 control block.
-const ROW_BUTTON_HEIGHT = 48
 
 interface ReviewStepProps {
   lookupResult: BookLookup
@@ -53,46 +47,6 @@ async function compressPhoto(file: File): Promise<Blob> {
   })
 }
 
-function ReviewToggleButton({
-  word1,
-  word2,
-  on,
-  onToggle,
-}: {
-  word1: string
-  word2: string
-  on: boolean
-  onToggle: (v: boolean) => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onToggle(!on)}
-      aria-pressed={on}
-      aria-label={`${word1} ${word2}`}
-      style={{
-        height: ROW_BUTTON_HEIGHT,
-        padding: '0 0.5rem',
-        border: on ? 'none' : `1px solid ${theme.colors.zoneBorder}`,
-        borderRadius: theme.radius.md,
-        background: on ? theme.colors.primaryBlue : theme.colors.bg,
-        color: on ? '#fff' : theme.colors.secondaryText,
-        fontWeight: on ? 500 : 400,
-        fontSize: 13,
-        cursor: 'pointer',
-        fontFamily: theme.font.sans,
-        lineHeight: 1.1,
-        overflow: 'hidden',
-        wordBreak: 'break-word',
-      }}
-    >
-      <span className="review-toggle-label">
-        {word1}<span className="rt-break"> </span>{word2}
-      </span>
-    </button>
-  )
-}
-
 export default function ReviewStep({
   lookupResult,
   photos,
@@ -114,16 +68,19 @@ export default function ReviewStep({
   const [localPhotos, setLocalPhotos] = useState<Array<{ id: string; file: File }>>(
     () => photos.map((file) => ({ id: crypto.randomUUID(), file }))
   )
-  const [blobUrls, setBlobUrls] = useState<string[]>([])
+  const [blobUrls, setBlobUrls] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   // Create and revoke blob URLs whenever localPhotos changes
   useEffect(() => {
-    const urls = localPhotos.map(({ file }) => URL.createObjectURL(file))
-    setBlobUrls(urls)
+    const map: Record<string, string> = {}
+    localPhotos.forEach(({ id, file }) => {
+      map[id] = URL.createObjectURL(file)
+    })
+    setBlobUrls(map)
     return () => {
-      urls.forEach((u) => URL.revokeObjectURL(u))
+      Object.values(map).forEach((u) => URL.revokeObjectURL(u))
     }
   }, [localPhotos])
 
@@ -141,6 +98,64 @@ export default function ReviewStep({
       setReviewPhotography(true)
     }
   }
+
+  // FEAT-05: append a new photo to the in-memory list (does not navigate away)
+  function handleAddPhoto(file: File) {
+    const id = crypto.randomUUID()
+    setLocalPhotos((prev) => [...prev, { id, file }])
+  }
+
+  // Handles condition + review toggles from BookCard without hitting the network
+  // (no saved book exists yet at review time).
+  const reviewImmediateSave = async (patch: Partial<Book>) => {
+    if ('condition' in patch) setCondition((patch.condition ?? null) as Condition | null)
+    if ('needs_metadata_review' in patch) setReviewMetadata(!!patch.needs_metadata_review)
+    if ('needs_photo_review' in patch) setReviewPhotography(!!patch.needs_photo_review)
+    if ('needs_description_review' in patch) setReviewDescription(!!patch.needs_description_review)
+  }
+
+  const aiPending = aiSummary.status === 'pending'
+  const aiDescription = aiSummary.status === 'success' ? aiSummary.text : null
+
+  // Build a virtual Book object so BookCard can render without a persisted record.
+  // The 'pending' sentinel id is intentional — no API call has been made yet.
+  const virtualBook = useMemo(() => ({
+    id: savedBookId ?? 'pending',
+    isbn: lookupResult.isbn,
+    title: lookupResult.title,
+    author: lookupResult.author,
+    publisher: lookupResult.publisher,
+    year: lookupResult.year,
+    pages: lookupResult.pages,
+    edition: lookupResult.edition ?? null,
+    dimensions: null,
+    weight: null,
+    description: aiDescription ?? lookupResult.description ?? null,
+    cover_image_url: lookupResult.cover_image_url ?? null,
+    cover_image_local: null,
+    data_sources: lookupResult.data_sources,
+    needs_metadata_review: reviewMetadata,
+    needs_photo_review: reviewPhotography,
+    needs_description_review: reviewDescription,
+    description_source: aiDescription
+      ? 'ai_generated'
+      : (lookupResult.data_sources?.description ?? null),
+    description_generation_failed: aiSummary.status === 'failed',
+    condition: condition ?? null,
+    has_photos: localPhotos.length > 0,
+    created_at: '',
+    updated_at: '',
+  } as unknown as Book), [
+    lookupResult,
+    aiSummary,
+    aiDescription,
+    reviewMetadata,
+    reviewPhotography,
+    reviewDescription,
+    condition,
+    savedBookId,
+    localPhotos.length,
+  ])
 
   async function handleSave() {
     if (!condition || saving) return
@@ -173,7 +188,7 @@ export default function ReviewStep({
           needs_photo_review: reviewPhotography,
           needs_description_review: reviewDescription,
           description_source,
-          description_generation_failed: aiFailed,
+          description_generation_failed: aiSummary.status === 'failed',
         })
         bookId = book.id
         onSavedBookId(bookId)
@@ -193,17 +208,6 @@ export default function ReviewStep({
     }
   }
 
-  const aiPending = aiSummary.status === 'pending'
-  const aiDescription = aiSummary.status === 'success' ? aiSummary.text : null
-  const aiFailed = aiSummary.status === 'failed'
-  // The description shown on the Review step — AI result wins, then whatever
-  // the public-source lookup returned. Display is decoupled from the AI state
-  // machine so a Google Books description is still visible even though
-  // Gemini was never called.
-  const effectiveDescription = aiDescription ?? lookupResult.description ?? null
-  const showDescriptionBlock = aiPending || effectiveDescription !== null || aiFailed
-  // Source icon: ai_generated when AI summary is in use, otherwise derive from
-  // the lookup data_sources field (e.g. 'google_books'), or null for no icon.
   const effectiveDescriptionSource: string | null =
     aiDescription ? 'ai_generated'
     : lookupResult.description ? (lookupResult.data_sources?.description ?? null)
@@ -224,179 +228,29 @@ export default function ReviewStep({
           height: '100%',
           overflowY: 'auto',
           overflowX: 'hidden',
-          color: theme.colors.text,
         }}
       >
-        <PhotoFilmstrip
-          coverUrl={lookupResult.cover_image_url}
-          photos={localPhotos.map(({ id }, i) => ({ key: id, url: blobUrls[i] ?? '' }))}
-          onDelete={handleDeletePhoto}
+        <BookCard
+          editable={false}
+          book={virtualBook}
+          photos={localPhotos.map((p) => ({ key: p.id, url: blobUrls[p.id] ?? '' }))}
+          photoUrls={blobUrls}
+          onDeletePhoto={handleDeletePhoto}
+          onAddPhoto={handleAddPhoto}
+          onSave={async () => {}}
+          onImmediateSave={reviewImmediateSave}
+          onRegenerateDescription={onRegenerateSummary}
+          regeneratingDescription={aiPending}
+          descriptionSource={effectiveDescriptionSource}
         />
 
-        {/* Metadata: title, author, year · publisher */}
-        <div style={{ padding: '0.75rem 1.25rem 0' }}>
-          {/* Title — bold, two-line max with ellipsis */}
-          <h2
-            style={{
-              margin: '0 0 0.2rem',
-              fontSize: '1.1rem',
-              fontWeight: 700,
-              lineHeight: 1.35,
-              color: theme.colors.text,
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}
-          >
-            {lookupResult.title ?? 'Unknown Title'}
-          </h2>
-
-          {/* Author — one-line max with ellipsis */}
-          <p
-            style={{
-              margin: '0 0 0.15rem',
-              fontSize: '0.9rem',
-              color: theme.colors.muted,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {lookupResult.author ?? '—'}
-          </p>
-
-          {/* Year · Publisher — secondary text, one line */}
-          <p
-            style={{
-              margin: '0 0 1rem',
-              fontSize: '0.8rem',
-              color: theme.colors.muted,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {[lookupResult.year, lookupResult.publisher].filter(Boolean).join(' · ') || '—'}
-          </p>
-        </div>
-
-        <div style={{ padding: '0 1.25rem 1rem' }}>
-          {/* Row 1: Condition — connected segmented bar, single-select */}
-          <div
-            style={{
-              display: 'flex',
-              width: '100%',
-              border: `1px solid ${theme.colors.zoneBorder}`,
-              borderRadius: theme.radius.md,
-              overflow: 'hidden',
-              marginBottom: 8,
-            }}
-          >
-            {CONDITIONS.map((c, i) => {
-              const selected = condition === c
-              return (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setCondition(c)}
-                  style={{
-                    flex: 1,
-                    height: ROW_BUTTON_HEIGHT,
-                    padding: '0 0.4rem',
-                    fontSize: 13,
-                    fontWeight: selected ? 500 : 400,
-                    background: selected ? theme.colors.primaryBlue : theme.colors.bg,
-                    color: selected ? '#fff' : theme.colors.secondaryText,
-                    border: 'none',
-                    borderLeft: i === 0 ? 'none' : `1px solid ${theme.colors.zoneBorder}`,
-                    cursor: 'pointer',
-                    fontFamily: theme.font.sans,
-                    lineHeight: 1.15,
-                  }}
-                >
-                  {c}
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Row 2: Review toggle buttons — three independent buttons, multi-select */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr 1fr',
-              gap: 8,
-              marginBottom: '0.75rem',
-            }}
-          >
-            <ReviewToggleButton
-              word1="review"
-              word2="metadata"
-              on={reviewMetadata}
-              onToggle={setReviewMetadata}
-            />
-            <ReviewToggleButton
-              word1="review"
-              word2="photography"
-              on={reviewPhotography}
-              onToggle={setReviewPhotography}
-            />
-            <ReviewToggleButton
-              word1="review"
-              word2="description"
-              on={reviewDescription}
-              onToggle={setReviewDescription}
-            />
-          </div>
-
-          {/* Description block — renders when a summary is pending, present,
-              or failed. "Present" now includes a public-source description
-              coming back from the lookup itself, not just an AI result. */}
-          {showDescriptionBlock && (
-            <div style={{ marginBottom: '0.75rem' }}>
-              <p
-                style={{
-                  margin: '0 0 0.35rem',
-                  fontSize: '0.72rem',
-                  color: theme.colors.muted,
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                }}
-              >
-                Description
-                <DescriptionSourceIcon
-                  source={effectiveDescriptionSource as any}
-                  regenerating={aiPending}
-                  onRegenerate={onRegenerateSummary}
-                />
-              </p>
-              {aiPending ? (
-                <p style={{ margin: 0, fontStyle: 'italic', color: theme.colors.muted, fontSize: 13 }}>
-                  Generating summary…
-                </p>
-              ) : effectiveDescription ? (
-                <p style={{ margin: 0, color: theme.colors.text, fontSize: 13, lineHeight: 1.45 }}>
-                  {effectiveDescription}
-                </p>
-              ) : aiFailed ? (
-                <p style={{ margin: 0, fontStyle: 'italic', color: theme.colors.muted, fontSize: 13 }}>
-                  Summary unavailable.
-                </p>
-              ) : null}
-            </div>
-          )}
-
-          {error && (
-            <p style={{ color: theme.colors.danger, fontSize: '0.85rem', margin: '0.5rem 0' }}>
+        {error && (
+          <div style={{ padding: '0 1.25rem 1rem' }}>
+            <p style={{ color: 'red', fontSize: '0.85rem', margin: '0.5rem 0' }}>
               {error}
             </p>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </WorkflowWrapper>
   )
