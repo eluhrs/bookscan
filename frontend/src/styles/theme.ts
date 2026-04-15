@@ -31,6 +31,10 @@ export const theme = {
     filterBlueFill:   '#E6F1FB',
     filterPurpleFill: '#EEEDFE',
     filterGreenFill:  '#EAF3DE',
+    // BookCard typography tokens (CHANGES-20)
+    labelGray:        '#BBBBBB',
+    dashedUnderline:  '#DDDDDD',
+    titleText:        '#222222',
   },
   font: {
     sans: "'Geist', 'Inter', system-ui, sans-serif",
