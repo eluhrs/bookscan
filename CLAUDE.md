@@ -248,36 +248,37 @@ docker-compose.prod.yml   # prod overrides (binds 127.0.0.1:3001)
 
 ---
 
-## AI Summaries (CHANGES-17)
+## AI Summaries (CHANGES-17 — details in `docs/HISTORY.md`)
 
-When a book lookup returns no `description` (none of Open Library / Google Books / LoC have one), `PhotoWorkflowPage` fires a **lookup-time** Gemini call in parallel with entering the Review step, so the description is available as soon as Review mounts. The result is held in memory until SAVE; the final POST to `/api/books` carries `description` + `description_source: 'ai_generated'` in a single round trip — no background task, no polling.
+**Core flow.** When a lookup returns no `description`, `PhotoWorkflowPage.handleLookupComplete` fires `generateSummary()` in parallel with entering Review. `aiSummary = {status: 'pending' | 'success' | 'failed', text}` is held in memory; a monotonic `aiGenIdRef` discards stale responses. On SAVE the final POST to `/api/books` carries `description` + `description_source: 'ai_generated'` in one round trip — no background task, no polling.
 
-- **Service:** `api/app/services/ai_summary.py`
-- **Model:** `gemini-2.5-flash` (constant `GEMINI_MODEL`)
-- **Free tier:** 10 RPM / 500 RPD / 250K TPM — well within ~1 request per scan.
-- **Timeout:** 8 seconds.
-- **Token budget:** `MAX_OUTPUT_TOKENS = 400` AND `thinkingConfig.thinkingBudget = 0` — Gemini 2.5 Flash counts internal "thinking" tokens against the output budget; without disabling thinking the visible reply gets truncated to ~4 tokens. Both knobs are required.
-- **Skipped when:** lookup already returned a description, or `lookupResult.title` is null (no usable metadata), or `GEMINI_API_KEY` is unset (endpoint returns `{description: null}`).
+**Gemini config (non-obvious).** `gemini-2.5-flash`; frontend timeout 8s; per-attempt backend timeout 3.5s with one 5xx/network retry after 500ms backoff. `MAX_OUTPUT_TOKENS = 400` AND `thinkingConfig.thinkingBudget = 0` are BOTH required — without disabling thinking, the visible reply is truncated to ~4 tokens because Gemini 2.5 Flash counts internal thinking tokens against the output budget.
 
-**Frontend flow.** `PhotoWorkflowPage.handleLookupComplete` calls `generateSummary({title, author, year, publisher})` immediately after the lookup resolves, sets `aiSummary = {status: 'pending', text: null}` synchronously, and updates to `success` / `failed` on response. A monotonic `aiGenIdRef` token discards stale responses if the user cancels mid-flight. `ReviewStep` reads `aiSummary` via prop and renders: pending → italic "Generating summary…", success → real text + 3rd toggle (already ON), failed → italic "Summary unavailable" line (no retry button this iteration).
+**Skipped when** lookup already returned a description, or `lookupResult.title` is null, or `GEMINI_API_KEY` is unset.
 
-**Backend endpoints:**
-- `POST /api/books/generate-summary` (rate limited 20/min, auth required) — stateless Gemini call, no DB writes. Takes `SummaryRequest{title, author, year, publisher}`, returns `SummaryResponse{description: str | null}`. Returns null on missing API key, 429, timeout, or any failure — the caller treats null as "fall back to no description". This is the path the workflow uses.
-- `POST /api/books` still has the BackgroundTasks safety-net wiring for non-workflow paths (manual API calls, future flows): if the POST has no `description` AND `GEMINI_API_KEY` is set, it schedules `generate_and_store_summary` to populate it asynchronously. The frontend workflow bypasses this by sending `description` in the POST.
-- `generate_and_store_summary(book_id)` — opens its own `async_session_maker()`, never touches the request session, mirroring the cover-download pattern. Used only by the background safety net.
+**Endpoints.** `POST /api/books/generate-summary` (20/min, auth required) is stateless and returns null on any failure — the workflow path. `POST /api/books` still has a `BackgroundTasks` safety-net (`generate_and_store_summary`) for non-workflow callers; it opens its own `async_session_maker()`.
 
-**Database fields (migration 007):**
-- `description_source` VARCHAR(32) — one of `open_library | google_books | library_of_congress | ai_generated | manual`, or NULL. The frontend sends `'ai_generated'` in the POST when the AI succeeded. The edit page sends `'manual'` when the user manually edits the description text. The backend auto-derives from `data_sources['description']` only when the caller didn't provide a value.
-- `needs_description_review` BOOL default false — set true when an AI summary is included in the POST; user toggles off when satisfied. Drives the dashboard review column (purple Sparkles icon, `aiPurple` `#7F77DD`) and the `?status=needs_description_review` filter.
-- `description_generation_failed` BOOL default false — set on timeout, 4xx/5xx, empty response, or repeated 429 (only when the legacy background-task path runs; the lookup-time path doesn't write this field, since failure surfaces as `aiSummary.status === 'failed'` in the in-memory state). Logged server-side. Not surfaced in the UI in this iteration; a retry UI is deferred.
+**DB fields (migration 007).** `description_source` VARCHAR(32); `needs_description_review` BOOL; `description_generation_failed` BOOL (set only by the legacy background-task path — the lookup-time path surfaces failure as `aiSummary.status === 'failed'`). `?status=needs_description_review` is a `Literal` on `GET /api/books`; the `ready` filter requires all three review flags to be false.
 
-**`?status=needs_description_review`** is a `Literal` value on `GET /api/books`. The `ready` filter requires all three review flags (`needs_metadata_review`, `needs_photo_review`, `needs_description_review`) to be false.
+**Duplicate ISBN handling (CHANGES-18 BUG-02).** `GET /api/books/lookup/{isbn}` returns `existing_book_id: UUID | None`. When set, `LookupStep` shows "This book is already in your library" and an "Open existing record" button that `navigate('/dashboard', { state: { editBookId } })`. `DashboardPage` picks up location state on mount, opens the edit view, then clears the state so refresh doesn't re-trigger. Review step is never entered for duplicates — no Gemini call, no 409.
 
-**Three review toggles (Review step + edit page).** `ReviewStep` and `BookEditCard` both render review toggles as styled buttons with `aria-pressed` (no checkboxes). The Review step shows a 2-column grid until the AI summary arrives, then expands to 3 columns. The edit page is always 3 columns. Description edits on the edit page send `description_source: 'manual'` in the PATCH so the Sparkles icon disappears.
+---
 
-**Reliability (CHANGES-18 BUG-01).** `generate_summary_text` now retries once on 5xx / network errors with a 500ms backoff and a tighter 3.5s per-attempt timeout (total ~7.5s, still inside the frontend's 8s budget). Gemini 2.5 Flash intermittently returns 503 "high demand" during normal use and a single retry rescues most of those calls. The ReviewStep failure-state message no longer redirects the user to the edit page — it just says "Summary unavailable" — since the feature is supposed to generate inline, not punt.
+## CHANGES-19 additions
 
-**Duplicate ISBN handling (CHANGES-18 BUG-02).** `GET /api/books/lookup/{isbn}` consults the `books` table and returns `existing_book_id: UUID | None` alongside the metadata. When the frontend sees `existing_book_id` set, `LookupStep` does NOT call `onLookupComplete` — it surfaces a "This book is already in your library" panel with an "Open existing record" button that `navigate('/dashboard', { state: { editBookId } })`s to the dashboard. `DashboardPage` picks that state up on mount, calls `getBook(id)`, opens `editingBook`, and clears the location state so a browser refresh doesn't re-trigger it. The Review step is never entered for duplicates, so no Gemini call is fired and no 409 save error is shown.
+**iOS viewport lock (BUG-01).** `frontend/index.html` viewport meta is `width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no` — blocks iOS text-input auto-zoom. Single-user app, a11y tradeoff is intentional. The inline `<style>` also adds `html { touch-action: manipulation }` for double-tap zoom.
+
+**Mobile overflow guards (BUG-02).** Top-level page wrappers all have `overflowX: 'hidden'`. Review toggles and ISBN cell have `wordBreak` (`break-word` on toggles, `break-all` on the monospace ISBN) so long strings don't push past 375px.
+
+**Review-toggle two-line wrap (BUG-03).** `frontend/src/styles/reviewToggle.css` → `.review-toggle-label` with a `.rt-break` span that is `display: inline` on desktop, `display: block` ≤ 600px. Both `ReviewToggleButton` (ReviewStep) and `ReviewToggle` (BookEditCard) take `word1`/`word2` props and render `{word1}<span class="rt-break"> </span>{word2}` with `aria-label="{word1} {word2}"`. All three toggles identical height both breakpoints.
+
+**Scholarly AI prompt (FEAT-01).** `build_prompt` in `api/app/services/ai_summary.py` asks for factual/scholarly 3-5 sentences with explicit bans on `captivating`, `perfect for`, `delve`, `journey`, `exploration`, value judgments. Test: `test_build_prompt_has_scholarly_tone_guardrails`.
+
+**StatusFilter ring + fill (FEAT-02).** Active states are `{border, fill}` pairs: amber/blue/purple/green for needs_metadata_review/needs_photo_review/needs_description_review/ready, gray+white default. Fill tokens: `filterAmberFill` `#FAEEDA`, `filterBlueFill` `#E6F1FB`, `filterPurpleFill` `#EEEDFE`, `filterGreenFill` `#EAF3DE`.
+
+**Mobile scrollbar (FEAT-04).** `frontend/src/styles/mobileScroll.css` → `.mobile-scroll` class on the scroll containers in ReviewStep and BookEditCard. Thin 6px bar under `@media (max-width: 600px)`, desktop untouched. Imported from `main.tsx`.
+
+**Description source icons (FEAT-03).** `frontend/src/components/DescriptionSourceIcon.tsx` is the single source. Catalog sources → gray `Database` span (display-only). `ai_generated` → purple `Sparkles` **button** that stops propagation and calls `onRegenerate()`. While regenerating, a `Loader2` with class `ds-spin` replaces it. `manual` / `null` render nothing. **Edit page:** `BookEditCard.handleRegenerate` calls `generateSummary()` then `onImmediateSave({description, description_source: 'ai_generated', needs_description_review: true})`. **Review step:** regeneration flows up to `PhotoWorkflowPage.handleRegenerateSummary`, which bumps `aiGenIdRef` and flips `aiSummary` back through `pending` → `success`/`failed`. `effectiveDescriptionSource` = `aiDescription ? 'ai_generated' : lookupResult.data_sources?.description ?? null`.
 
 ---
 

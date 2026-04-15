@@ -125,3 +125,30 @@ Historical iteration summaries moved out of CLAUDE.md for session-start leanness
 - FEAT-02: Condition column removed from desktop dashboard table; `CONDITION_COLOR` constant deleted; condition remains visible and editable on `BookEditCard`
 - QA fix: Camera error recovery — `retryCamera()` function added to `useCameraStream` hook; retry button shown in both PhotographStep and LookupStep when camera errors occur, so error state is recoverable without force-closing the browser
 - QA fix: HTTP→HTTPS redirect in local dev — Vite plugin starts HTTP server on port 5180 (mapped to host 3000) that 301-redirects to HTTPS on 3001; mkcert cert regenerated to cover `localhost`, `127.0.0.1`, and `bloke.local` for network-independent phone access
+
+---
+
+## CHANGES-17 — AI Summaries (moved from CLAUDE.md 2026-04-15)
+
+When a book lookup returns no `description` (none of Open Library / Google Books / LoC have one), `PhotoWorkflowPage` fires a **lookup-time** Gemini call in parallel with entering the Review step, so the description is available as soon as Review mounts. The result is held in memory until SAVE; the final POST to `/api/books` carries `description` + `description_source: 'ai_generated'` in a single round trip — no background task, no polling.
+
+- Service: `api/app/services/ai_summary.py`
+- Model: `gemini-2.5-flash`
+- Free tier: 10 RPM / 500 RPD / 250K TPM — well within ~1 request per scan
+- Frontend timeout: 8 seconds; per-attempt backend timeout 3.5s with one 5xx/network retry after 500ms backoff
+- Token budget: `MAX_OUTPUT_TOKENS = 400` AND `thinkingConfig.thinkingBudget = 0` — Gemini 2.5 Flash counts internal "thinking" tokens against the output budget; without disabling thinking the visible reply gets truncated to ~4 tokens
+- Skipped when: lookup already returned a description, or `lookupResult.title` is null, or `GEMINI_API_KEY` is unset
+
+**Frontend flow.** `PhotoWorkflowPage.handleLookupComplete` calls `generateSummary({title, author, year, publisher})` immediately after the lookup resolves, sets `aiSummary = {status: 'pending'}` synchronously, updates to `success` / `failed` on response. A monotonic `aiGenIdRef` token discards stale responses. `ReviewStep` reads `aiSummary` via prop: pending → "Generating summary…", success → real text + toggle ON, failed → "Summary unavailable".
+
+**Backend endpoints.**
+- `POST /api/books/generate-summary` (rate limited 20/min, auth required) — stateless Gemini call, no DB writes. Returns null on missing API key, 429, timeout, or any failure. This is the path the workflow uses.
+- `POST /api/books` retains a BackgroundTasks safety net for non-workflow POSTs: if no description AND `GEMINI_API_KEY` is set, it schedules `generate_and_store_summary` asynchronously. The frontend workflow bypasses this by sending `description` in the POST.
+- `generate_and_store_summary(book_id)` opens its own `async_session_maker()`.
+
+**DB fields (migration 007).**
+- `description_source` VARCHAR(32) — one of `open_library | google_books | library_of_congress | ai_generated | manual` or NULL. Backend auto-derives from `data_sources['description']` only when the caller didn't provide a value.
+- `needs_description_review` BOOL default false — set true when an AI summary is included in the POST.
+- `description_generation_failed` BOOL default false — set on timeout/5xx/empty/repeated 429 (only the legacy background-task path writes it; the lookup-time path surfaces failure as `aiSummary.status === 'failed'` instead).
+
+**`?status=needs_description_review`** is a `Literal` on `GET /api/books`. The `ready` filter requires all three review flags to be false.
