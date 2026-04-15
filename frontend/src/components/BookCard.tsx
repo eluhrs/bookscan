@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Book } from '../types';
 import PhotoFilmstrip from './PhotoFilmstrip';
+import DescriptionSourceIcon from './DescriptionSourceIcon';
 import { theme } from '../styles/theme';
 
 export interface BookCardProps {
@@ -390,6 +391,34 @@ export default function BookCard(props: BookCardProps) {
           on={!!book.needs_description_review}
           onToggle={(next) => props.onImmediateSave({ needs_description_review: next })}
         />
+      </div>
+
+      {/* Description */}
+      <div style={{ marginTop: 16 }}>
+        <div className="bc-description-label">
+          <span className="bc-label">Description</span>
+          <DescriptionSourceIcon
+            source={(props.descriptionSource ?? book.description_source ?? (book.data_sources?.description ?? null)) as Parameters<typeof DescriptionSourceIcon>[0]['source']}
+            regenerating={!!props.regeneratingDescription}
+            onRegenerate={props.onRegenerateDescription ?? (() => {})}
+          />
+        </div>
+        {editable ? (
+          <div className="bc-field-full" style={{ marginTop: 6 }}>
+            <InlineField
+              value={draft.description}
+              onChange={(v) => setDraft({ ...draft, description: v })}
+              multiline
+              fontSize={13}
+              color="#222"
+              placeholder="No description"
+            />
+          </div>
+        ) : (
+          <p style={{ marginTop: 6, fontSize: 13, color: '#222' }}>
+            {book.description || ''}
+          </p>
+        )}
       </div>
     </div>
   );
