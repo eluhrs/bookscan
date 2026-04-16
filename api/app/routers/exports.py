@@ -1,12 +1,16 @@
 """eBay CSV export with batch tracking and undo."""
+import asyncio
 import csv
 import io
+import logging
 import uuid
+import zipfile
 from datetime import date
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +20,7 @@ from app.database import get_db
 from app.models import Book, BookPhoto, ExportBatch
 
 router = APIRouter(prefix="/exports", tags=["exports"])
+logger = logging.getLogger(__name__)
 
 CONDITION_MAP = {
     "Very Good": "4000",
@@ -40,9 +45,44 @@ CSV_COLUMNS = [
     "ISBN",
 ]
 
+PHOTOS_DIR = Path("/app/photos")
+
+
+def _collect_photos(
+    book: Book,
+    photos: list[BookPhoto],
+) -> list[tuple[str, bytes]]:
+    """Collect (zip_filename, data) pairs for a book's cover + user photos.
+
+    Returns list of (filename, bytes) tuples. Skips missing files with a warning.
+    """
+    isbn = book.isbn
+    entries: list[tuple[str, bytes]] = []
+    n = 1
+
+    # Cover image (local file)
+    if book.cover_image_local:
+        cover_path = Path(book.cover_image_local)
+        if cover_path.exists():
+            entries.append((f"photos/{isbn}_{n}.jpg", cover_path.read_bytes()))
+            n += 1
+        else:
+            logger.warning("Cover file missing for ISBN %s: %s", isbn, cover_path)
+
+    # User photos
+    for photo in photos:
+        photo_path = PHOTOS_DIR / photo.filename
+        if photo_path.exists():
+            entries.append((f"photos/{isbn}_{n}.jpg", photo_path.read_bytes()))
+            n += 1
+        else:
+            logger.warning("Photo file missing for ISBN %s: %s", isbn, photo_path)
+
+    return entries
+
 
 @router.post("")
-async def export_csv(
+async def export_books(
     db: Annotated[AsyncSession, Depends(get_db)],
     _user: Annotated[str, Depends(get_current_user)],
 ):
@@ -62,20 +102,30 @@ async def export_csv(
     if book_ids:
         photo_rows = (
             await db.scalars(
-                select(BookPhoto).where(BookPhoto.book_id.in_(book_ids))
+                select(BookPhoto)
+                .where(BookPhoto.book_id.in_(book_ids))
+                .order_by(BookPhoto.created_at)
             )
         ).all()
         for p in photo_rows:
             photos_by_book.setdefault(p.book_id, []).append(p)
 
+    # Collect all photos (blocking IO in thread)
+    all_photo_entries: list[tuple[str, bytes]] = []
+    pic_names_by_book: dict[uuid.UUID, str] = {}
+    for book in books:
+        photos = photos_by_book.get(book.id, [])
+        entries = await asyncio.to_thread(_collect_photos, book, photos)
+        all_photo_entries.extend(entries)
+        pic_names = ",".join(fname.removeprefix("photos/") for fname, _ in entries)
+        pic_names_by_book[book.id] = pic_names
+
     # Generate CSV
-    output = io.StringIO()
-    writer = csv.writer(output)
+    csv_output = io.StringIO()
+    writer = csv.writer(csv_output)
     writer.writerow(CSV_COLUMNS)
 
     for book in books:
-        photos = photos_by_book.get(book.id, [])
-        pic_names = ",".join(f"{book.isbn}_{i+1}.jpg" for i in range(len(photos)))
         writer.writerow([
             "Add",
             f"{book.title} by {book.author}",
@@ -88,10 +138,22 @@ async def export_csv(
             "GTC",
             settings.ebay_shipping_profile,
             settings.ebay_return_policy,
-            pic_names,
+            pic_names_by_book.get(book.id, ""),
             book.isbn,
             book.isbn,
         ])
+
+    # Build ZIP
+    today = date.today().isoformat()
+    csv_filename = f"bookscan-export-{today}.csv"
+    zip_filename = f"bookscan-export-{today}.zip"
+
+    zip_buf = io.BytesIO()
+    with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(csv_filename, csv_output.getvalue())
+        for photo_name, photo_data in all_photo_entries:
+            zf.writestr(photo_name, photo_data)
+    zip_buf.seek(0)
 
     # Archive all exported books
     for book in books:
@@ -105,13 +167,10 @@ async def export_csv(
 
     await db.commit()
 
-    # Return CSV as streaming response
-    output.seek(0)
-    filename = f"bookscan-export-{date.today().isoformat()}.csv"
-    return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    return Response(
+        content=zip_buf.read(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{zip_filename}"'},
     )
 
 

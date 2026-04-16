@@ -1,9 +1,14 @@
 """Tests for the eBay CSV export endpoints."""
 import csv
 import io
+import zipfile
 import pytest
 import pytest_asyncio
+from pathlib import Path
+from unittest.mock import patch
 from httpx import AsyncClient
+from tests._helpers import TestSession
+from app.models import Book
 
 
 def _ready_book(isbn, title="Test Book", author="Author"):
@@ -30,10 +35,16 @@ async def test_export_csv_downloads(client: AsyncClient, auth_headers: dict):
 
     resp = await client.post("/api/exports", headers=auth_headers)
     assert resp.status_code == 200
-    assert resp.headers["content-type"].startswith("text/csv")
+    assert "application/zip" in resp.headers["content-type"]
     assert "bookscan-export-" in resp.headers["content-disposition"]
 
-    reader = csv.reader(io.StringIO(resp.text))
+    buf = io.BytesIO(resp.content)
+    with zipfile.ZipFile(buf) as zf:
+        csv_files = [n for n in zf.namelist() if n.endswith(".csv")]
+        assert len(csv_files) == 1
+        csv_content = zf.read(csv_files[0]).decode("utf-8")
+
+    reader = csv.reader(io.StringIO(csv_content))
     rows = list(reader)
     assert len(rows) == 2  # header + 1 data row
     header = rows[0]
@@ -63,7 +74,11 @@ async def test_export_condition_mapping(client: AsyncClient, auth_headers: dict)
     await client.patch(f"/api/books/{book_id}", json={"condition": "Very Good"}, headers=auth_headers)
 
     resp = await client.post("/api/exports", headers=auth_headers)
-    reader = csv.reader(io.StringIO(resp.text))
+    buf = io.BytesIO(resp.content)
+    with zipfile.ZipFile(buf) as zf:
+        csv_files = [n for n in zf.namelist() if n.endswith(".csv")]
+        csv_content = zf.read(csv_files[0]).decode("utf-8")
+    reader = csv.reader(io.StringIO(csv_content))
     rows = list(reader)
     header = rows[0]
     data = dict(zip(header, rows[1]))
@@ -104,7 +119,11 @@ async def test_export_no_ready_books_returns_empty(client: AsyncClient, auth_hea
     resp = await client.post("/api/exports", headers=auth_headers)
     assert resp.status_code == 200
 
-    reader = csv.reader(io.StringIO(resp.text))
+    buf = io.BytesIO(resp.content)
+    with zipfile.ZipFile(buf) as zf:
+        csv_files = [n for n in zf.namelist() if n.endswith(".csv")]
+        csv_content = zf.read(csv_files[0]).decode("utf-8")
+    reader = csv.reader(io.StringIO(csv_content))
     rows = list(reader)
     assert len(rows) == 1  # header only
 
@@ -175,3 +194,126 @@ async def test_new_export_replaces_old_batch(client: AsyncClient, auth_headers: 
 async def test_export_requires_auth(client: AsyncClient):
     resp = await client.post("/api/exports")
     assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_export_returns_zip_with_csv(client: AsyncClient, auth_headers: dict):
+    """Export should return a ZIP containing a CSV file."""
+    await client.post("/api/books", json=_ready_book("9780000000101"), headers=auth_headers)
+
+    resp = await client.post("/api/exports", headers=auth_headers)
+    assert resp.status_code == 200
+    assert "application/zip" in resp.headers["content-type"]
+    assert "bookscan-export-" in resp.headers["content-disposition"]
+    assert resp.headers["content-disposition"].endswith('.zip"')
+
+    buf = io.BytesIO(resp.content)
+    with zipfile.ZipFile(buf) as zf:
+        names = zf.namelist()
+        csv_files = [n for n in names if n.endswith(".csv")]
+        assert len(csv_files) == 1
+        assert csv_files[0].startswith("bookscan-export-")
+
+        csv_content = zf.read(csv_files[0]).decode("utf-8")
+        reader = csv.reader(io.StringIO(csv_content))
+        rows = list(reader)
+        assert len(rows) == 2
+        header = rows[0]
+        data = dict(zip(header, rows[1]))
+        assert data["Action"] == "Add"
+        assert data["ISBN"] == "9780000000101"
+
+
+@pytest.mark.asyncio
+async def test_export_zip_includes_cover_and_user_photos(client: AsyncClient, auth_headers: dict):
+    """ZIP should include cover image and user photos named {isbn}_{n}.jpg."""
+    book_data = _ready_book("9780000000102")
+    book_data["cover_image_url"] = "https://example.com/cover.jpg"
+    resp = await client.post("/api/books", json=book_data, headers=auth_headers)
+    book_id = resp.json()["id"]
+
+    # Create fake cover file and set cover_image_local directly on the DB record
+    # (cover_image_local is set by the background cover-download task, not via API)
+    cover_path = Path("/tmp/bookscan_test_covers/9780000000102.jpg")
+    cover_path.parent.mkdir(parents=True, exist_ok=True)
+    cover_path.write_bytes(b"FAKE_COVER_DATA")
+
+    import uuid as _uuid
+    async with TestSession() as session:
+        book = await session.get(Book, _uuid.UUID(book_id))
+        book.cover_image_local = str(cover_path)
+        await session.commit()
+
+    # Upload a user photo via API (patch photos router dir too)
+    with patch("app.routers.photos.PHOTOS_DIR", Path("/tmp/bookscan_test_photos")):
+        resp = await client.post(
+            f"/api/books/{book_id}/photos",
+            files=[("files", ("photo.jpg", b"FAKE_PHOTO_DATA", "image/jpeg"))],
+            headers=auth_headers,
+        )
+    assert resp.status_code == 201
+    photo_id = resp.json()[0]["id"]
+
+    # Write the user photo file where PHOTOS_DIR expects it
+    user_photo_path = Path(f"/tmp/bookscan_test_photos/{book_id}/{photo_id}.jpg")
+    user_photo_path.parent.mkdir(parents=True, exist_ok=True)
+    user_photo_path.write_bytes(b"FAKE_PHOTO_DATA")
+
+    with patch("app.routers.exports.PHOTOS_DIR", Path("/tmp/bookscan_test_photos")):
+        resp = await client.post("/api/exports", headers=auth_headers)
+
+    assert resp.status_code == 200
+    buf = io.BytesIO(resp.content)
+    with zipfile.ZipFile(buf) as zf:
+        names = zf.namelist()
+        assert "photos/9780000000102_1.jpg" in names  # cover
+        assert "photos/9780000000102_2.jpg" in names  # user photo
+        assert zf.read("photos/9780000000102_1.jpg") == b"FAKE_COVER_DATA"
+        assert zf.read("photos/9780000000102_2.jpg") == b"FAKE_PHOTO_DATA"
+
+        # PictureName in CSV should match
+        csv_files = [n for n in names if n.endswith(".csv")]
+        csv_content = zf.read(csv_files[0]).decode("utf-8")
+        reader = csv.reader(io.StringIO(csv_content))
+        rows = list(reader)
+        header = rows[0]
+        data = dict(zip(header, rows[1]))
+        assert data["PictureName"] == "9780000000102_1.jpg,9780000000102_2.jpg"
+
+    # Cleanup
+    import shutil
+    shutil.rmtree("/tmp/bookscan_test_covers", ignore_errors=True)
+    shutil.rmtree("/tmp/bookscan_test_photos", ignore_errors=True)
+
+
+@pytest.mark.asyncio
+async def test_export_zip_skips_missing_cover(client: AsyncClient, auth_headers: dict):
+    """If cover_image_local points to a missing file, skip it gracefully."""
+    book_data = _ready_book("9780000000103")
+    book_data["cover_image_url"] = "https://example.com/cover.jpg"
+    resp = await client.post("/api/books", json=book_data, headers=auth_headers)
+    book_id = resp.json()["id"]
+
+    # Set cover_image_local to a nonexistent path directly on DB
+    import uuid as _uuid
+    async with TestSession() as session:
+        book = await session.get(Book, _uuid.UUID(book_id))
+        book.cover_image_local = "/tmp/nonexistent/cover.jpg"
+        await session.commit()
+
+    resp = await client.post("/api/exports", headers=auth_headers)
+    assert resp.status_code == 200
+
+    buf = io.BytesIO(resp.content)
+    with zipfile.ZipFile(buf) as zf:
+        names = zf.namelist()
+        photo_files = [n for n in names if n.startswith("photos/")]
+        assert len(photo_files) == 0
+
+        csv_files = [n for n in names if n.endswith(".csv")]
+        csv_content = zf.read(csv_files[0]).decode("utf-8")
+        reader = csv.reader(io.StringIO(csv_content))
+        rows = list(reader)
+        header = rows[0]
+        data = dict(zip(header, rows[1]))
+        assert data["PictureName"] == ""
