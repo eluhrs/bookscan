@@ -30,6 +30,10 @@ export default defineConfig({
         target: 'http://api:8001',
         changeOrigin: true,
       },
+      '/photos': {
+        target: 'http://api:8001',
+        changeOrigin: true,
+      },
     },
     https: fs.existsSync('/app/localhost+1.pem')
       ? {
