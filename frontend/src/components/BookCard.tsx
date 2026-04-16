@@ -1,7 +1,8 @@
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import type { Book } from '../types';
 import PhotoFilmstrip from './PhotoFilmstrip';
 import DescriptionSourceIcon from './DescriptionSourceIcon';
+import { Check, ChevronDown } from 'lucide-react';
 import { theme } from '../styles/theme';
 
 export interface BookCardHandle {
@@ -23,6 +24,8 @@ export interface BookCardProps {
   onAddPhoto?: (file: File) => void;
   onRegenerateDescription?: () => void;
   regeneratingDescription?: boolean;
+  /** Show price/category row (desktop edit only, not mobile or Review step) */
+  showListingFields?: boolean;
   descriptionSource?: string | null;
 }
 
@@ -31,6 +34,18 @@ const CONDITIONS = ['Very Good', 'Good', 'Acceptable'] as const
 // Shared height for both button rows (condition + review toggles) so the
 // two rows look like a unified 2×3 control block.
 const ROW_BUTTON_HEIGHT = 48
+
+const CATEGORIES = [
+  'Science Fiction',
+  'History',
+  'Science',
+  'Social Sciences',
+  'Philosophy',
+  'Travel',
+  'Textbooks & Education',
+  'Antiquarian & Collectible',
+  'Other',
+] as const
 
 // ---- ConditionBar ----
 interface ConditionBarProps {
@@ -237,6 +252,218 @@ function InlineField({
       {local || <span style={{ color: theme.colors.muted, fontStyle: 'italic' }}>{placeholder || '—'}</span>}
     </span>
   );
+}
+
+function PriceCategoryRow({ book, onImmediateSave }: {
+  book: Book
+  onImmediateSave: (patch: Partial<Book>) => Promise<void> | void
+}) {
+  const [editingPrice, setEditingPrice] = useState(false)
+  const [priceLocal, setPriceLocal] = useState(
+    book.price != null ? String(book.price) : ''
+  )
+  const [categoryOpen, setCategoryOpen] = useState(false)
+  const catRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    setPriceLocal(book.price != null ? String(book.price) : '')
+  }, [book.price])
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (catRef.current && !catRef.current.contains(e.target as Node)) setCategoryOpen(false)
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [])
+
+  const hasPrice = book.price != null && book.price > 0
+  const hasCategory = !!book.ebay_category_name
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
+      {/* Price */}
+      <button
+        type="button"
+        onClick={() => setEditingPrice(true)}
+        style={{
+          height: ROW_BUTTON_HEIGHT,
+          display: 'flex',
+          alignItems: 'center',
+          border: hasPrice ? 'none' : `1px solid ${theme.colors.zoneBorder}`,
+          borderRadius: theme.radius.md,
+          background: hasPrice ? theme.colors.primaryBlue : theme.colors.bg,
+          cursor: 'pointer',
+          padding: 0,
+          overflow: 'hidden',
+          fontFamily: theme.font.sans,
+        }}
+      >
+        <span style={{
+          padding: '0 10px',
+          fontSize: 11,
+          fontWeight: 600,
+          textTransform: 'uppercase' as const,
+          letterSpacing: '0.04em',
+          color: hasPrice ? '#fff' : theme.colors.secondaryText,
+          borderRight: `1px solid ${hasPrice ? 'rgba(255,255,255,0.3)' : theme.colors.zoneBorder}`,
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+        }}>
+          Price
+        </span>
+        <span style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 10px',
+          fontSize: 14,
+          color: hasPrice ? '#fff' : theme.colors.secondaryText,
+        }}>
+          {editingPrice ? (
+            <span style={{ display: 'flex', alignItems: 'center', width: '100%' }} onClick={(e) => e.stopPropagation()}>
+              <span style={{ marginRight: 4 }}>$</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                autoFocus
+                value={priceLocal}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^0-9.]/g, '')
+                  setPriceLocal(v)
+                }}
+                onBlur={() => {
+                  setEditingPrice(false)
+                  const num = parseFloat(priceLocal)
+                  const newPrice = isNaN(num) ? null : Math.round(num * 100) / 100
+                  onImmediateSave({ price: newPrice as any })
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                }}
+                style={{
+                  width: '100%',
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  fontSize: 14,
+                  color: hasPrice ? '#fff' : '#222',
+                  fontFamily: theme.font.sans,
+                }}
+              />
+            </span>
+          ) : (
+            <>
+              <span style={{ marginRight: 2 }}>$</span>
+              {hasPrice ? Number(book.price).toFixed(2) : '0.00'}
+            </>
+          )}
+        </span>
+      </button>
+
+      {/* Category */}
+      <div ref={catRef} style={{ position: 'relative' }}>
+        <button
+          type="button"
+          onClick={() => setCategoryOpen((o) => !o)}
+          style={{
+            width: '100%',
+            height: ROW_BUTTON_HEIGHT,
+            display: 'flex',
+            alignItems: 'center',
+            border: hasCategory ? 'none' : `1px solid ${theme.colors.zoneBorder}`,
+            borderRadius: theme.radius.md,
+            background: hasCategory ? theme.colors.primaryBlue : theme.colors.bg,
+            cursor: 'pointer',
+            padding: 0,
+            overflow: 'hidden',
+            fontFamily: theme.font.sans,
+          }}
+        >
+          <span style={{
+            padding: '0 10px',
+            fontSize: 11,
+            fontWeight: 600,
+            textTransform: 'uppercase' as const,
+            letterSpacing: '0.04em',
+            color: hasCategory ? '#fff' : theme.colors.secondaryText,
+            borderRight: `1px solid ${hasCategory ? 'rgba(255,255,255,0.3)' : theme.colors.zoneBorder}`,
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+          }}>
+            Category
+          </span>
+          <span style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0 8px',
+            color: hasCategory ? '#fff' : theme.colors.secondaryText,
+            fontSize: 14,
+          }}>
+            {hasCategory ? <Check size={18} /> : '\u2014'}
+          </span>
+          <span style={{
+            padding: '0 8px',
+            color: hasCategory ? '#fff' : theme.colors.secondaryText,
+            display: 'flex',
+            alignItems: 'center',
+          }}>
+            <ChevronDown size={14} />
+          </span>
+        </button>
+
+        {categoryOpen && (
+          <div
+            role="menu"
+            style={{
+              position: 'absolute',
+              top: 'calc(100% + 4px)',
+              left: 0,
+              right: 0,
+              background: theme.colors.bg,
+              border: `1px solid ${theme.colors.zoneBorder}`,
+              borderRadius: theme.radius.sm,
+              boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
+              zIndex: 20,
+              padding: '0.25rem 0',
+              maxHeight: 240,
+              overflowY: 'auto',
+            }}
+          >
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setCategoryOpen(false)
+                  onImmediateSave({ ebay_category_name: cat })
+                }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '0.5rem 0.75rem',
+                  background: book.ebay_category_name === cat ? theme.colors.tableHeaderBg : 'transparent',
+                  border: 'none',
+                  fontSize: '0.85rem',
+                  color: theme.colors.text,
+                  cursor: 'pointer',
+                  fontFamily: theme.font.sans,
+                }}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 const BookCard = forwardRef<BookCardHandle, BookCardProps>(function BookCard(props, ref) {
@@ -462,6 +689,9 @@ const BookCard = forwardRef<BookCardHandle, BookCardProps>(function BookCard(pro
           onToggle={(next) => props.onImmediateSave({ needs_description_review: next })}
         />
       </div>
+      {props.showListingFields && (
+        <PriceCategoryRow book={book} onImmediateSave={props.onImmediateSave} />
+      )}
 
       {/* Description */}
       <div style={{ marginTop: 20 }}>
