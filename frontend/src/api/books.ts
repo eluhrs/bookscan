@@ -28,13 +28,15 @@ export async function saveBook(
 export async function listBooks(params?: {
   page?: number
   page_size?: number
-  status?: 'all' | 'needs_metadata_review' | 'needs_photo_review' | 'needs_description_review' | 'ready'
+  status?: 'all' | 'ready' | 'archived'
+  review?: 'needs_metadata_review' | 'needs_photo_review' | 'needs_description_review' | 'needs_price'
   search?: string
 }): Promise<BookListResponse> {
   const q = new URLSearchParams()
   if (params?.page) q.set('page', String(params.page))
   if (params?.page_size) q.set('page_size', String(params.page_size))
   if (params?.status && params.status !== 'all') q.set('status', params.status)
+  if (params?.review) q.set('review', params.review)
   if (params?.search) q.set('search', params.search)
   return apiFetch(`/api/books?${q}`)
 }

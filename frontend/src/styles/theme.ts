@@ -31,6 +31,7 @@ export const theme = {
     filterBlueFill:   '#E6F1FB',
     filterPurpleFill: '#EEEDFE',
     filterGreenFill:  '#EAF3DE',
+    filterGrayFill:   '#F1EFE8',
     // BookCard typography tokens (CHANGES-20)
     labelGray:        '#BBBBBB',
     dashedUnderline:  '#DDDDDD',

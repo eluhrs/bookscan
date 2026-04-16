@@ -20,6 +20,10 @@ export interface Book {
   description_source: string | null
   needs_description_review: boolean
   description_generation_failed: boolean
+  price: number | null
+  ebay_category_id: number | null
+  ebay_category_name: string | null
+  archived: boolean
   created_at: string
   updated_at: string
 }
