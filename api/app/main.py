@@ -31,8 +31,10 @@ from app.auth import router as auth_router
 from app.routers.books import router as books_router
 from app.routers.listings import router as listings_router
 from app.routers.photos import router as photos_router
+from app.routers.exports import router as exports_router
 
 app.include_router(auth_router, prefix="/api")
 app.include_router(books_router, prefix="/api")
 app.include_router(listings_router, prefix="/api")
 app.include_router(photos_router, prefix="/api")
+app.include_router(exports_router, prefix="/api")
