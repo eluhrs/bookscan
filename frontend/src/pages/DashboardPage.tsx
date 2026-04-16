@@ -4,7 +4,7 @@ import { Camera } from 'lucide-react'
 import BookTable from '../components/BookTable'
 import BookCard, { BookCardHandle } from '../components/BookCard'
 import ListingGenerator from '../components/ListingGenerator'
-import StatusFilter, { StatusFilterValue } from '../components/StatusFilter'
+import { StatusTagFilter, ReviewEyeFilter, StatusTagValue, ReviewEyeValue } from '../components/StatusFilter'
 import { listBooks, updateBook, deleteBook, exportListingsCSV, getBook, generateSummary } from '../api/books'
 import { listPhotos, deletePhoto, getPhotoUrl, uploadPhotos } from '../api/photos'
 import { Book, BookPhoto } from '../types'
@@ -21,7 +21,8 @@ export default function DashboardPage() {
   const [books, setBooks] = useState<Book[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [statusFilter, setStatusFilter] = useState<StatusFilterValue>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusTagValue>('all')
+  const [reviewFilter, setReviewFilter] = useState<ReviewEyeValue>('')
   const [search, setSearch] = useState('')
   const [editingBook, setEditingBook] = useState<Book | null>(null)
   const [listingBook, setListingBook] = useState<Book | null>(null)
@@ -39,7 +40,8 @@ export default function DashboardPage() {
       const result = await listBooks({
         page,
         page_size: PAGE_SIZE,
-        status: statusFilter === 'archived' ? 'all' : statusFilter,
+        status: statusFilter,
+        review: reviewFilter || undefined,
         search: search || undefined,
       })
       setBooks(result.items)
@@ -47,14 +49,15 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, statusFilter, search])
+  }, [page, statusFilter, reviewFilter, search])
 
   const poll = useCallback(async () => {
     try {
       const result = await listBooks({
         page,
         page_size: PAGE_SIZE,
-        status: statusFilter === 'archived' ? 'all' : statusFilter,
+        status: statusFilter,
+        review: reviewFilter || undefined,
         search: search || undefined,
       })
       setBooks(result.items)
@@ -62,7 +65,7 @@ export default function DashboardPage() {
     } catch {
       // Ignore silent poll errors
     }
-  }, [page, statusFilter, search])
+  }, [page, statusFilter, reviewFilter, search])
 
   useEffect(() => { load() }, [load])
 
@@ -579,9 +582,13 @@ export default function DashboardPage() {
                 outline: 'none',
               }}
             />
-            <StatusFilter
+            <StatusTagFilter
               value={statusFilter}
               onChange={(v) => { setStatusFilter(v); setPage(1) }}
+            />
+            <ReviewEyeFilter
+              value={reviewFilter}
+              onChange={(v) => { setReviewFilter(v); setPage(1) }}
             />
           </div>
 
@@ -653,6 +660,18 @@ export default function DashboardPage() {
         }}
       >
         {books.length} of {total} records
+        {statusFilter !== 'all' && (
+          <> &middot; Status: {statusFilter === 'ready' ? 'Ready to list' : 'Archived'}</>
+        )}
+        {reviewFilter && (
+          <> &middot; Review: {
+            reviewFilter === 'needs_metadata_review' ? 'Metadata' :
+            reviewFilter === 'needs_photo_review' ? 'Photography' :
+            reviewFilter === 'needs_description_review' ? 'Description' :
+            'Price'
+          }</>
+        )}
+        {statusFilter === 'all' && !reviewFilter && ''}
       </div>
 
       {listingBook && (
