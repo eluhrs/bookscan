@@ -358,6 +358,7 @@ export default function DashboardPage() {
                 onImmediateSave={handleImmediateSave}
                 onRegenerateDescription={handleRegenerate}
                 regeneratingDescription={regenerating}
+                showListingFields={!isMobileDevice()}
               />
             </div>
           </div>
@@ -404,14 +405,13 @@ export default function DashboardPage() {
                 >
                   {saving ? 'SAVING…' : 'SAVE'}
                 </button>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button type="button" onClick={() => setEditingBook(null)} style={secondaryButtonStyle}>
-                    Dashboard
-                  </button>
-                  <button type="button" onClick={() => setListingBook(editingBook)} style={secondaryButtonStyle}>
-                    Generate Listing
-                  </button>
-                </div>
+                <button type="button" onClick={() => setEditingBook(null)} style={{
+                  ...secondaryButtonStyle,
+                  flex: undefined,
+                  width: '100%',
+                }}>
+                  Dashboard
+                </button>
               </div>
             </div>
           </div>
