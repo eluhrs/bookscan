@@ -74,3 +74,11 @@ class BookPhoto(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     book: Mapped["Book"] = relationship(back_populates="photos")
+
+
+class ExportBatch(Base):
+    __tablename__ = "export_batches"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    exported_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    book_ids: Mapped[list] = mapped_column(JSON, nullable=False)
