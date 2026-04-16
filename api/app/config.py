@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     ebay_shipping_profile_alt: str = ""
     ebay_return_policy: str = ""
     ebay_payment_profile: str = ""
+    ebay_shipping_location: str = ""
     photo_signing_secret: str = ""
     site_url: str = "https://bookscan.luhrs.net"
 

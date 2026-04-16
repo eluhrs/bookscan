@@ -619,7 +619,13 @@ export default function DashboardPage() {
               }}
             >
               <span>
-                ✓ {exportBatch.count} record{exportBatch.count !== 1 ? 's' : ''} exported and archived.
+                ✓ {exportBatch.count} record{exportBatch.count !== 1 ? 's' : ''} exported and archived.{' '}
+                <a
+                  href="https://www.ebay.com/sh/reports/uploads"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: 'inherit', textDecoration: 'underline' }}
+                >Upload to eBay</a>
               </span>
               <span style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <button

@@ -38,6 +38,7 @@ CSV_COLUMNS = [
     "Custom label (SKU)",
     "Category ID",
     "Category name",
+    "Location",
     "Title",
     "P:ISBN",
     "Start price",
@@ -106,13 +107,16 @@ async def export_books(
 
         category_name = EBAY_CATEGORY_NAMES.get(book.ebay_category_id or 0, "")
 
+        isbn_str = f'="{book.isbn}"'
+
         writer.writerow([
             "Add",
-            book.isbn,
+            isbn_str,
             str(book.ebay_category_id or ""),
             category_name,
+            settings.ebay_shipping_location or "",
             f"{book.title} by {book.author}",
-            book.isbn,
+            isbn_str,
             f"{float(book.price):.2f}" if book.price else "",
             "1",
             photo_urls,

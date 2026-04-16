@@ -54,14 +54,15 @@ async def test_export_csv_downloads(client: AsyncClient, auth_headers: dict):
     data = rows[0]
     assert data["*Action(SiteID=US|Country=US|Currency=USD|Version=1193)"] == "Add"
     assert data["Title"] == "Test Book by Author"
-    assert data["P:ISBN"] == "9780000000001"
-    assert data["Custom label (SKU)"] == "9780000000001"
+    assert data["P:ISBN"] == '="9780000000001"'
+    assert data["Custom label (SKU)"] == '="9780000000001"'
     assert data["Start price"] == "9.99"
     assert data["Quantity"] == "1"
     assert data["Format"] == "FixedPrice"
     assert data["Duration"] == "GTC"
     assert data["Category ID"] == "261186"
     assert data["Category name"] == "Books"
+    assert "Location" in data  # column exists
     assert data["Condition ID"] == "5000"  # Good
     assert data["C:Book Title"] == "Test Book"
     assert data["C:Author"] == "Author"
@@ -194,9 +195,11 @@ async def test_export_photo_urls_pipe_separated(client: AsyncClient, auth_header
 
     with patch("app.routers.exports.settings") as mock_settings:
         mock_settings.photo_signing_secret = "test-secret"
+        mock_settings.site_url = "https://test.example.com"
         mock_settings.ebay_shipping_profile = ""
         mock_settings.ebay_return_policy = ""
         mock_settings.ebay_payment_profile = ""
+        mock_settings.ebay_shipping_location = ""
         resp = await client.post("/api/exports", headers=auth_headers)
 
     rows = _parse_csv(resp.content)
