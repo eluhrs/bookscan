@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileWarning, Camera as CameraIcon, Pencil, Trash2, Check, Sparkles } from 'lucide-react'
+import { FileWarning, Camera as CameraIcon, Pencil, Trash2, Check, Sparkles, DollarSign } from 'lucide-react'
 import { Book } from '../types'
 import { theme } from '../styles/theme'
 
@@ -128,7 +128,7 @@ export default function BookTable({ books, onEdit, onDelete }: BookTableProps) {
               style={{ background: theme.colors.bg, borderBottom: `1px solid ${theme.colors.rowBorder}`, cursor: 'pointer' }}
             >
               <td style={{ padding: '0.6rem 0.5rem', width: 56, textAlign: 'center' }}>
-                {!book.needs_metadata_review && !book.needs_photo_review && !book.needs_description_review ? (
+                {!book.needs_metadata_review && !book.needs_photo_review && !book.needs_description_review && book.price != null && book.price > 0 ? (
                   <span title="Reviewed" style={{ display: 'inline-flex' }}>
                     <Check size={16} color={theme.colors.reviewGreen} />
                   </span>
@@ -147,6 +147,11 @@ export default function BookTable({ books, onEdit, onDelete }: BookTableProps) {
                     {book.needs_description_review && (
                       <span title="Description needs review" style={{ display: 'inline-flex' }}>
                         <Sparkles size={16} color={theme.colors.aiPurple} />
+                      </span>
+                    )}
+                    {(book.price == null || book.price <= 0) && (
+                      <span title="Price not set" style={{ display: 'inline-flex' }}>
+                        <DollarSign size={16} color="#888" />
                       </span>
                     )}
                   </span>
