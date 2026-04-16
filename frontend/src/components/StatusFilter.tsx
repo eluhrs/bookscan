@@ -1,36 +1,41 @@
 import { useState, useRef, useEffect } from 'react'
-import { Filter, ChevronDown } from 'lucide-react'
+import { Tag, Eye, ChevronDown } from 'lucide-react'
 import { theme } from '../styles/theme'
 
-export type StatusFilterValue =
-  | 'all'
+export type StatusTagValue = 'all' | 'ready' | 'archived'
+export type ReviewEyeValue =
+  | ''
   | 'needs_metadata_review'
   | 'needs_photo_review'
   | 'needs_description_review'
-  | 'ready'
-  | 'archived'
+  | 'needs_price'
 
-interface Option {
-  value: StatusFilterValue
+// --- Shared dropdown shell ---
+
+interface DropdownOption<V extends string> {
+  value: V
   label: string
-  disabled?: boolean
 }
 
-const OPTIONS: Option[] = [
-  { value: 'all', label: 'All records' },
-  { value: 'needs_metadata_review', label: 'Needs metadata review' },
-  { value: 'needs_photo_review', label: 'Needs photography' },
-  { value: 'needs_description_review', label: 'Needs description review' },
-  { value: 'ready', label: 'Ready to list' },
-  { value: 'archived', label: 'Archived', disabled: true },
-]
-
-interface Props {
-  value: StatusFilterValue
-  onChange: (v: StatusFilterValue) => void
+interface FilterButtonProps<V extends string> {
+  icon: React.ReactNode
+  ariaLabel: string
+  borderColor: string
+  fillColor: string
+  options: DropdownOption<V>[]
+  value: V
+  onChange: (v: V) => void
 }
 
-export default function StatusFilter({ value, onChange }: Props) {
+function FilterButton<V extends string>({
+  icon,
+  ariaLabel,
+  borderColor,
+  fillColor,
+  options,
+  value,
+  onChange,
+}: FilterButtonProps<V>) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement | null>(null)
 
@@ -42,35 +47,26 @@ export default function StatusFilter({ value, onChange }: Props) {
     return () => document.removeEventListener('mousedown', onDocClick)
   }, [])
 
-  // Active-state ring + subtle fill match the filter's lane so the button
-  // visually echoes the filter color.
-  const activeStyle =
-    value === 'needs_metadata_review'    ? { border: '#BA7517', fill: theme.colors.filterAmberFill } :
-    value === 'needs_photo_review'       ? { border: '#0070F3', fill: theme.colors.filterBlueFill } :
-    value === 'needs_description_review' ? { border: '#7F77DD', fill: theme.colors.filterPurpleFill } :
-    value === 'ready'                    ? { border: '#3B6D11', fill: theme.colors.filterGreenFill } :
-    { border: theme.colors.zoneBorder, fill: theme.colors.bg }
-
   return (
     <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
       <button
         type="button"
-        aria-label="Filter by status"
+        aria-label={ariaLabel}
         onClick={() => setOpen((o) => !o)}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
           gap: 4,
           padding: '0.5rem 0.55rem',
-          border: `1px solid ${activeStyle.border}`,
+          border: `1px solid ${borderColor}`,
           borderRadius: theme.radius.sm,
-          background: activeStyle.fill,
+          background: fillColor,
           color: theme.colors.secondaryText,
           cursor: 'pointer',
           fontFamily: theme.font.sans,
         }}
       >
-        <Filter size={16} />
+        {icon}
         <ChevronDown size={14} />
       </button>
 
@@ -90,14 +86,12 @@ export default function StatusFilter({ value, onChange }: Props) {
             padding: '0.25rem 0',
           }}
         >
-          {OPTIONS.map((opt) => (
+          {options.map((opt) => (
             <button
               key={opt.value}
               type="button"
               role="menuitem"
-              disabled={opt.disabled}
               onClick={() => {
-                if (opt.disabled) return
                 onChange(opt.value)
                 setOpen(false)
               }}
@@ -109,8 +103,8 @@ export default function StatusFilter({ value, onChange }: Props) {
                 background: value === opt.value ? theme.colors.tableHeaderBg : 'transparent',
                 border: 'none',
                 fontSize: '0.85rem',
-                color: opt.disabled ? theme.colors.disabledText : theme.colors.text,
-                cursor: opt.disabled ? 'default' : 'pointer',
+                color: theme.colors.text,
+                cursor: 'pointer',
                 fontFamily: theme.font.sans,
               }}
             >
@@ -120,5 +114,77 @@ export default function StatusFilter({ value, onChange }: Props) {
         </div>
       )}
     </div>
+  )
+}
+
+// --- Status (Tag) filter ---
+
+const STATUS_OPTIONS: DropdownOption<StatusTagValue>[] = [
+  { value: 'all', label: 'All records' },
+  { value: 'ready', label: 'Ready to list' },
+  { value: 'archived', label: 'Archived' },
+]
+
+function getStatusStyle(value: StatusTagValue) {
+  if (value === 'ready') return { border: '#3B6D11', fill: theme.colors.filterGreenFill }
+  if (value === 'archived') return { border: '#888', fill: theme.colors.filterGrayFill }
+  return { border: theme.colors.zoneBorder, fill: theme.colors.bg }
+}
+
+interface StatusTagProps {
+  value: StatusTagValue
+  onChange: (v: StatusTagValue) => void
+}
+
+export function StatusTagFilter({ value, onChange }: StatusTagProps) {
+  const style = getStatusStyle(value)
+  return (
+    <FilterButton
+      icon={<Tag size={16} />}
+      ariaLabel="Filter by status"
+      borderColor={style.border}
+      fillColor={style.fill}
+      options={STATUS_OPTIONS}
+      value={value}
+      onChange={onChange}
+    />
+  )
+}
+
+// --- Review (Eye) filter ---
+
+const REVIEW_OPTIONS: DropdownOption<ReviewEyeValue>[] = [
+  { value: '', label: 'No filter' },
+  { value: 'needs_metadata_review', label: 'Metadata Review' },
+  { value: 'needs_photo_review', label: 'Photography Review' },
+  { value: 'needs_description_review', label: 'Description Review' },
+  { value: 'needs_price', label: 'Price' },
+]
+
+function getReviewStyle(value: ReviewEyeValue) {
+  if (value === 'needs_metadata_review') return { border: '#BA7517', fill: theme.colors.filterAmberFill }
+  if (value === 'needs_photo_review') return { border: '#0070F3', fill: theme.colors.filterBlueFill }
+  if (value === 'needs_description_review') return { border: '#7F77DD', fill: theme.colors.filterPurpleFill }
+  if (value === 'needs_price') return { border: '#888', fill: theme.colors.filterGrayFill }
+  return { border: theme.colors.zoneBorder, fill: theme.colors.bg }
+}
+
+interface ReviewEyeProps {
+  value: ReviewEyeValue
+  onChange: (v: ReviewEyeValue) => void
+}
+
+export function ReviewEyeFilter({ value, onChange }: ReviewEyeProps) {
+  const style = getReviewStyle(value)
+  return (
+    <FilterButton
+      icon={<Eye size={16} />}
+      ariaLabel="Filter by review status"
+      borderColor={style.border}
+      fillColor={style.fill}
+      options={REVIEW_OPTIONS}
+      value={value}
+      onChange={onChange}
+    />
   )
 }
