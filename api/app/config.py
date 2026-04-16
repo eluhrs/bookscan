@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     ebay_return_policy: str = ""
     ebay_payment_profile: str = ""
     photo_signing_secret: str = ""
+    site_url: str = "https://bookscan.luhrs.net"
 
 
 settings = Settings()

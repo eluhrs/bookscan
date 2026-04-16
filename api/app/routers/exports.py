@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 from fastapi.responses import Response
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -56,20 +56,12 @@ CSV_COLUMNS = [
 ]
 
 
-def _build_base_url(request: Request) -> str:
-    """Derive the public base URL from the incoming request."""
-    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
-    host = request.headers.get("x-forwarded-host", request.headers.get("host", ""))
-    return f"{scheme}://{host}"
-
-
 @router.post("")
 async def export_books(
-    request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     _user: Annotated[str, Depends(get_current_user)],
 ):
-    base_url = _build_base_url(request)
+    base_url = settings.site_url.rstrip("/")
 
     # Fetch all "ready to list" books
     q = select(Book)
