@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Camera } from 'lucide-react'
+import { Camera, Download, X } from 'lucide-react'
 import BookTable from '../components/BookTable'
 import BookCard, { BookCardHandle } from '../components/BookCard'
 import ListingGenerator from '../components/ListingGenerator'
@@ -11,6 +11,7 @@ import { Book, BookPhoto } from '../types'
 import { useAuth } from '../hooks/useAuth'
 import { useVisualViewport } from '../hooks/useVisualViewport'
 import { isMobileDevice } from '../utils/deviceDetect'
+import { exportBooks, getExportBatch, undoExportBatch, dismissExportBatch, ExportBatch } from '../api/exports'
 import { theme } from '../styles/theme'
 
 export default function DashboardPage() {
@@ -32,6 +33,8 @@ export default function DashboardPage() {
   const [saving, setSaving] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
   const bookCardRef = useRef<BookCardHandle>(null)
+  const [exportBatch, setExportBatch] = useState<ExportBatch | null>(null)
+  const [exporting, setExporting] = useState(false)
   const PAGE_SIZE = 20
 
   const load = useCallback(async () => {
@@ -104,6 +107,10 @@ export default function DashboardPage() {
       document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [poll])
+
+  useEffect(() => {
+    getExportBatch().then(setExportBatch).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!editingBook) {
@@ -227,6 +234,37 @@ export default function DashboardPage() {
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Delete failed')
     }
+  }
+
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      await exportBooks()
+      const batch = await getExportBatch()
+      setExportBatch(batch)
+      load()
+    } catch {
+      alert('Export failed')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleUndo = async () => {
+    try {
+      await undoExportBatch()
+      setExportBatch(null)
+      load()
+    } catch {
+      alert('Undo failed')
+    }
+  }
+
+  const handleDismiss = async () => {
+    try {
+      await dismissExportBatch()
+      setExportBatch(null)
+    } catch {}
   }
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
@@ -565,6 +603,60 @@ export default function DashboardPage() {
             boxSizing: 'border-box',
           }}
         >
+          {exportBatch && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0.6rem 0.75rem',
+                marginBottom: '1rem',
+                background: theme.colors.filterGreenFill,
+                border: `1px solid ${theme.colors.reviewGreen}`,
+                borderRadius: theme.radius.sm,
+                fontSize: '0.85rem',
+                color: theme.colors.text,
+              }}
+            >
+              <span>
+                ✓ {exportBatch.count} record{exportBatch.count !== 1 ? 's' : ''} exported and archived.
+              </span>
+              <span style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button
+                  onClick={handleUndo}
+                  style={{
+                    padding: '0.25rem 0.5rem',
+                    fontSize: '0.8rem',
+                    border: `1px solid ${theme.colors.zoneBorder}`,
+                    borderRadius: theme.radius.sm,
+                    background: theme.colors.bg,
+                    color: theme.colors.secondaryText,
+                    cursor: 'pointer',
+                    fontFamily: theme.font.sans,
+                  }}
+                >
+                  Undo
+                </button>
+                <button
+                  onClick={handleDismiss}
+                  aria-label="Dismiss"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0.2rem',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    color: theme.colors.muted,
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              </span>
+            </div>
+          )}
+
           {/* Search / filter row */}
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', alignItems: 'center' }}>
             <input
@@ -590,6 +682,30 @@ export default function DashboardPage() {
               value={reviewFilter}
               onChange={(v) => { setReviewFilter(v); setPage(1) }}
             />
+            {statusFilter === 'ready' && !isMobileDevice() && (
+              <button
+                disabled={total === 0 || exporting}
+                onClick={handleExport}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  padding: '0.4rem 0.75rem',
+                  fontSize: '0.85rem',
+                  border: `1px solid ${theme.colors.zoneBorder}`,
+                  borderRadius: theme.radius.sm,
+                  background: total === 0 || exporting ? theme.colors.disabled : theme.colors.bg,
+                  color: total === 0 || exporting ? theme.colors.muted : theme.colors.secondaryText,
+                  cursor: total === 0 || exporting ? 'default' : 'pointer',
+                  fontFamily: theme.font.sans,
+                  whiteSpace: 'nowrap',
+                  opacity: total === 0 || exporting ? 0.5 : 1,
+                }}
+              >
+                <Download size={14} />
+                {exporting ? 'Exporting...' : `Export ${total}`}
+              </button>
+            )}
           </div>
 
           {loading ? (
