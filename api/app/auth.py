@@ -27,6 +27,19 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> str
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
+def get_refresh_token_if_eligible(token: str) -> str | None:
+    """Return a fresh token if the current one is valid and has > 1 hour remaining."""
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
+        exp = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
+        remaining = (exp - datetime.now(timezone.utc)).total_seconds()
+        if remaining > 3600:
+            return create_access_token(payload["sub"])
+    except JWTError:
+        pass
+    return None
+
+
 @router.post("/login", response_model=Token)
 async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     if form_data.username != settings.app_username:

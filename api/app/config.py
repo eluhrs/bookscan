@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     secret_key: str
     app_username: str
     password_hash: str
-    access_token_expire_minutes: int = 60 * 24 * 7  # 1 week
+    access_token_expire_minutes: int = 60 * 12  # 12 hours
     gemini_api_key: str | None = None
 
 

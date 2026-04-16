@@ -8,6 +8,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [sessionExpired] = useState(() => {
+    const expired = sessionStorage.getItem('session_expired')
+    if (expired) {
+      sessionStorage.removeItem('session_expired')
+      return true
+    }
+    return false
+  })
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -58,6 +66,19 @@ export default function LoginPage() {
         <p style={{ margin: '0 0 1.5rem', color: theme.colors.muted, fontSize: '0.9rem' }}>
           Sign in to your inventory
         </p>
+        {sessionExpired && (
+          <p style={{
+            color: theme.colors.danger,
+            fontSize: '0.85rem',
+            marginBottom: '1rem',
+            padding: '0.5rem 0.75rem',
+            background: '#FFF5F5',
+            borderRadius: theme.radius.sm,
+            border: `1px solid ${theme.colors.danger}20`,
+          }}>
+            Your session has expired, please log in again
+          </p>
+        )}
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '1rem' }}>
             <label

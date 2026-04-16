@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, Text, Integer, Boolean, ForeignKey, DateTime, func, JSON
+from sqlalchemy import String, Text, Integer, Boolean, ForeignKey, DateTime, Numeric, func, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
@@ -31,6 +31,10 @@ class Book(Base):
     needs_metadata_review: Mapped[bool] = mapped_column(Boolean, default=True)
     condition: Mapped[str | None] = mapped_column(String(20))
     needs_photo_review: Mapped[bool] = mapped_column(Boolean, default=False)
+    price: Mapped[float | None] = mapped_column(Numeric(10, 2))
+    ebay_category_id: Mapped[int | None] = mapped_column(Integer)
+    ebay_category_name: Mapped[str | None] = mapped_column(String)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()

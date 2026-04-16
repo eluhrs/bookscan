@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional
 from pydantic import BaseModel
 
@@ -50,6 +51,10 @@ class BookCreate(BaseModel):
     description_source: Optional[str] = None
     needs_description_review: bool = False
     description_generation_failed: bool = False
+    price: Optional[Decimal] = None
+    ebay_category_id: Optional[int] = None
+    ebay_category_name: Optional[str] = None
+    archived: bool = False
 
 
 class BookUpdate(BaseModel):
@@ -70,6 +75,10 @@ class BookUpdate(BaseModel):
     description_source: Optional[str] = None
     needs_description_review: Optional[bool] = None
     description_generation_failed: Optional[bool] = None
+    price: Optional[Decimal] = None
+    ebay_category_id: Optional[int] = None
+    ebay_category_name: Optional[str] = None
+    archived: Optional[bool] = None
 
 
 class BookPhotoResponse(BaseModel):
@@ -102,6 +111,10 @@ class BookResponse(BaseModel):
     description_source: Optional[str] = None
     needs_description_review: bool = False
     description_generation_failed: bool = False
+    price: Optional[Decimal] = None
+    ebay_category_id: Optional[int] = None
+    ebay_category_name: Optional[str] = None
+    archived: bool = False
     has_photos: bool = False
     photos: list[BookPhotoResponse] = []
     created_at: datetime

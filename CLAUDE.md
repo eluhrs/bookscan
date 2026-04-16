@@ -81,7 +81,7 @@ PASSWORD_HASH    # cd api && .venv/bin/python generate_hash.py '<password>'
 
 ## Auth
 
-Single-user: `APP_USERNAME` + `PASSWORD_HASH` from `.env`. Verified with `bcrypt.checkpw()` (passlib removed — incompatible with bcrypt ≥ 4.0.0). JWT via python-jose, 1-week expiry. All routes protected except `POST /api/login`. slowapi rate limiting, stricter on `/api/books/lookup/{isbn}`.
+Single-user: `APP_USERNAME` + `PASSWORD_HASH` from `.env`. Verified with `bcrypt.checkpw()` (passlib removed — incompatible with bcrypt ≥ 4.0.0). JWT via python-jose, 12-hour sliding expiry (CHANGES-21). All routes protected except `POST /api/login`. slowapi rate limiting, stricter on `/api/books/lookup/{isbn}`.
 
 ---
 
@@ -112,7 +112,7 @@ Single-user: `APP_USERNAME` + `PASSWORD_HASH` from `.env`. Verified with `bcrypt
 
 ## Data Model
 
-**Tables:** `books`, `listings`, `book_photos`. Migrations in `api/alembic/versions/001_initial_schema.py` through `006_replace_data_complete_with_needs_metadata_review.py`.
+**Tables:** `books`, `listings`, `book_photos`. Migrations in `api/alembic/versions/001_initial_schema.py` through `008_add_price_category_archived.py`.
 
 **`condition`** (VARCHAR 20): `Very Good`, `Good`, `Acceptable` — aligned with eBay's used-book condition scale (CHANGES-18 FIX-18). Legacy `New` / `Poor` values from pre-CHANGES-18 records are retained in the DB but cannot be set via the UI; the edit-page condition row simply shows no button selected for those rows.
 
@@ -148,7 +148,7 @@ GET    /api/photos/{photo_id}/file      # authenticated FileResponse
 
 **HTTP 204 on DELETE.** `apiFetch` guards `resp.status === 204` and returns `undefined` rather than calling `resp.json()`.
 
-**`status` query filter (CHANGES-16).** `GET /api/books?status=` accepts a `Literal["all", "needs_metadata_review", "needs_photo_review", "ready"]` — FastAPI returns 422 on unknown values. `ready` filters to `needs_metadata_review == False AND needs_photo_review == False`. Frontend dropdown (`StatusFilter`) also exposes `archived` but it's disabled/grayed and never reaches the server.
+**`status` query filter (CHANGES-16, extended CHANGES-21).** `GET /api/books?status=` accepts a `Literal["all", "needs_metadata_review", "needs_photo_review", "needs_description_review", "ready", "archived"]` — FastAPI returns 422 on unknown values. `ready` filters to `archived == False AND needs_metadata_review == False AND needs_photo_review == False AND needs_description_review == False AND price IS NOT NULL AND price > 0`. `archived` filters to `archived == True`.
 
 ---
 
@@ -264,30 +264,6 @@ docker-compose.prod.yml   # prod overrides (binds 127.0.0.1:3001)
 
 ---
 
-## CHANGES-20 additions
-
-**Shared `BookCard` component (FEAT-01).** `frontend/src/components/BookCard.tsx` is the single card component used by both the edit page and the workflow Review step. Controlled by the `editable: boolean` prop. `editable=true` → `InlineField`s with dashed underlines + additional-fields section + `commitDraft()` imperative handle. `editable=false` → static display nodes, no underlines, no additional fields. Both modes share filmstrip + condition bar + three review toggles + description block. Replaced the retired `BookEditCard.tsx` and the hand-rolled field block in `ReviewStep.tsx`.
-
-**Field layout + typography (FEAT-02).** `frontend/src/styles/bookCard.css` defines `.bc-title` (18/500 #222), `.bc-author` (14/400 #222), `.bc-label` (10px small-caps #BBB), `.bc-value` (12 #222), `.bc-value-sm` (11 #222), `.bc-value-mono` (Geist Mono), `.bc-editable` (1px dashed #DDD), `.bc-row-inline` (flex row). Field order: Title → Author → Publisher (own row) → Year / ISBN / Pages (inline row) → condition → review toggles → description → additional fields (editable only).
-
-**`commitDraft()` imperative handle.** `BookCard` is `forwardRef<BookCardHandle, BookCardProps>`. `BookCardHandle.commitDraft()` flushes the local `DraftFields` (title/author/publisher/isbn/year/pages/edition/dimensions/weight/description) through `props.onSave` as a `Partial<Book>`. `DashboardPage`'s edit-view SAVE button holds a `useRef<BookCardHandle>(null)` and calls `await bookCardRef.current?.commitDraft()` on click. `year` and `pages` are parsed to `Number` (or null).
-
-**Year + Publisher inline-editable (FEAT-04).** Both fields are `InlineField` instances. Year onChange sanitizes to digits max 4. Backend `BookUpdate` already accepted both — no API change needed.
-
-**Hide-when-empty additional fields (FEAT-03).** The Edition / Dimensions / Weight grid renders only when `editable=true` AND at least one of the three has a value. No section header. When visible, all three fields render with em-dash placeholders for empty ones.
-
-**Review step + button (FEAT-05).** `ReviewStep` passes `onAddPhoto={handleAddPhoto}` to `BookCard`; `BookCard` forwards it to `PhotoFilmstrip`, which renders the + tile. `handleAddPhoto` appends `{id: crypto.randomUUID(), file}` to `localPhotos`. No workflow state is touched — adding a photo stays on the Review step.
-
-**Review-step virtual book.** `ReviewStep` has no persisted book yet, so it builds a `virtualBook` via `useMemo` from `lookupResult` + in-memory state and feeds it to `<BookCard editable={false} …/>`. A local `reviewImmediateSave(patch)` intercepts `onImmediateSave` calls and only mutates local state — no network calls at review time. The persisted POST still happens in `handleSave` via `WorkflowWrapper`'s footer SAVE button.
-
-**Review step editable (FEAT-06, scope addition).** Review step now passes `editable={true}` to BookCard, so Title / Author / Publisher / Year / ISBN / Pages / Description are all inline-editable with the same dashed-underline affordance as the Edit page. BookCard exposes a second imperative method `getDraft(): Partial<Book>` that returns the current draft synchronously without calling `onSave`. ReviewStep holds a `bookCardRef`, pulls the draft via `getDraft()` in `handleSave`, and merges it into the `POST /books` payload (overriding `lookupResult` values where the user edited). BookCard's draft re-sync changed from `[book]` to `[book.id]` + a separate `[book.description]` effect, so unrelated parent re-renders (virtualBook re-memoizing on condition / review-toggle / aiSummary transitions) don't clobber in-flight user edits; the description-specific effect still lets Gemini async responses and edit-page regenerate flow through.
-
-**Post-iteration layout + editability fixes.** Title/Author wrapped in `.bc-title-row` / `.bc-author-row` block divs; title block vertical spacing via `.bc-title-row` (14px top), `.bc-author-row` (12px bottom), `.bc-field-full` (8px), `.bc-row-inline` (20px); edit-view content wrapper gained `1rem 1.25rem` padding and `minHeight: 100%` so L/R borders reach the footer top border; `InlineField` has a `compact` prop for Year/ISBN/Pages (content-sized `width: Nch`) — default mode is `display: block` with `whiteSpace: pre-wrap` for multiline description; ISBN fully editable (added to `DraftFields`, `commitDraft()`, and `BookUpdate` schema); description block no longer uses the `.bc-field-full` flex wrapper (its `align-items: baseline` was collapsing multiline content).
-
-**TECH-01 — vitest tsconfig split.** `frontend/tsconfig.json` now excludes the test globs (`src/**/*.test.ts{,x}` + setup file). A new `frontend/tsconfig.vitest.json` extends the main config and includes those globs with `types: ["vitest/globals", "@testing-library/jest-dom"]`. Not a composite project reference — `noEmit: true` in the main config is incompatible with `composite: true`, so they run as independent `tsc -p` invocations. Type-check both with `npx tsc --noEmit` + `npx tsc --noEmit -p tsconfig.vitest.json`.
-
----
-
 ## Deploying to Hetzner
 
 ```bash
@@ -307,3 +283,13 @@ Apache VirtualHost:
     ProxyPassReverse / http://localhost:3001/
 </VirtualHost>
 ```
+
+---
+
+## CHANGES-21 additions
+
+**AUDIT-01 — Security audit.** Read-only audit completed; results in `AUDIT-RESULTS.md` (gitignored). Key findings: 6 high-severity dependency CVEs (python-jose, python-multipart, starlette), no login rate limiting, Docker containers run as root. No fixes applied — awaiting instruction.
+
+**FEAT-02 — Price, category, archived fields (migration 008).** Four new columns on `books`: `price` DECIMAL(10,2) nullable, `ebay_category_id` INTEGER nullable, `ebay_category_name` VARCHAR nullable, `archived` BOOLEAN default false. All four are patchable via `PATCH /books/{id}`. "Ready to list" is a computed state: `archived=false AND needs_metadata_review=false AND needs_photo_review=false AND needs_description_review=false AND price IS NOT NULL AND price > 0`. The `archived` status filter is now a server-side `Literal` option on `GET /api/books`.
+
+**FEAT-01 — Sliding 12-hour session expiry.** Token lifetime changed from 1 week to 12 hours. `TokenRefreshMiddleware` in `api/app/main.py` issues an `X-Refresh-Token` response header on every authenticated request where the current token has > 1 hour remaining. Frontend `apiFetch` swaps the refreshed token into localStorage. On 401: clears token, sets `sessionStorage.session_expired`, redirects to `/login`. `LoginPage` checks for the flag on mount and shows "Your session has expired, please log in again" — flag is cleared immediately so fresh visits don't see it. `AuthContext` listens for `storage` events for cross-tab token sync.

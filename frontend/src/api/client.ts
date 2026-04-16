@@ -11,6 +11,20 @@ export async function apiFetch<T>(
     ...(options.headers ?? {}),
   }
   const resp = await fetch(path, { ...options, headers })
+
+  // Swap in refreshed token if the server issued one
+  const refreshToken = resp.headers.get('X-Refresh-Token')
+  if (refreshToken) {
+    localStorage.setItem('token', refreshToken)
+  }
+
+  if (resp.status === 401) {
+    localStorage.removeItem('token')
+    sessionStorage.setItem('session_expired', '1')
+    window.location.href = '/login'
+    return new Promise(() => {})
+  }
+
   if (!resp.ok) {
     const detail = await resp.json().catch(() => ({ detail: resp.statusText }))
     throw new Error(detail.detail ?? resp.statusText)

@@ -154,6 +154,10 @@ async def create_book(
         description_source=book.description_source,
         needs_description_review=book.needs_description_review,
         description_generation_failed=book.description_generation_failed,
+        price=book.price,
+        ebay_category_id=book.ebay_category_id,
+        ebay_category_name=book.ebay_category_name,
+        archived=book.archived,
         has_photos=False,
         photos=[],
         created_at=book.created_at,
@@ -183,6 +187,7 @@ async def list_books(
         "needs_photo_review",
         "needs_description_review",
         "ready",
+        "archived",
     ] = Query("all"),
     search: Optional[str] = Query(None),
 ):
@@ -193,10 +198,15 @@ async def list_books(
         q = q.where(Book.needs_photo_review == True)  # noqa: E712
     elif status == "needs_description_review":
         q = q.where(Book.needs_description_review == True)  # noqa: E712
+    elif status == "archived":
+        q = q.where(Book.archived == True)  # noqa: E712
     elif status == "ready":
+        q = q.where(Book.archived == False)  # noqa: E712
         q = q.where(Book.needs_metadata_review == False)  # noqa: E712
         q = q.where(Book.needs_photo_review == False)  # noqa: E712
         q = q.where(Book.needs_description_review == False)  # noqa: E712
+        q = q.where(Book.price.isnot(None))
+        q = q.where(Book.price > 0)
     if search:
         term = f"%{search}%"
         q = q.where(
@@ -241,6 +251,10 @@ async def list_books(
             description_source=b.description_source,
             needs_description_review=b.needs_description_review,
             description_generation_failed=b.description_generation_failed,
+            price=b.price,
+            ebay_category_id=b.ebay_category_id,
+            ebay_category_name=b.ebay_category_name,
+            archived=b.archived,
             has_photos=b.id in photo_book_ids,
             photos=[],
             created_at=b.created_at,

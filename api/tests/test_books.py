@@ -263,6 +263,7 @@ async def test_status_filter_ready_excludes_description_review(client, auth_head
             needs_metadata_review=False,
             needs_photo_review=False,
             needs_description_review=False,
+            price=9.99,
         ))
         db.add(Book(
             isbn="9780000000021",
