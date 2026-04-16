@@ -703,7 +703,7 @@ export default function DashboardPage() {
                 }}
               >
                 <Download size={14} />
-                {exporting ? 'Exporting...' : `Export ${total} (CSV + photos)`}
+                {exporting ? 'Exporting...' : `Export ${total}`}
               </button>
             )}
           </div>

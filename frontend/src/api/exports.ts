@@ -18,8 +18,8 @@ export async function exportBooks(): Promise<void> {
   const disposition = resp.headers.get('content-disposition') || ''
   const match = disposition.match(/filename="(.+)"/)
   const now = new Date()
-  const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`
-  const filename = match ? match[1] : `bookscan-export-${ts}.zip`
+  const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`
+  const filename = match ? match[1] : `bookscan-export-${ts}.csv`
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
