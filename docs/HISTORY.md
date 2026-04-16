@@ -202,3 +202,37 @@ When a book lookup returns no `description` (none of Open Library / Google Books
 **FEAT-02 — Price, category, archived fields (migration 008).** Four new columns on `books`: `price` DECIMAL(10,2) nullable, `ebay_category_id` INTEGER nullable, `ebay_category_name` VARCHAR nullable, `archived` BOOLEAN default false. All four are patchable via `PATCH /books/{id}`. "Ready to list" is a computed state: `archived=false AND needs_metadata_review=false AND needs_photo_review=false AND needs_description_review=false AND price IS NOT NULL AND price > 0`. The `archived` status filter is now a server-side `Literal` option on `GET /api/books`.
 
 **FEAT-01 — Sliding 12-hour session expiry.** Token lifetime changed from 1 week to 12 hours. `TokenRefreshMiddleware` in `api/app/main.py` issues an `X-Refresh-Token` response header on every authenticated request where the current token has > 1 hour remaining. Frontend `apiFetch` swaps the refreshed token into localStorage. On 401: clears token, sets `sessionStorage.session_expired`, redirects to `/login`. `LoginPage` checks for the flag on mount and shows "Your session has expired, please log in again" — flag is cleared immediately so fresh visits don't see it. `AuthContext` listens for `storage` events for cross-tab token sync.
+
+---
+
+## CHANGES-22 additions
+
+**FEAT-01 — Dashboard filter redesign.** The single `StatusFilter` dropdown (Filter icon) was replaced by two independent icon-button controls in `frontend/src/components/StatusFilter.tsx`: `StatusTagFilter` (Lucide `Tag` icon, options: All records / Ready to list / Archived) and `ReviewEyeFilter` (Lucide `Eye` icon, options: No filter / Metadata Review / Photography Review / Description Review / Price). Both are combinable — selecting one does not clear the other. Active states use colored ring + fill: green for Ready, gray for Archived/Price, amber for Metadata, blue for Photography, purple for Description. Backend `GET /api/books` now accepts two independent query params: `status` (`all`/`ready`/`archived`) and `review` (`needs_metadata_review`/`needs_photo_review`/`needs_description_review`/`needs_price`). Footer shows active filter labels.
+
+**FEAT-02 — Price indicator in review column.** Gray `DollarSign` icon (`#888`) appears in the BookTable review column when `price` is null or zero. Stacks vertically with existing review icons. Green check now requires all three review flags false AND price > 0.
+
+**FEAT-03 — Price and category on desktop edit.** `PriceCategoryRow` component in `BookCard.tsx` renders a 2-column grid (50/50) below the review toggles. Controlled by `showListingFields` prop — only passed as `true` on desktop via `!isMobileDevice()`. Price: tap to edit inline, saves on blur via `onImmediateSave`. Category: dropdown with eBay categories, saves on selection. Visual: unset = white bg + gray text; set = `primaryBlue` bg + white text.
+
+**FEAT-04 — Archived filter logic.** `status=all` shows everything including archived. `status=archived` shows only archived. `status=ready` excludes archived AND requires all review flags false AND price > 0.
+
+---
+
+## CHANGES-23 additions
+
+**FEAT-01 — eBay export env vars.** Three new optional settings in `api/app/config.py`: `ebay_shipping_profile`, `ebay_shipping_profile_alt`, `ebay_return_policy` (all default to empty string). Values must exactly match eBay Seller Hub account config (case-sensitive). Documented in `.env.example`.
+
+**FEAT-02 — Export button on dashboard.** `Download` icon + "Export N" label in the search/filter row, right of the `ReviewEyeFilter`. Only visible when `statusFilter === 'ready'` AND `!isMobileDevice()`. Disabled (grayed, 0.5 opacity) when `total === 0` or export in progress. Triggers eBay CSV export flow.
+
+**FEAT-03 — eBay CSV export.** `POST /api/exports` generates export with eBay Seller Hub-compatible CSV. Condition mapping: Very Good→4000, Good→5000, Acceptable→6000. Fixed values: Action=Add, Quantity=1, Format=FixedPrice, Duration=GTC. Frontend `exportBooks()` in `frontend/src/api/exports.ts` handles blob download with filename extraction from Content-Disposition.
+
+**FEAT-04 — Post-export archiving and undo.** After export generation, all exported books are set to `archived=true`. An `export_batches` table (migration 009) tracks the last export: `id` (integer autoincrement), `exported_at` (timestamp), `book_ids` (JSON array of UUID strings). Only one batch at a time — new export deletes previous batch. Undo banner appears at top of dashboard content zone. Undo (`POST /api/exports/batch/undo`) sets `archived=false` on all batch books and deletes the batch. Dismiss (`DELETE /api/exports/batch`) deletes the batch without restoring.
+
+---
+
+## CHANGES-24 additions
+
+**FEAT-01 — Photo ZIP export.** Export included user-taken photographs in a ZIP alongside the CSV. Photos named `{isbn}_{n}.jpg`. Cover images excluded from export (low-resolution API thumbnails).
+
+**Cover URLs use medium/thumbnail size (deliberate).** Open Library covers use the `medium` size (~180px). Google Books uses the default `thumbnail`.
+
+**FEAT-02 — Export button label.** Updated to reflect ZIP contents.

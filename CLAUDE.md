@@ -144,10 +144,11 @@ POST/GET  /api/books/{id}/photos        # multipart upload / list
 GET    /api/books/{id}/photos/download  # ZIP of all photos
 DELETE /api/photos/{photo_id}           # 204
 GET    /api/photos/{photo_id}/file      # authenticated FileResponse
-POST   /api/exports                    # eBay ZIP export (CSV + photos) + auto-archive
+POST   /api/exports                    # eBay CSV export (signed photo URLs) + auto-archive
 GET    /api/exports/batch              # latest export batch (for undo banner)
 POST   /api/exports/batch/undo         # undo last export (unarchive books)
 DELETE /api/exports/batch              # dismiss banner (204)
+GET    /photos/{filename}              # public signed photo URL (no auth, HMAC token)
 ```
 
 **HTTP 204 on DELETE.** `apiFetch` guards `resp.status === 204` and returns `undefined` rather than calling `resp.json()`.
@@ -177,9 +178,9 @@ Description is rarely populated — sourced from Google Books only (OL fetcher n
 ```
 api/app/
   main.py  config.py  database.py  auth.py  models.py  schemas.py
-  routers/     books.py  listings.py  photos.py  exports.py
-  services/    lookup.py  covers.py
-api/alembic/versions/    001_initial … 006_replace_data_complete
+  routers/     books.py  listings.py  photos.py  exports.py  signed_photos.py
+  services/    lookup.py  covers.py  photo_urls.py
+api/alembic/versions/    001_initial … 010_backfill_ebay_category_id
 api/tests/               test_auth, test_books, test_lookup, test_listings, test_exports
 
 frontend/src/
@@ -290,36 +291,18 @@ Apache VirtualHost:
 
 ---
 
-## CHANGES-22 additions
+## CHANGES-25 additions
 
-**FEAT-01 — Dashboard filter redesign.** The single `StatusFilter` dropdown (Filter icon) was replaced by two independent icon-button controls in `frontend/src/components/StatusFilter.tsx`: `StatusTagFilter` (Lucide `Tag` icon, options: All records / Ready to list / Archived) and `ReviewEyeFilter` (Lucide `Eye` icon, options: No filter / Metadata Review / Photography Review / Description Review / Price). Both are combinable — selecting one does not clear the other. Active states use colored ring + fill: green for Ready, gray for Archived/Price, amber for Metadata, blue for Photography, purple for Description. Backend `GET /api/books` now accepts two independent query params: `status` (`all`/`ready`/`archived`) and `review` (`needs_metadata_review`/`needs_photo_review`/`needs_description_review`/`needs_price`). Footer shows active filter labels.
+**eBay Export Overhaul.** The export system was rebuilt to match the official eBay Seller Hub bulk listing template. Previous CHANGES-22 through CHANGES-24 additions are in `docs/HISTORY.md`.
 
-**FEAT-02 — Price indicator in review column.** Gray `DollarSign` icon (`#888`) appears in the BookTable review column when `price` is null or zero. Stacks vertically with existing review icons. Green check now requires all three review flags false AND price > 0.
+**BACK-01 — Signed photo URLs.** New public (unauthenticated) endpoint `GET /photos/{filename}?expires=...&token=...` serves book photos via HMAC-signed, time-limited URLs (48-hour expiry). Filename format: `{isbn}_{n}.jpg`. The endpoint validates the HMAC token, looks up the book by ISBN, fetches the nth photo (ordered by `created_at`), and serves the file. Returns 404 on any failure. Router at `api/app/routers/signed_photos.py`, registered on the FastAPI app WITHOUT the `/api` prefix. Signing utility at `api/app/services/photo_urls.py`. Requires `PHOTO_SIGNING_SECRET` env var (generate with `python3 -c "import secrets; print(secrets.token_hex(32))"`). Nginx (`frontend/nginx.conf`) and Vite (`frontend/vite.config.ts`) both proxy `/photos/` to FastAPI.
 
-**FEAT-03 — Price and category on desktop edit.** `PriceCategoryRow` component in `BookCard.tsx` renders a 2-column grid (50/50) below the review toggles. Controlled by `showListingFields` prop — only passed as `true` on desktop via `!isMobileDevice()`. Price: tap to edit inline, saves on blur via `onImmediateSave`. Category: dropdown with 9 options (Science Fiction, History, Science, Social Sciences, Philosophy, Travel, Textbooks & Education, Antiquarian & Collectible, Other), saves on selection. Visual: unset = white bg + gray text; set = `primaryBlue` bg + white text. Category shows Lucide `Check` when set (not category name). Generate Listing button removed from edit footer; footer is now SAVE + Dashboard only.
+**BACK-02 — CSV export (replaces ZIP).** `POST /api/exports` now returns `text/csv` directly (no ZIP). CSV columns match eBay Seller Hub template exactly: `*Action(SiteID=US|Country=US|Currency=USD|Version=1193)`, `Custom label (SKU)`, `Category ID`, `Category name`, `Title`, `P:ISBN`, `Start price`, `Quantity`, `Item photo URL`, `Condition ID`, `Description`, `Format`, `Duration`, `Shipping profile name`, `Return profile name`, `Payment profile name`, `C:Book Title`, `C:Author`, `C:Language`. Photos appear as pipe-separated signed URLs in the `Item photo URL` column. `C:Language` hardcoded to "English". Category name derived from `EBAY_CATEGORY_NAMES` mapping. Filename: `bookscan-export-YYYY-MM-DD-HHMM.csv`.
 
-**FEAT-04 — Archived filter logic.** `status=all` shows everything including archived. `status=archived` shows only archived. `status=ready` excludes archived AND requires all review flags false AND price > 0.
+**FRONT-01 — eBay category buttons.** Category dropdown reduced from 9 generic options to 4 real eBay categories: Books (261186), Antiquarian (29223), Textbooks (1105), Atlases (69496). Button shows short label text instead of Check icon. Selection saves both `ebay_category_id` (integer) and `ebay_category_name` (full eBay name). Default: 261186 (Books) — pre-selected blue on all records after migration 010.
 
----
+**MIGRATION-01 — Backfill ebay_category_id (migration 010).** Backfills all existing NULL `ebay_category_id` values to 261186 and sets column default to 261186. After migration, all records have a category set, counting as "ready to list" for the category requirement.
 
-## CHANGES-23 additions
+**New env vars.** `PHOTO_SIGNING_SECRET` (HMAC key for signed URLs), `EBAY_PAYMENT_PROFILE` (eBay payment policy name, optional). Both in `api/app/config.py` and `.env.example`.
 
-**FEAT-01 — eBay export env vars.** Three new optional settings in `api/app/config.py`: `ebay_shipping_profile`, `ebay_shipping_profile_alt`, `ebay_return_policy` (all default to empty string). Values must exactly match eBay Seller Hub account config (case-sensitive). Documented in `.env.example`.
-
-**FEAT-02 — Export button on dashboard.** `Download` icon + "Export N" label in the search/filter row, right of the `ReviewEyeFilter`. Only visible when `statusFilter === 'ready'` AND `!isMobileDevice()`. Disabled (grayed, 0.5 opacity) when `total === 0` or export in progress. Triggers eBay CSV export flow.
-
-**FEAT-03 — eBay CSV export.** `POST /api/exports` generates a ZIP file containing an eBay Seller Hub-compatible CSV and all photos for exported books. CSV columns: Action, Title, Category, ConditionID, Description, StartPrice, Quantity, Format, Duration, ShippingProfileName, ReturnProfileName, PictureName, CustomLabel, ISBN. Title format: `{title} by {author}`. Condition mapping: Very Good→4000, Good→5000, Acceptable→6000. Fixed values: Action=Add, Quantity=1, Format=FixedPrice, Duration=GTC. ZIP filename: `bookscan-export-YYYYMMDD-HHMM.zip`. Frontend `exportBooks()` in `frontend/src/api/exports.ts` handles blob download with filename extraction from Content-Disposition.
-
-**FEAT-04 — Post-export archiving and undo.** After export generation, all exported books are set to `archived=true`. An `export_batches` table (migration 009) tracks the last export: `id` (integer autoincrement), `exported_at` (timestamp), `book_ids` (JSON array of UUID strings). Only one batch at a time — new export deletes previous batch. Undo banner appears at top of dashboard content zone when a batch exists: green `filterGreenFill` background, `reviewGreen` border, "✓ N records exported and archived." with Undo and dismiss (X) buttons. Banner is persistent (database-driven, survives page refresh). Undo (`POST /api/exports/batch/undo`) sets `archived=false` on all batch books and deletes the batch. Dismiss (`DELETE /api/exports/batch`) deletes the batch without restoring. `ExportBatch` model in `api/app/models.py`; router in `api/app/routers/exports.py`.
-
----
-
-## CHANGES-24 additions
-
-**FEAT-01 — Photo ZIP export.** `POST /api/exports` now returns a ZIP file (`application/zip`) instead of a plain CSV. The ZIP contains: `bookscan-export-YYYYMMDD-HHMM.csv` (the eBay CSV) and a `photos/` directory with user-taken photographs named `{isbn}_{n}.jpg` (numbered from 1 in `created_at` order). Missing photo files are skipped gracefully with a `logger.warning`. PictureName column in the CSV matches the actual files in the ZIP. Photo collection uses `_collect_photos()` helper called via `asyncio.to_thread` for blocking IO.
-
-**Cover images excluded from export (deliberate).** API cover images (Open Library, Google Books) are low-resolution thumbnails (~180-500px) not suitable for eBay listings where images display at 800-1600px. Including them would produce pixelated first images on listings. Only user-taken photographs (phone camera, ~200k each) are shipped to eBay. Covers are still fetched and displayed in-app at small size where they look fine. If a higher-resolution cover source becomes available in the future (e.g., ISBNdb, or OL improves their originals), this decision can be revisited in `_collect_photos()` in `api/app/routers/exports.py`.
-
-**Cover URLs use medium/thumbnail size (deliberate).** Open Library covers use the `medium` size (~180px, fast to load). Google Books uses the default `thumbnail`. Larger sizes were tested but caused noticeable display lag in the app without benefiting eBay exports (since covers are excluded from export). If covers are ever included in exports, upgrade OL to suffix-stripped URLs (remove `-M` from the cover ID URL to get the original) and GB to `zoom=0`.
-
-**FEAT-02 — Export button label.** Dashboard export button updated from `Export ${total}` to `Export ${total} (CSV + photos)` to reflect the ZIP contents.
+**Cover images still excluded from export.** Only user-taken photographs are included in the CSV via signed URLs. API cover images remain low-resolution thumbnails not suitable for eBay. Cover URLs use medium/thumbnail size in-app.

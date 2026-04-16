@@ -57,3 +57,18 @@ Not automated — simple and safe for a solo workflow.
 **Note:** deploy.sh alone (without GitHub Actions) immediately improves manual deployments. Consider implementing the script first as a quick win, then adding GitHub Actions automation separately.
 
 **Prerequisites:** GitHub repository must be set up (already done). Hetzner server SSH access already configured.
+
+### Language selection in scan workflow (deferred from CHANGES-25)
+C:Language is hardcoded to "English" in eBay export. Some inventory may be
+in other languages. Add a language field to the scan workflow so non-English
+books can be tagged correctly for eBay item specifics.
+
+### C:Binding capture in scan workflow (deferred from CHANGES-25)
+Currently omitted from eBay export. Could be added as a field in the scan
+workflow or inferred from catalog data (hardcover vs paperback).
+
+### C:Topic and C:Genre population from catalog subject data (deferred from CHANGES-25)
+Mapping layer needed between library catalog vocabulary (LCSH, BISAC) and
+eBay's controlled terms for Topic and Genre item specifics. Subject data
+is available from Open Library and LoC but doesn't map 1:1 to eBay's
+category-specific item specific values.
