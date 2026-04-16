@@ -25,6 +25,10 @@ const makeBook = (overrides: Partial<Book> = {}): Book => ({
   description_source: null,
   needs_description_review: false,
   description_generation_failed: false,
+  price: null,
+  ebay_category_id: null,
+  ebay_category_name: null,
+  archived: false,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
   ...overrides,
@@ -105,7 +109,7 @@ describe('BookTable', () => {
   })
 
   it('shows green check when neither review flag is set', () => {
-    const books = [makeBook({ needs_metadata_review: false, needs_photo_review: false })]
+    const books = [makeBook({ needs_metadata_review: false, needs_photo_review: false, price: 10 })]
     render(<BookTable books={books} onEdit={vi.fn()} onDelete={vi.fn()} />)
     expect(screen.getByTitle('Reviewed')).toBeInTheDocument()
   })

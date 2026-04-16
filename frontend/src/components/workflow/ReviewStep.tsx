@@ -205,6 +205,10 @@ export default function ReviewStep({
           needs_description_review: reviewDescription,
           description_source,
           description_generation_failed: aiSummary.status === 'failed',
+          price: null,
+          ebay_category_id: null,
+          ebay_category_name: null,
+          archived: false,
         })
         bookId = book.id
         onSavedBookId(bookId)

@@ -43,7 +43,7 @@ async def test_list_books_incomplete_filter(client, auth_headers):
     await client.post(
         "/api/books", json={"isbn": "444", "needs_metadata_review": False}, headers=auth_headers
     )
-    resp = await client.get("/api/books?status=needs_metadata_review", headers=auth_headers)
+    resp = await client.get("/api/books?review=needs_metadata_review", headers=auth_headers)
     assert resp.json()["total"] == 1
 
 
@@ -245,7 +245,7 @@ async def test_status_filter_needs_description_review(client, auth_headers):
         db.add(Book(isbn="9780000000011", title="B", needs_description_review=False))
         await db.commit()
 
-    resp = await client.get("/api/books?status=needs_description_review", headers=auth_headers)
+    resp = await client.get("/api/books?review=needs_description_review", headers=auth_headers)
     assert resp.status_code == 200
     isbns = [b["isbn"] for b in resp.json()["items"]]
     assert "9780000000010" in isbns

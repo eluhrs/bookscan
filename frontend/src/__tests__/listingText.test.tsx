@@ -39,6 +39,10 @@ const mockBook = {
   description_source: null,
   needs_description_review: false,
   description_generation_failed: false,
+  price: null,
+  ebay_category_id: null,
+  ebay_category_name: null,
+  archived: false,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 }
