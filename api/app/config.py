@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     password_hash: str
     access_token_expire_minutes: int = 60 * 12  # 12 hours
     gemini_api_key: str | None = None
+    ebay_shipping_profile: str = ""
+    ebay_shipping_profile_alt: str = ""
+    ebay_return_policy: str = ""
 
 
 settings = Settings()
