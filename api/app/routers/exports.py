@@ -52,29 +52,20 @@ def _collect_photos(
     book: Book,
     photos: list[BookPhoto],
 ) -> list[tuple[str, bytes]]:
-    """Collect (zip_filename, data) pairs for a book's cover + user photos.
+    """Collect (zip_filename, data) pairs for a book's user photos only.
 
-    Returns list of (filename, bytes) tuples. Skips missing files with a warning.
+    Cover images are excluded from the export — they are low-resolution API
+    thumbnails not suitable for eBay listings. Only user-taken photographs
+    are included. Returns list of (filename, bytes) tuples. Skips missing
+    files with a warning.
     """
     isbn = book.isbn
     entries: list[tuple[str, bytes]] = []
-    n = 1
 
-    # Cover image (local file)
-    if book.cover_image_local:
-        cover_path = Path(book.cover_image_local)
-        if cover_path.exists():
-            entries.append((f"photos/{isbn}_{n}.jpg", cover_path.read_bytes()))
-            n += 1
-        else:
-            logger.warning("Cover file missing for ISBN %s: %s", isbn, cover_path)
-
-    # User photos
-    for photo in photos:
+    for n, photo in enumerate(photos, 1):
         photo_path = PHOTOS_DIR / photo.filename
         if photo_path.exists():
             entries.append((f"photos/{isbn}_{n}.jpg", photo_path.read_bytes()))
-            n += 1
         else:
             logger.warning("Photo file missing for ISBN %s: %s", isbn, photo_path)
 

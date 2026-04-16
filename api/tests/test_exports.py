@@ -225,15 +225,14 @@ async def test_export_returns_zip_with_csv(client: AsyncClient, auth_headers: di
 
 
 @pytest.mark.asyncio
-async def test_export_zip_includes_cover_and_user_photos(client: AsyncClient, auth_headers: dict):
-    """ZIP should include cover image and user photos named {isbn}_{n}.jpg."""
+async def test_export_zip_includes_user_photos_only(client: AsyncClient, auth_headers: dict):
+    """ZIP should include only user photos (not covers), named {isbn}_{n}.jpg."""
     book_data = _ready_book("9780000000102")
     book_data["cover_image_url"] = "https://example.com/cover.jpg"
     resp = await client.post("/api/books", json=book_data, headers=auth_headers)
     book_id = resp.json()["id"]
 
-    # Create fake cover file and set cover_image_local directly on the DB record
-    # (cover_image_local is set by the background cover-download task, not via API)
+    # Set cover_image_local — should NOT appear in ZIP
     cover_path = Path("/tmp/bookscan_test_covers/9780000000102.jpg")
     cover_path.parent.mkdir(parents=True, exist_ok=True)
     cover_path.write_bytes(b"FAKE_COVER_DATA")
@@ -244,7 +243,7 @@ async def test_export_zip_includes_cover_and_user_photos(client: AsyncClient, au
         book.cover_image_local = str(cover_path)
         await session.commit()
 
-    # Upload a user photo via API (patch photos router dir too)
+    # Upload a user photo via API
     with patch("app.routers.photos.PHOTOS_DIR", Path("/tmp/bookscan_test_photos")):
         resp = await client.post(
             f"/api/books/{book_id}/photos",
@@ -266,54 +265,21 @@ async def test_export_zip_includes_cover_and_user_photos(client: AsyncClient, au
     buf = io.BytesIO(resp.content)
     with zipfile.ZipFile(buf) as zf:
         names = zf.namelist()
-        assert "photos/9780000000102_1.jpg" in names  # cover
-        assert "photos/9780000000102_2.jpg" in names  # user photo
-        assert zf.read("photos/9780000000102_1.jpg") == b"FAKE_COVER_DATA"
-        assert zf.read("photos/9780000000102_2.jpg") == b"FAKE_PHOTO_DATA"
+        photo_files = [n for n in names if n.startswith("photos/")]
+        # Only user photo, no cover
+        assert photo_files == ["photos/9780000000102_1.jpg"]
+        assert zf.read("photos/9780000000102_1.jpg") == b"FAKE_PHOTO_DATA"
 
-        # PictureName in CSV should match
+        # PictureName in CSV should match (user photo only)
         csv_files = [n for n in names if n.endswith(".csv")]
         csv_content = zf.read(csv_files[0]).decode("utf-8")
         reader = csv.reader(io.StringIO(csv_content))
         rows = list(reader)
         header = rows[0]
         data = dict(zip(header, rows[1]))
-        assert data["PictureName"] == "9780000000102_1.jpg,9780000000102_2.jpg"
+        assert data["PictureName"] == "9780000000102_1.jpg"
 
     # Cleanup
     import shutil
     shutil.rmtree("/tmp/bookscan_test_covers", ignore_errors=True)
     shutil.rmtree("/tmp/bookscan_test_photos", ignore_errors=True)
-
-
-@pytest.mark.asyncio
-async def test_export_zip_skips_missing_cover(client: AsyncClient, auth_headers: dict):
-    """If cover_image_local points to a missing file, skip it gracefully."""
-    book_data = _ready_book("9780000000103")
-    book_data["cover_image_url"] = "https://example.com/cover.jpg"
-    resp = await client.post("/api/books", json=book_data, headers=auth_headers)
-    book_id = resp.json()["id"]
-
-    # Set cover_image_local to a nonexistent path directly on DB
-    import uuid as _uuid
-    async with TestSession() as session:
-        book = await session.get(Book, _uuid.UUID(book_id))
-        book.cover_image_local = "/tmp/nonexistent/cover.jpg"
-        await session.commit()
-
-    resp = await client.post("/api/exports", headers=auth_headers)
-    assert resp.status_code == 200
-
-    buf = io.BytesIO(resp.content)
-    with zipfile.ZipFile(buf) as zf:
-        names = zf.namelist()
-        photo_files = [n for n in names if n.startswith("photos/")]
-        assert len(photo_files) == 0
-
-        csv_files = [n for n in names if n.endswith(".csv")]
-        csv_content = zf.read(csv_files[0]).decode("utf-8")
-        reader = csv.reader(io.StringIO(csv_content))
-        rows = list(reader)
-        header = rows[0]
-        data = dict(zip(header, rows[1]))
-        assert data["PictureName"] == ""

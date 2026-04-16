@@ -1,5 +1,4 @@
 import asyncio
-import re
 from dataclasses import dataclass, field
 from typing import Optional
 import httpx
@@ -58,10 +57,9 @@ async def fetch_open_library(isbn: str, client: httpx.AsyncClient) -> BookData:
             result.pages = book["number_of_pages"]
             result.data_sources["pages"] = "open_library"
         covers = book.get("cover", {})
-        cover_url = covers.get("large") or covers.get("medium")
+        cover_url = covers.get("medium")
         if cover_url:
-            # Strip size suffix (-S, -M, -L) to get original full-resolution image
-            result.cover_image_url = re.sub(r'-[SML]\.jpg$', '.jpg', cover_url)
+            result.cover_image_url = cover_url
             result.data_sources["cover_image_url"] = "open_library"
         return result
     except Exception:
@@ -103,9 +101,7 @@ async def fetch_google_books(isbn: str, client: httpx.AsyncClient) -> BookData:
         image_links = info.get("imageLinks", {})
         cover = image_links.get("thumbnail") or image_links.get("smallThumbnail")
         if cover:
-            cover = cover.replace("http://", "https://")
-            cover = cover.replace("&zoom=1", "&zoom=0").replace("&edge=curl", "")
-            result.cover_image_url = cover
+            result.cover_image_url = cover.replace("http://", "https://")
             result.data_sources["cover_image_url"] = "google_books"
         return result
     except Exception:
