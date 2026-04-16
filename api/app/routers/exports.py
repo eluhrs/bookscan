@@ -135,7 +135,7 @@ async def export_books(
         ])
 
     # Build ZIP
-    timestamp = datetime.now().strftime("%Y-%m-%d-%H%M")
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M")
     csv_filename = f"bookscan-export-{timestamp}.csv"
     zip_filename = f"bookscan-export-{timestamp}.zip"
 
