@@ -103,7 +103,7 @@ Single-user: `APP_USERNAME` + `PASSWORD_HASH` from `.env`. Verified with `bcrypt
 - **Secondary buttons:** white background, `1px solid zoneBorder`, `secondaryText` label.
 - **Review toggle buttons** (edit page + Review step, CHANGES-16 FEAT-08, restyled CHANGES-18 FIX-17): three independent buttons — `review metadata`, `review photography`, `review description` — sharing a height with the condition row above. Off: white + `zoneBorder` + `secondaryText`. On: `primaryBlue` fill + no border + white text + `fontWeight 500` + `aria-pressed="true"`. Each saves immediately via `onImmediateSave`.
 - **Condition + review button block (CHANGES-18 FIX-17).** Both the Review step and the edit page render two rows of three buttons with identical height (`ROW_BUTTON_HEIGHT = 48`, `lineHeight: 1.15` so two-line labels wrap cleanly). Row 1 is the connected condition segmented bar (Very Good | Good | Acceptable, single-select, no gaps); Row 2 is the three review toggle buttons with an 8px gap (independent, multi-select). Selected state is identical across both rows: `primaryBlue` fill + white text. The third `review description` toggle is always rendered — on the Review step it was previously conditional on the AI summary, but the grid is now always 3 columns so the layout doesn't reflow when Gemini returns.
-- **Icons: Lucide line art only — no emoji.** 18px in toolbars, 16px in table cells. In use: `Flashlight`, `Keyboard`, `Camera`, `FileWarning`, `Pencil`, `Trash2`, `Check`, `Filter`, `ChevronDown`.
+- **Icons: Lucide line art only — no emoji.** 18px in toolbars, 16px in table cells. In use: `Flashlight`, `Keyboard`, `Camera`, `FileWarning`, `Pencil`, `Trash2`, `Check`, `Filter`, `ChevronDown`, `Download`, `X`.
 - **Mobile device detection:** use `isMobileDevice()` from `frontend/src/utils/deviceDetect.ts` (user-agent + `maxTouchPoints > 0`). Do NOT use `useBreakpoint` (viewport width) for this.
 - **Spacing:** `WorkflowWrapper` middle flex container handles `gap: 0.75rem` and `padding: 0.75rem 1rem`. Camera views inside workflow steps must NOT add outer padding.
 - **Primary button height:** 64px across all workflow screens via `WorkflowWrapper`'s unified footer.
@@ -112,7 +112,7 @@ Single-user: `APP_USERNAME` + `PASSWORD_HASH` from `.env`. Verified with `bcrypt
 
 ## Data Model
 
-**Tables:** `books`, `listings`, `book_photos`. Migrations in `api/alembic/versions/001_initial_schema.py` through `008_add_price_category_archived.py`.
+**Tables:** `books`, `listings`, `book_photos`, `export_batches`. Migrations in `api/alembic/versions/001_initial_schema.py` through `009_create_export_batches.py`.
 
 **`condition`** (VARCHAR 20): `Very Good`, `Good`, `Acceptable` — aligned with eBay's used-book condition scale (CHANGES-18 FIX-18). Legacy `New` / `Poor` values from pre-CHANGES-18 records are retained in the DB but cannot be set via the UI; the edit-page condition row simply shows no button selected for those rows.
 
@@ -144,6 +144,10 @@ POST/GET  /api/books/{id}/photos        # multipart upload / list
 GET    /api/books/{id}/photos/download  # ZIP of all photos
 DELETE /api/photos/{photo_id}           # 204
 GET    /api/photos/{photo_id}/file      # authenticated FileResponse
+POST   /api/exports                    # eBay CSV export + auto-archive
+GET    /api/exports/batch              # latest export batch (for undo banner)
+POST   /api/exports/batch/undo         # undo last export (unarchive books)
+DELETE /api/exports/batch              # dismiss banner (204)
 ```
 
 **HTTP 204 on DELETE.** `apiFetch` guards `resp.status === 204` and returns `undefined` rather than calling `resp.json()`.
@@ -173,13 +177,13 @@ Description is rarely populated — sourced from Google Books only (OL fetcher n
 ```
 api/app/
   main.py  config.py  database.py  auth.py  models.py  schemas.py
-  routers/     books.py  listings.py  photos.py
+  routers/     books.py  listings.py  photos.py  exports.py
   services/    lookup.py  covers.py
 api/alembic/versions/    001_initial … 006_replace_data_complete
-api/tests/               test_auth, test_books, test_lookup, test_listings
+api/tests/               test_auth, test_books, test_lookup, test_listings, test_exports
 
 frontend/src/
-  api/            client, auth, books, listings, photos
+  api/            client, auth, books, listings, photos, exports
   context/        AuthContext
   hooks/          useAuth, useBreakpoint (viewport only), useScanAudio, useCameraStream
   utils/          deviceDetect.ts (isMobileDevice)
@@ -286,16 +290,6 @@ Apache VirtualHost:
 
 ---
 
-## CHANGES-21 additions
-
-**AUDIT-01 — Security audit.** Read-only audit completed; results in `AUDIT-RESULTS.md` (gitignored). Key findings: 6 high-severity dependency CVEs (python-jose, python-multipart, starlette), no login rate limiting, Docker containers run as root. No fixes applied — awaiting instruction.
-
-**FEAT-02 — Price, category, archived fields (migration 008).** Four new columns on `books`: `price` DECIMAL(10,2) nullable, `ebay_category_id` INTEGER nullable, `ebay_category_name` VARCHAR nullable, `archived` BOOLEAN default false. All four are patchable via `PATCH /books/{id}`. "Ready to list" is a computed state: `archived=false AND needs_metadata_review=false AND needs_photo_review=false AND needs_description_review=false AND price IS NOT NULL AND price > 0`. The `archived` status filter is now a server-side `Literal` option on `GET /api/books`.
-
-**FEAT-01 — Sliding 12-hour session expiry.** Token lifetime changed from 1 week to 12 hours. `TokenRefreshMiddleware` in `api/app/main.py` issues an `X-Refresh-Token` response header on every authenticated request where the current token has > 1 hour remaining. Frontend `apiFetch` swaps the refreshed token into localStorage. On 401: clears token, sets `sessionStorage.session_expired`, redirects to `/login`. `LoginPage` checks for the flag on mount and shows "Your session has expired, please log in again" — flag is cleared immediately so fresh visits don't see it. `AuthContext` listens for `storage` events for cross-tab token sync.
-
----
-
 ## CHANGES-22 additions
 
 **FEAT-01 — Dashboard filter redesign.** The single `StatusFilter` dropdown (Filter icon) was replaced by two independent icon-button controls in `frontend/src/components/StatusFilter.tsx`: `StatusTagFilter` (Lucide `Tag` icon, options: All records / Ready to list / Archived) and `ReviewEyeFilter` (Lucide `Eye` icon, options: No filter / Metadata Review / Photography Review / Description Review / Price). Both are combinable — selecting one does not clear the other. Active states use colored ring + fill: green for Ready, gray for Archived/Price, amber for Metadata, blue for Photography, purple for Description. Backend `GET /api/books` now accepts two independent query params: `status` (`all`/`ready`/`archived`) and `review` (`needs_metadata_review`/`needs_photo_review`/`needs_description_review`/`needs_price`). Footer shows active filter labels.
@@ -305,3 +299,15 @@ Apache VirtualHost:
 **FEAT-03 — Price and category on desktop edit.** `PriceCategoryRow` component in `BookCard.tsx` renders a 2-column grid (50/50) below the review toggles. Controlled by `showListingFields` prop — only passed as `true` on desktop via `!isMobileDevice()`. Price: tap to edit inline, saves on blur via `onImmediateSave`. Category: dropdown with 9 options (Science Fiction, History, Science, Social Sciences, Philosophy, Travel, Textbooks & Education, Antiquarian & Collectible, Other), saves on selection. Visual: unset = white bg + gray text; set = `primaryBlue` bg + white text. Category shows Lucide `Check` when set (not category name). Generate Listing button removed from edit footer; footer is now SAVE + Dashboard only.
 
 **FEAT-04 — Archived filter logic.** `status=all` shows everything including archived. `status=archived` shows only archived. `status=ready` excludes archived AND requires all review flags false AND price > 0.
+
+---
+
+## CHANGES-23 additions
+
+**FEAT-01 — eBay export env vars.** Three new optional settings in `api/app/config.py`: `ebay_shipping_profile`, `ebay_shipping_profile_alt`, `ebay_return_policy` (all default to empty string). Values must exactly match eBay Seller Hub account config (case-sensitive). Documented in `.env.example`.
+
+**FEAT-02 — Export button on dashboard.** `Download` icon + "Export N" label in the search/filter row, right of the `ReviewEyeFilter`. Only visible when `statusFilter === 'ready'` AND `!isMobileDevice()`. Disabled (grayed, 0.5 opacity) when `total === 0` or export in progress. Triggers eBay CSV export flow.
+
+**FEAT-03 — eBay CSV export.** `POST /api/exports` generates eBay Seller Hub-compatible CSV for all "ready to list" books. Columns: Action, Title, Category, ConditionID, Description, StartPrice, Quantity, Format, Duration, ShippingProfileName, ReturnProfileName, PictureName, CustomLabel, ISBN. Title format: `{title} by {author}`. Condition mapping: Very Good→4000, Good→5000, Acceptable→6000. PictureName: `{isbn}_1.jpg,{isbn}_2.jpg,...` (one per photo, for CHANGES-24 ZIP). Fixed values: Action=Add, Quantity=1, Format=FixedPrice, Duration=GTC. Filename: `bookscan-export-YYYY-MM-DD.csv`. Frontend `exportBooks()` in `frontend/src/api/exports.ts` handles blob download with filename extraction from Content-Disposition.
+
+**FEAT-04 — Post-export archiving and undo.** After CSV generation, all exported books are set to `archived=true`. An `export_batches` table (migration 009) tracks the last export: `id` (integer autoincrement), `exported_at` (timestamp), `book_ids` (JSON array of UUID strings). Only one batch at a time — new export deletes previous batch. Undo banner appears at top of dashboard content zone when a batch exists: green `filterGreenFill` background, `reviewGreen` border, "✓ N records exported and archived." with Undo and dismiss (X) buttons. Banner is persistent (database-driven, survives page refresh). Undo (`POST /api/exports/batch/undo`) sets `archived=false` on all batch books and deletes the batch. Dismiss (`DELETE /api/exports/batch`) deletes the batch without restoring. `ExportBatch` model in `api/app/models.py`; router in `api/app/routers/exports.py`.
