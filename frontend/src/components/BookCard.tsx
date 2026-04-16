@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 're
 import type { Book } from '../types';
 import PhotoFilmstrip from './PhotoFilmstrip';
 import DescriptionSourceIcon from './DescriptionSourceIcon';
-import { Check, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { theme } from '../styles/theme';
 
 export interface BookCardHandle {
@@ -35,16 +35,11 @@ const CONDITIONS = ['Very Good', 'Good', 'Acceptable'] as const
 // two rows look like a unified 2×3 control block.
 const ROW_BUTTON_HEIGHT = 48
 
-const CATEGORIES = [
-  'Science Fiction',
-  'History',
-  'Science',
-  'Social Sciences',
-  'Philosophy',
-  'Travel',
-  'Textbooks & Education',
-  'Antiquarian & Collectible',
-  'Other',
+const EBAY_CATEGORIES = [
+  { label: 'Books', id: 261186, name: 'Books' },
+  { label: 'Antiquarian', id: 29223, name: 'Antiquarian & Collectible' },
+  { label: 'Textbooks', id: 1105, name: 'Textbooks' },
+  { label: 'Atlases', id: 69496, name: 'Maps & Atlases' },
 ] as const
 
 // ---- ConditionBar ----
@@ -278,7 +273,7 @@ function PriceCategoryRow({ book, onImmediateSave }: {
   }, [])
 
   const hasPrice = book.price != null && book.price > 0
-  const hasCategory = !!book.ebay_category_name
+  const hasCategory = book.ebay_category_id != null
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
@@ -392,6 +387,7 @@ function PriceCategoryRow({ book, onImmediateSave }: {
             height: '100%',
             display: 'flex',
             alignItems: 'center',
+            flexShrink: 0,
           }}>
             Category
           </span>
@@ -403,14 +399,19 @@ function PriceCategoryRow({ book, onImmediateSave }: {
             padding: '0 8px',
             color: hasCategory ? '#fff' : theme.colors.secondaryText,
             fontSize: 14,
+            overflow: 'hidden',
+            whiteSpace: 'nowrap',
           }}>
-            {hasCategory ? <Check size={18} /> : '\u2014'}
+            {hasCategory
+              ? (EBAY_CATEGORIES.find(c => c.id === book.ebay_category_id)?.label ?? '—')
+              : '—'}
           </span>
           <span style={{
             padding: '0 8px',
             color: hasCategory ? '#fff' : theme.colors.secondaryText,
             display: 'flex',
             alignItems: 'center',
+            flexShrink: 0,
           }}>
             <ChevronDown size={14} />
           </span>
@@ -430,25 +431,23 @@ function PriceCategoryRow({ book, onImmediateSave }: {
               boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
               zIndex: 20,
               padding: '0.25rem 0',
-              maxHeight: 240,
-              overflowY: 'auto',
             }}
           >
-            {CATEGORIES.map((cat) => (
+            {EBAY_CATEGORIES.map((cat) => (
               <button
-                key={cat}
+                key={cat.id}
                 type="button"
                 role="menuitem"
                 onClick={() => {
                   setCategoryOpen(false)
-                  onImmediateSave({ ebay_category_name: cat })
+                  onImmediateSave({ ebay_category_id: cat.id, ebay_category_name: cat.name })
                 }}
                 style={{
                   display: 'block',
                   width: '100%',
                   textAlign: 'left',
                   padding: '0.5rem 0.75rem',
-                  background: book.ebay_category_name === cat ? theme.colors.tableHeaderBg : 'transparent',
+                  background: book.ebay_category_id === cat.id ? theme.colors.tableHeaderBg : 'transparent',
                   border: 'none',
                   fontSize: '0.85rem',
                   color: theme.colors.text,
@@ -456,7 +455,7 @@ function PriceCategoryRow({ book, onImmediateSave }: {
                   fontFamily: theme.font.sans,
                 }}
               >
-                {cat}
+                {cat.label}
               </button>
             ))}
           </div>
