@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     ebay_shipping_profile: str = ""
     ebay_shipping_profile_alt: str = ""
     ebay_return_policy: str = ""
+    ebay_payment_profile: str = ""
+    photo_signing_secret: str = ""
 
 
 settings = Settings()
