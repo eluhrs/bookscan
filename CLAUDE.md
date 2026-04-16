@@ -144,7 +144,7 @@ POST/GET  /api/books/{id}/photos        # multipart upload / list
 GET    /api/books/{id}/photos/download  # ZIP of all photos
 DELETE /api/photos/{photo_id}           # 204
 GET    /api/photos/{photo_id}/file      # authenticated FileResponse
-POST   /api/exports                    # eBay CSV export + auto-archive
+POST   /api/exports                    # eBay ZIP export (CSV + photos) + auto-archive
 GET    /api/exports/batch              # latest export batch (for undo banner)
 POST   /api/exports/batch/undo         # undo last export (unarchive books)
 DELETE /api/exports/batch              # dismiss banner (204)
@@ -308,6 +308,16 @@ Apache VirtualHost:
 
 **FEAT-02 — Export button on dashboard.** `Download` icon + "Export N" label in the search/filter row, right of the `ReviewEyeFilter`. Only visible when `statusFilter === 'ready'` AND `!isMobileDevice()`. Disabled (grayed, 0.5 opacity) when `total === 0` or export in progress. Triggers eBay CSV export flow.
 
-**FEAT-03 — eBay CSV export.** `POST /api/exports` generates eBay Seller Hub-compatible CSV for all "ready to list" books. Columns: Action, Title, Category, ConditionID, Description, StartPrice, Quantity, Format, Duration, ShippingProfileName, ReturnProfileName, PictureName, CustomLabel, ISBN. Title format: `{title} by {author}`. Condition mapping: Very Good→4000, Good→5000, Acceptable→6000. PictureName: `{isbn}_1.jpg,{isbn}_2.jpg,...` (one per photo, for CHANGES-24 ZIP). Fixed values: Action=Add, Quantity=1, Format=FixedPrice, Duration=GTC. Filename: `bookscan-export-YYYY-MM-DD.csv`. Frontend `exportBooks()` in `frontend/src/api/exports.ts` handles blob download with filename extraction from Content-Disposition.
+**FEAT-03 — eBay CSV export.** `POST /api/exports` generates a ZIP file containing an eBay Seller Hub-compatible CSV and all photos for exported books. CSV columns: Action, Title, Category, ConditionID, Description, StartPrice, Quantity, Format, Duration, ShippingProfileName, ReturnProfileName, PictureName, CustomLabel, ISBN. Title format: `{title} by {author}`. Condition mapping: Very Good→4000, Good→5000, Acceptable→6000. Fixed values: Action=Add, Quantity=1, Format=FixedPrice, Duration=GTC. ZIP filename: `bookscan-export-YYYY-MM-DD.zip`. Frontend `exportBooks()` in `frontend/src/api/exports.ts` handles blob download with filename extraction from Content-Disposition.
 
-**FEAT-04 — Post-export archiving and undo.** After CSV generation, all exported books are set to `archived=true`. An `export_batches` table (migration 009) tracks the last export: `id` (integer autoincrement), `exported_at` (timestamp), `book_ids` (JSON array of UUID strings). Only one batch at a time — new export deletes previous batch. Undo banner appears at top of dashboard content zone when a batch exists: green `filterGreenFill` background, `reviewGreen` border, "✓ N records exported and archived." with Undo and dismiss (X) buttons. Banner is persistent (database-driven, survives page refresh). Undo (`POST /api/exports/batch/undo`) sets `archived=false` on all batch books and deletes the batch. Dismiss (`DELETE /api/exports/batch`) deletes the batch without restoring. `ExportBatch` model in `api/app/models.py`; router in `api/app/routers/exports.py`.
+**FEAT-04 — Post-export archiving and undo.** After export generation, all exported books are set to `archived=true`. An `export_batches` table (migration 009) tracks the last export: `id` (integer autoincrement), `exported_at` (timestamp), `book_ids` (JSON array of UUID strings). Only one batch at a time — new export deletes previous batch. Undo banner appears at top of dashboard content zone when a batch exists: green `filterGreenFill` background, `reviewGreen` border, "✓ N records exported and archived." with Undo and dismiss (X) buttons. Banner is persistent (database-driven, survives page refresh). Undo (`POST /api/exports/batch/undo`) sets `archived=false` on all batch books and deletes the batch. Dismiss (`DELETE /api/exports/batch`) deletes the batch without restoring. `ExportBatch` model in `api/app/models.py`; router in `api/app/routers/exports.py`.
+
+---
+
+## CHANGES-24 additions
+
+**FEAT-01 — Photo ZIP export.** `POST /api/exports` now returns a ZIP file (`application/zip`) instead of a plain CSV. The ZIP contains: `bookscan-export-YYYY-MM-DD.csv` (the eBay CSV) and a `photos/` directory with all cover images + user photos named `{isbn}_{n}.jpg`. Cover image (from `book.cover_image_local`) is `{isbn}_1.jpg`; user photos follow in `created_at` order as `{isbn}_2.jpg`, `{isbn}_3.jpg`, etc. If no cover exists locally, user photos start at `_1.jpg`. Missing files (cover or user photo) are skipped gracefully with a `logger.warning` — the export continues. PictureName column in the CSV matches the actual files in the ZIP. Photo collection uses `_collect_photos()` helper called via `asyncio.to_thread` for blocking IO. `PHOTOS_DIR` module-level constant in `exports.py` for testability.
+
+**Cover size upgrade (lookup time).** Open Library now prefers `covers["large"]` over `covers["medium"]` (fallback to medium if large absent). Google Books thumbnail URLs have `&zoom=1` replaced with `&zoom=0` and `&edge=curl` stripped, returning the full-size original image. Changes in `api/app/services/lookup.py`. Existing books with small covers are unaffected — new lookups get full-size going forward.
+
+**FEAT-02 — Export button label.** Dashboard export button updated from `Export ${total}` to `Export ${total} (CSV + photos)` to reflect the ZIP contents.
