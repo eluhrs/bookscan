@@ -17,7 +17,9 @@ export async function exportBooks(): Promise<void> {
   const blob = await resp.blob()
   const disposition = resp.headers.get('content-disposition') || ''
   const match = disposition.match(/filename="(.+)"/)
-  const filename = match ? match[1] : `bookscan-export-${new Date().toISOString().slice(0, 10)}.zip`
+  const now = new Date()
+  const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`
+  const filename = match ? match[1] : `bookscan-export-${ts}.zip`
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

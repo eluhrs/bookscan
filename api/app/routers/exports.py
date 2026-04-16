@@ -5,7 +5,7 @@ import io
 import logging
 import uuid
 import zipfile
-from datetime import date
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -144,9 +144,9 @@ async def export_books(
         ])
 
     # Build ZIP
-    today = date.today().isoformat()
-    csv_filename = f"bookscan-export-{today}.csv"
-    zip_filename = f"bookscan-export-{today}.zip"
+    timestamp = datetime.now().strftime("%Y-%m-%d-%H%M")
+    csv_filename = f"bookscan-export-{timestamp}.csv"
+    zip_filename = f"bookscan-export-{timestamp}.zip"
 
     zip_buf = io.BytesIO()
     with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
