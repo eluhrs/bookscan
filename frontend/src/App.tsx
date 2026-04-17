@@ -4,6 +4,7 @@ import { useAuth } from './hooks/useAuth'
 import LoginPage from './pages/LoginPage'
 import PhotoWorkflowPage from './pages/PhotoWorkflowPage'
 import DashboardPage from './pages/DashboardPage'
+import ProfilerPage from './pages/ProfilerPage'
 
 function ProtectedRoutes() {
   const { isAuthenticated } = useAuth()
@@ -14,6 +15,7 @@ function ProtectedRoutes() {
     <Routes>
       <Route path="/scan" element={<PhotoWorkflowPage />} />
       <Route path="/dashboard" element={<DashboardPage />} />
+      <Route path="/profiler" element={<ProfilerPage />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   )

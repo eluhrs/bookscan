@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Camera, Download, X } from 'lucide-react'
+import { Camera, Download, X, ScanLine } from 'lucide-react'
 import BookTable from '../components/BookTable'
 import BookCard, { BookCardHandle } from '../components/BookCard'
 import ListingGenerator from '../components/ListingGenerator'
@@ -544,6 +544,23 @@ export default function DashboardPage() {
                 }}
               >
                 <Camera size={18} />
+              </button>
+              <button
+                aria-label="ISBN Profiler"
+                onClick={() => navigate('/profiler')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0.4rem 0.5rem',
+                  border: `1px solid ${theme.colors.zoneBorder}`,
+                  borderRadius: theme.radius.sm,
+                  background: theme.colors.bg,
+                  cursor: 'pointer',
+                  color: theme.colors.text,
+                }}
+              >
+                <ScanLine size={18} />
               </button>
             ) : (
               <button
