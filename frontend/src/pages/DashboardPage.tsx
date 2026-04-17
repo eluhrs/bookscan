@@ -528,40 +528,42 @@ export default function DashboardPage() {
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             {isMobileDevice() ? (
-              <button
-                aria-label="Scan books"
-                onClick={() => navigate('/scan')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '0.4rem 0.5rem',
-                  border: `1px solid ${theme.colors.zoneBorder}`,
-                  borderRadius: theme.radius.sm,
-                  background: theme.colors.bg,
-                  cursor: 'pointer',
-                  color: theme.colors.text,
-                }}
-              >
-                <Camera size={18} />
-              </button>
-              <button
-                aria-label="ISBN Profiler"
-                onClick={() => navigate('/profiler')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '0.4rem 0.5rem',
-                  border: `1px solid ${theme.colors.zoneBorder}`,
-                  borderRadius: theme.radius.sm,
-                  background: theme.colors.bg,
-                  cursor: 'pointer',
-                  color: theme.colors.text,
-                }}
-              >
-                <ScanLine size={18} />
-              </button>
+              <>
+                <button
+                  aria-label="Scan books"
+                  onClick={() => navigate('/scan')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0.4rem 0.5rem',
+                    border: `1px solid ${theme.colors.zoneBorder}`,
+                    borderRadius: theme.radius.sm,
+                    background: theme.colors.bg,
+                    cursor: 'pointer',
+                    color: theme.colors.text,
+                  }}
+                >
+                  <Camera size={18} />
+                </button>
+                <button
+                  aria-label="ISBN Profiler"
+                  onClick={() => navigate('/profiler')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0.4rem 0.5rem',
+                    border: `1px solid ${theme.colors.zoneBorder}`,
+                    borderRadius: theme.radius.sm,
+                    background: theme.colors.bg,
+                    cursor: 'pointer',
+                    color: theme.colors.text,
+                  }}
+                >
+                  <ScanLine size={18} />
+                </button>
+              </>
             ) : (
               <button
                 onClick={() => exportListingsCSV().catch(() => alert('Export failed'))}
