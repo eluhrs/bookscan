@@ -33,6 +33,7 @@ from app.routers.listings import router as listings_router
 from app.routers.photos import router as photos_router
 from app.routers.exports import router as exports_router
 from app.routers.signed_photos import router as signed_photos_router
+from app.routers.profiler import router as profiler_router
 
 app.include_router(auth_router, prefix="/api")
 app.include_router(books_router, prefix="/api")
@@ -40,3 +41,4 @@ app.include_router(listings_router, prefix="/api")
 app.include_router(photos_router, prefix="/api")
 app.include_router(exports_router, prefix="/api")
 app.include_router(signed_photos_router)  # No prefix — public /photos/ route
+app.include_router(profiler_router, prefix="/api")

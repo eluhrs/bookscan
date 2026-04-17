@@ -10,3 +10,4 @@ dist/
 frontend/package-lock.json
 api/.venv/
 AUDIT-RESULTS.md
+isbn_scans.db
